@@ -50,6 +50,7 @@ export default function AboutPage() {
               src={aboutImg}
               alt="GriVA Premium audio headphones"
               className="object-contain max-h-[340px]"
+              style={{ width: "auto", height: "auto" }}
             />
           </div>
         </div>

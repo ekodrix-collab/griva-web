@@ -64,7 +64,9 @@ export default function TrendingProductCard({
             alt={product.title}
             width={110}
             height={110}
+            priority
             className="object-contain transition-transform duration-300 group-hover:scale-105"
+            style={{ width: "auto", height: "auto" }}
           />
           {/* Fav Icon */}
           <button
