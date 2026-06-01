@@ -38,6 +38,7 @@ function OfferCards({offer}: {offer: OfferCard;}) {
           width={150}
           height={150}
           className="object-contain"
+          style={{ width: "auto", height: "auto" }}
         />
       </div>
     </Link>

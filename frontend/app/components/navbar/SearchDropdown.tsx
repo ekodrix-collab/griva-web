@@ -74,6 +74,7 @@ export default function SearchDropdown({ onClose }: SearchDropdownProps) {
                       src={product.image}
                       alt={product.title}
                       fill
+                      sizes="40px"
                       className="object-contain p-1"
                     />
                   </div>

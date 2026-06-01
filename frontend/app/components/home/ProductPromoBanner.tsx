@@ -54,6 +54,7 @@ const ProductPromoBanner = () => {
                   height={420}
                   priority
                   className="h-[250px] w-full max-w-[400px] object-contain drop-shadow-2xl"
+                  style={{ width: "auto", height: "auto" }}
                 />
               </div>
             </div>

@@ -85,7 +85,9 @@ export default function ProductCard({ product }: { product: Product }) {
             alt={product.title}
             width={120}
             height={120}
+            priority
             className="object-contain"
+            style={{ width: "auto", height: "auto" }}
           />
         </div>
 

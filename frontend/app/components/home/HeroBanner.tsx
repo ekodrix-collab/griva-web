@@ -162,6 +162,7 @@ export default function HeroBanner() {
                   src={currentSlide.image}
                   alt={currentSlide.title}
                   fill
+                  sizes="(max-width: 1024px) 100vw, 50vw"
                   priority
                   className="object-contain drop-shadow-2xl"
                 />

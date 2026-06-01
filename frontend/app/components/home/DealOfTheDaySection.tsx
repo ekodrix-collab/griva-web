@@ -124,6 +124,7 @@ export default function DealOfTheDaySection() {
                         width={36}
                         height={36}
                         className="object-contain"
+                        style={{ width: "auto", height: "auto" }}
                       />
                     </div>
                   ))}
@@ -135,6 +136,7 @@ export default function DealOfTheDaySection() {
                     src={slide.mainImage}
                     alt={slide.title}
                     fill
+                    sizes="(max-width: 768px) 100vw, 300px"
                     className="object-contain p-4"
                   />
                 </div>
