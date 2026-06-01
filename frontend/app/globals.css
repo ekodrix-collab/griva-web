@@ -1,5 +1,20 @@
 @import "tailwindcss";
 
+@theme {
+  --color-brand-orange: #f97316;
+  --color-brand-orange-dark: #ea580c;
+  --font-body: var(--font-geist-sans), sans-serif;
+  
+  @keyframes marquee {
+    0% {
+      transform: translate3d(0, 0, 0);
+    }
+    100% {
+      transform: translate3d(-50%, 0, 0);
+    }
+  }
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;

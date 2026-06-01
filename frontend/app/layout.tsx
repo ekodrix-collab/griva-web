@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/app/components/navbar/Navbar";
+import AnnouncementBar from "@/app/components/navbar/AnnouncementBar";
 import Footer from "@/app/components/footer/Footer";
 import { Providers } from "@/app/context/Providers";
 import CartDrawer from "@/app/components/cart/CartDrawer";
@@ -33,6 +34,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-white text-gray-900" suppressHydrationWarning>
         <Providers>
+          <AnnouncementBar />
           <Navbar />
           <main className="flex-grow">
             {children}
