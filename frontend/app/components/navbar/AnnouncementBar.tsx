@@ -68,63 +68,69 @@ export default function AnnouncementBar() {
   );
 
   return (
-    <div className="h-10 bg-gradient-to-r from-brand-orange via-brand-orange to-brand-orange-dark text-white flex items-center justify-between overflow-hidden sticky top-0 z-[9999] select-none border-b border-white/10 shadow-[0_1px_0_rgba(0,0,0,0.08)]">
-      {/* Left 60% - Infinite Marquee */}
-      <div className="w-full md:w-[60%] h-full flex items-center relative overflow-hidden">
-        {/* Gradient edge masks */}
-        <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-brand-orange to-transparent z-10 pointer-events-none" />
-        <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-brand-orange to-transparent z-10 pointer-events-none" />
+    <div className="h-10 bg-gradient-to-r from-brand-orange via-brand-orange to-brand-orange-dark text-white flex items-center sticky top-0 z-[9999] select-none border-b border-white/10 shadow-[0_1px_0_rgba(0,0,0,0.08)] w-full">
+      <div className="mx-auto flex h-full w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        
+        {/* Left Section - Infinite Marquee */}
+        <div className="w-full sm:w-[60%] h-full flex items-center relative overflow-hidden">
+          {/* Gradient edge masks */}
+          <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-brand-orange to-transparent z-10 pointer-events-none" />
+          <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-brand-orange to-transparent z-10 pointer-events-none" />
 
-        <div className="w-full overflow-hidden flex items-center">
-          <div className="flex flex-row flex-nowrap shrink-0 animate-[marquee_25s_linear_infinite] hover:[animation-play-state:paused]">
-            {renderMarqueeContent()}
-            {renderMarqueeContent()}
+          <div className="w-full overflow-hidden flex items-center">
+            <div className="flex flex-row flex-nowrap shrink-0 animate-[marquee_30s_linear_infinite] hover:[animation-play-state:paused]">
+              {renderMarqueeContent()}
+              {renderMarqueeContent()}
+              {renderMarqueeContent()}
+              {renderMarqueeContent()}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Right 40% - Double Widget Zone */}
-      <div className="hidden md:flex w-[40%] h-full items-center text-white border-l border-white/15">
-        {/* Zone A: Live Data */}
-        <div className="w-1/2 h-full flex items-center justify-center gap-2 px-4 bg-black/15">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
-          </span>
-          <Users size={12} className="text-white" />
-          <span
-            className="font-body text-[12px] font-medium tracking-[0.5px] text-white"
-            suppressHydrationWarning
-          >
+        {/* Right Section - Double Widget Zone */}
+        <div className="hidden sm:flex w-[40%] h-full items-center text-white border-l border-white/15 shrink-0">
+          {/* Zone A: Live Data */}
+          <div className="w-1/2 h-full flex items-center justify-center gap-2 px-3 lg:px-4 bg-black/15">
+            <span className="relative flex h-2 w-2 shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+            </span>
+            <Users size={12} className="text-white shrink-0" />
             <span
-              className={`inline-block transition-all duration-300 ${
-                trend === "up"
-                  ? "text-[#4ADE80] font-bold scale-[1.03]"
-                  : trend === "down"
-                  ? "text-neutral-300"
-                  : "text-white"
-              }`}
+              className="font-body text-[11px] lg:text-[12px] font-medium tracking-[0.5px] text-white whitespace-nowrap"
+              suppressHydrationWarning
             >
-              {shoppersCount ?? "—"}
-            </span>{" "}
-            shopping now
-          </span>
+              <span
+                className={`inline-block transition-all duration-300 ${
+                  trend === "up"
+                    ? "text-[#4ADE80] font-bold scale-[1.03]"
+                    : trend === "down"
+                    ? "text-neutral-300"
+                    : "text-white"
+                }`}
+              >
+                {shoppersCount ?? "—"}
+              </span>{" "}
+              online
+            </span>
+          </div>
+
+          {/* Zone B: Join Deals CTA */}
+          <Link
+            href="/exclusive-deals"
+            className="group w-1/2 h-full flex items-center justify-center gap-1.5 px-3 lg:px-4 bg-black/25 hover:bg-black/40 border-l border-white/10 transition-colors duration-200 cursor-pointer text-decoration-none whitespace-nowrap"
+          >
+            <span className="font-body text-[11px] lg:text-[12px] font-semibold text-white tracking-wide">
+              Exclusive Deals
+            </span>
+            <ChevronRight
+              size={14}
+              className="text-white shrink-0 transition-transform duration-200 group-hover:translate-x-1"
+              strokeWidth={2.5}
+            />
+          </Link>
         </div>
 
-        {/* Zone B: Join Deals CTA */}
-        <Link
-          href="/exclusive-deals"
-          className="group w-1/2 h-full flex items-center justify-center gap-1.5 px-4 bg-black/25 hover:bg-black/40 border-l border-white/10 transition-colors duration-200 cursor-pointer text-decoration-none"
-        >
-          <span className="font-body text-[12px] font-semibold text-white tracking-wide">
-            Join Exclusive Deals
-          </span>
-          <ChevronRight
-            size={14}
-            className="text-white shrink-0 transition-transform duration-200 group-hover:translate-x-1"
-            strokeWidth={2.5}
-          />
-        </Link>
       </div>
     </div>
   );
