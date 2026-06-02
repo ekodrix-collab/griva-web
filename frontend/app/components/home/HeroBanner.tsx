@@ -31,34 +31,26 @@ export default function HeroBanner() {
 
   useEffect(() => {
     const timer = setInterval(() => {
-      goTo((current + 1) % slide.length);
+      if (busyRef.current) return;
+      busyRef.current = true;
+      setVisible(false);
+      setTimeout(() => {
+        setCurrent((prev) => (prev + 1) % slide.length);
+        setAnimKey((k) => k + 1);
+        setVisible(true);
+        busyRef.current = false;
+      }, 300);
     }, 4000);
 
     return () => clearInterval(timer);
-  }, [current]);
+  }, []); // stable: functional updates don't need current in deps
 
   const currentSlide = slide[current];
 
   return (
     <section className="w-full py-5">
 
-      <style>{`
-        @keyframes priceShake {
-          0%   { transform: scale(1) rotate(0deg); }
-          15%  { transform: scale(1.15) rotate(-3deg); }
-          30%  { transform: scale(1.2) rotate(3deg); }
-          45%  { transform: scale(1.15) rotate(-2deg); }
-          60%  { transform: scale(1.1) rotate(2deg); }
-          75%  { transform: scale(1.05) rotate(-1deg); }
-          100% { transform: scale(1) rotate(0deg); }
-        }
-        .price-shake {
-          display: inline-block;
-          animation: priceShake 0.6s ease-out forwards;
-        }
-      `}</style>
-
-      {/* ✅ Same wrapper as DealOfTheDaySection */}
+      {/* Same wrapper as DealOfTheDaySection */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
         <div

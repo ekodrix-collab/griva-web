@@ -2,16 +2,12 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import {
   Menu,
-  X,
   ShoppingCart,
-  User,
   Search,
   Headphones,
   Heart,
-  ChevronDown,
 } from "lucide-react";
 import { useCart } from "@/app/context/CartContext";
 import { useWishlist } from "@/app/context/WishlistContext";
@@ -21,16 +17,8 @@ import SearchDropdown from "./SearchDropdown";
 import MobileMenu from "./MobileMenu";
 import { AnimatePresence } from "framer-motion";
 
-// const navLinks = [
-//   { label: "Home", href: "/" },
-//   { label: "Shop", href: "/shop" },
-//   { label: "About", href: "/about" },
-//   { label: "Contact", href: "/contact" },
-//   { label: "FAQ", href: "/faq" },
-// ];
 
 export default function Navbar() {
-  const pathname = usePathname();
   const scrolled = useScrolled(10);
 
   const { state: cartState, openDrawer } = useCart();
@@ -64,7 +52,7 @@ export default function Navbar() {
   return (
     <header
       className={`sticky top-10 z-40 w-full border-b border-gray-100 bg-white transition-all duration-300 px-4 sm:px-6 lg:px-8 xl:px-10 ${
-        scrolled ? "py-2 shadow-md" : "py-4"
+        scrolled ? "py-0 shadow-md" : "py-0"
       }`}
     >
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8 gap-4">
@@ -74,24 +62,6 @@ export default function Navbar() {
             GR<span className="text-orange-500 font-extrabold">i</span>VA
           </h1>
         </Link>
-
-        {/* Desktop Navigation Links */}
-        {/* <nav className="hidden md:flex items-center gap-6">
-          {navLinks.map((link) => {
-            const isActive = pathname === link.href;
-            return (
-              <Link
-                key={link.label}
-                href={link.href}
-                className={`text-sm font-semibold transition-colors duration-200 hover:text-orange-500 ${
-                  isActive ? "text-orange-500 font-bold" : "text-gray-600"
-                }`}
-              >
-                {link.label}
-              </Link>
-            );
-          })}
-        </nav> */}
 
         {/* Search Bar - Desktop */}
         <div ref={searchRef} className="hidden lg:relative lg:flex flex-1 max-w-2xl items-center justify-center">
