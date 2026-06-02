@@ -8,10 +8,12 @@ import {
   Search,
   Headphones,
   Heart,
+  User,
 } from "lucide-react";
 import { useCart } from "@/app/context/CartContext";
 import { useWishlist } from "@/app/context/WishlistContext";
 import { useSearch } from "@/app/context/SearchContext";
+import { useUser } from "@/app/context/UserContext";
 import { useScrolled } from "@/app/hooks/useScrolled";
 import SearchDropdown from "./SearchDropdown";
 import MobileMenu from "./MobileMenu";
@@ -24,6 +26,7 @@ export default function Navbar() {
   const { state: cartState, openDrawer } = useCart();
   const { items: wishlistItems } = useWishlist();
   const { searchQuery, setSearchQuery, filters, setFilters } = useSearch();
+  const { state: userState } = useUser();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
@@ -153,6 +156,22 @@ export default function Navbar() {
               </p>
             </div>
           </button>
+
+          {/* User */}
+          <Link
+            href={userState.isLoggedIn ? "/account" : "/login"}
+            className="relative flex items-center gap-2 group cursor-pointer"
+          >
+            <div className="relative">
+              <User size={18} className="text-black group-hover:text-orange-500 transition-colors" />
+            </div>
+            <div className="text-left leading-tight">
+              <p className="text-[10px] text-gray-400">{userState.isLoggedIn ? "Account" : "Welcome"}</p>
+              <p className="text-xs font-bold text-black group-hover:text-orange-500 transition-colors truncate max-w-[80px]">
+                {userState.isLoggedIn ? userState.user?.name : "Sign In"}
+              </p>
+            </div>
+          </Link>
         </div>
 
         {/* Mobile Actions: Cart & Hamburger */}
@@ -194,6 +213,14 @@ export default function Navbar() {
               </span>
             )}
           </button>
+
+          {/* User Button (Mobile) */}
+          <Link
+            href={userState.isLoggedIn ? "/account" : "/login"}
+            className="p-2 text-gray-700 hover:text-orange-500 transition-colors rounded-lg"
+          >
+            <User size={20} />
+          </Link>
 
           {/* Hamburger Menu Button */}
           <button
