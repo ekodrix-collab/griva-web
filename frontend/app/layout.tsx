@@ -7,6 +7,7 @@ import Footer from "@/app/components/footer/Footer";
 import { Providers } from "@/app/context/Providers";
 import CartDrawer from "@/app/components/cart/CartDrawer";
 import NotificationBubble from "./components/common/NotificationBubble";
+import BackToTop from "@/app/components/common/BackToTop";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -44,6 +45,7 @@ export default function RootLayout({
           <Footer />
           <CartDrawer />
           <NotificationBubble />
+          <BackToTop />
         </Providers>
       </body>
     </html>

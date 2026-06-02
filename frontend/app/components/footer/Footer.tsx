@@ -26,7 +26,6 @@ const footerLinks: FooterLinkGroup[] = [
     title: "Company",
     links: [
       { label: "About Us", href: "/about" },
-      { label: "Careers", href: "/about" },
       { label: "Contact Us", href: "/contact" },
       { label: "FAQ", href: "/faq" },
     ],
