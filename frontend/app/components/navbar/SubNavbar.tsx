@@ -65,7 +65,7 @@ export default function SubNavbar() {
   const { items: wishlistItems } = useWishlist();
 
   return (
-    <div className="w-full border-y border-gray-200 bg-white px-10">
+    <div className="hidden lg:block w-full border-y border-gray-200 bg-white px-4 sm:px-6 lg:px-8 xl:px-10">
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Left Side */}
         <div className="flex items-center">
@@ -143,7 +143,7 @@ export default function SubNavbar() {
           {/* Deal */}
           <Link href="/shop" className="flex items-center gap-2 group">
             <span className="text-sm font-semibold text-black group-hover:text-orange-500 transition-colors">
-              Today's Deal
+              Today&apos;s Deal
             </span>
             <span className="rounded bg-orange-500 px-1.5 py-[2px] text-[10px] font-bold uppercase text-white animate-bounce">
               Hot

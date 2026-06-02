@@ -31,16 +31,24 @@ export default function HeroBanner() {
 
   useEffect(() => {
     const timer = setInterval(() => {
-      goTo((current + 1) % slide.length);
+      if (busyRef.current) return;
+      busyRef.current = true;
+      setVisible(false);
+      setTimeout(() => {
+        setCurrent((prev) => (prev + 1) % slide.length);
+        setAnimKey((k) => k + 1);
+        setVisible(true);
+        busyRef.current = false;
+      }, 300);
     }, 4000);
 
     return () => clearInterval(timer);
-  }, [current]);
+  }, []); // stable: functional updates don't need current in deps
 
   const currentSlide = slide[current];
 
   return (
-    <section className="w-full py-5">
+    <section className="w-full lg:py-5">
 
       <style>{`
         @keyframes priceShake {
@@ -59,10 +67,10 @@ export default function HeroBanner() {
       `}</style>
 
       {/* ✅ Same wrapper as DealOfTheDaySection */}
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="lg:mx-auto lg:max-w-7xl lg:px-8">
 
         <div
-          className="relative overflow-hidden rounded-[32px] transition-colors duration-700"
+          className="relative overflow-hidden lg:rounded-[32px] transition-colors duration-700"
           style={{ backgroundColor: currentSlide.bg }}
         >
           {/* Background Glow */}
@@ -70,12 +78,12 @@ export default function HeroBanner() {
           <div className="absolute bottom-0 right-0 h-72 w-72 rounded-full bg-indigo-500/10 blur-3xl" />
 
           {/* Fixed height flex row */}
-          <div className="relative z-10 flex h-[480px] flex-col lg:flex-row">
+          <div className="relative z-10 flex flex-col lg:flex-row lg:h-[480px]">
 
             {/* Left Content — ANIMATED */}
             <div
               key={`content-${animKey}`}
-              className={`flex w-full flex-col justify-center px-6 py-10 sm:px-10 lg:w-1/2 lg:px-20
+              className={`flex w-full flex-col justify-center px-6 py-8 sm:px-10 lg:w-1/2 lg:px-20 lg:py-10
               transition-all duration-500 ease-out
               ${
                 visible
@@ -91,38 +99,25 @@ export default function HeroBanner() {
               </div>
 
               {/* Title */}
-              <h1 className="max-w-xl whitespace-pre-line text-4xl font-black leading-tight text-white sm:text-5xl">
+              <h1 className="max-w-xl text-2xl font-black text-white sm:text-3xl lg:text-4xl">
                 {currentSlide.title}
               </h1>
 
               {/* Subtitle */}
-              <p className="mt-5 max-w-lg text-sm leading-7 text-gray-300 sm:text-base">
+              <p className=" max-w-lg text-xs  text-gray-300 sm:text-sm lg:text-base">
                 {currentSlide.subtitle}
               </p>
 
-              {/* Feature Tags */}
-              <div className="mt-6 flex flex-wrap gap-3">
-                <div className="rounded-full border border-white/15 px-4 py-2 text-xs font-medium text-gray-200">
-                  Premium Quality
-                </div>
-                <div className="rounded-full border border-white/15 px-4 py-2 text-xs font-medium text-gray-200">
-                  Fast Delivery
-                </div>
-                <div className="rounded-full border border-white/15 px-4 py-2 text-xs font-medium text-gray-200">
-                  Best Price
-                </div>
-              </div>
-
               {/* Price */}
-              <div className="mt-8 flex items-end gap-3">
-                <span className="text-lg font-medium text-gray-300">From</span>
+              <div className=" flex items-end gap-2 lg:gap-3">
+                <span className="text-sm font-medium text-gray-300 lg:text-lg">From</span>
                 <span
                   key={`price-${animKey}`}
-                  className="price-shake text-4xl font-black text-orange-400"
+                  className="price-shake text-2xl font-black text-orange-400 lg:text-4xl"
                 >
                   {currentSlide.price}
                 </span>
-                <span className="mb-1 text-lg text-gray-400 line-through">$599</span>
+                <span className="mb-0.5 text-sm text-gray-400 line-through lg:mb-1 lg:text-lg">$599</span>
               </div>
 
               {/* Buttons */}
@@ -134,19 +129,13 @@ export default function HeroBanner() {
                   Shop Now
                   <ArrowRight size={16} />
                 </Link>
-                <Link
-                  href="/products"
-                  className="flex h-12 items-center justify-center rounded-xl border border-white/15 px-7 text-[12px] font-bold uppercase tracking-wide text-white transition-all duration-300 hover:bg-white/10"
-                >
-                  Explore More
-                </Link>
               </div>
             </div>
 
-            {/* Right Image — ANIMATED, fixed size */}
+            {/* Right Image — ANIMATED, visible on all screens */}
             <div
               key={`image-${animKey}`}
-              className={`relative hidden flex-1 items-center justify-center lg:flex
+              className={`relative flex flex-1 items-center justify-center py-6 lg:py-0
               transition-all duration-500 ease-out
               ${
                 visible
@@ -155,13 +144,14 @@ export default function HeroBanner() {
               }`}
             >
               {/* Glow */}
-              <div className="absolute h-72 w-72 rounded-full bg-orange-500/20 blur-3xl" />
+              <div className="absolute h-52 w-52 lg:h-72 lg:w-72 rounded-full bg-orange-500/20 blur-3xl" />
 
-              <div className="relative h-[380px] w-[380px] flex-shrink-0">
+              <div className="relative h-[220px] w-[220px] sm:h-[280px] sm:w-[280px] lg:h-[380px] lg:w-[380px] flex-shrink-0">
                 <Image
                   src={currentSlide.image}
                   alt={currentSlide.title}
                   fill
+                  sizes="(max-width: 640px) 220px, (max-width: 1024px) 280px, 380px"
                   priority
                   className="object-contain drop-shadow-2xl"
                 />
@@ -171,7 +161,7 @@ export default function HeroBanner() {
           </div>
 
           {/* Extra Info — FIXED, never animates, centered */}
-          <div className="relative z-10 grid grid-cols-3 place-items-center gap-5 border-t border-white/10 px-6 pb-8 pt-6 sm:px-10 lg:px-20 pb-15">
+          <div className="relative z-10 hidden lg:grid grid-cols-3 place-items-center gap-5 border-t border-white/10 px-6 pb-8 pt-6 sm:px-10 lg:px-20">
             <div className="flex items-center gap-3">
               <Truck className="text-orange-400" size={20} />
               <div>
@@ -198,15 +188,15 @@ export default function HeroBanner() {
           </div>
 
           {/* Bottom Dots */}
-          <div className="absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2">
+          <div className="absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2">
             {slide.map((_, i) => (
               <button
                 key={i}
                 onClick={() => goTo(i)}
                 className={`rounded-full transition-all duration-300 ${
                   i === current
-                    ? "h-2.5 w-7 bg-orange-500"
-                    : "h-2.5 w-2.5 bg-white/50 hover:bg-white"
+                    ? "h-2 w-5 bg-orange-500"
+                    : "h-2 w-2.5 bg-white/50 hover:bg-white"
                 }`}
               />
             ))}

@@ -164,7 +164,7 @@ export interface SlideItem {
   description: string;
   rating: number;
   mainImage: string | StaticImageData;
-  thumbs: (string | StaticImageData)[];
+  thumbs: string[] | StaticImageData[];
 }
 
 // ─────────────────────────────────────────────────────────

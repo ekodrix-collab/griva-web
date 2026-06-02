@@ -2,9 +2,12 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/app/components/navbar/Navbar";
+import AnnouncementBar from "@/app/components/navbar/AnnouncementBar";
 import Footer from "@/app/components/footer/Footer";
 import { Providers } from "@/app/context/Providers";
 import CartDrawer from "@/app/components/cart/CartDrawer";
+import NotificationBubble from "./components/common/NotificationBubble";
+import BackToTop from "@/app/components/common/BackToTop";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,15 +33,19 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-white text-gray-900" cz-shortcut-listen="true">
+      <body className="min-h-full flex flex-col bg-white text-gray-900" suppressHydrationWarning>
         <Providers>
+          <AnnouncementBar />
           <Navbar />
           <main className="flex-grow">
             {children}
           </main>
           <Footer />
           <CartDrawer />
+          <NotificationBubble />
+          <BackToTop />
         </Providers>
       </body>
     </html>

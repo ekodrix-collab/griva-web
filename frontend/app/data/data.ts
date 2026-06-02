@@ -32,6 +32,7 @@ import nbg from "../../public/images/nbg.png";
 import headphoneNew from "../../public/images/headphonenew.png";
 import gamejoysticnew from "../../public/images/gamejoysticnew.png";
 import airbudsnew from "../../public/images/airbudsnew.png";
+import headphone123 from "../../public/images/HeadphoneNew@.png";
 
 // ───────────────────────────────────────────────────────── 
 // Products
@@ -496,7 +497,7 @@ const slides: SlideItem[] = [
       "Package includes Xbox Series S 1TB console, 1 Xbox Wireless Controller, High Speed HDMI cable.",
     rating: 5,
     mainImage: gamejoysticnew,
-    thumbs: [gamejoysticnew, gamejoysticnew, gamejoysticnew, gamejoysticnew],
+    thumbs: [gamejoysticnew, macb, gamejoysticnew, gamejoysticnew],
   },
   {
     id: 2,

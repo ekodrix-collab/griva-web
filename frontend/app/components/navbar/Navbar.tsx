@@ -2,16 +2,12 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import {
   Menu,
-  X,
   ShoppingCart,
-  User,
   Search,
   Headphones,
   Heart,
-  ChevronDown,
 } from "lucide-react";
 import { useCart } from "@/app/context/CartContext";
 import { useWishlist } from "@/app/context/WishlistContext";
@@ -21,16 +17,8 @@ import SearchDropdown from "./SearchDropdown";
 import MobileMenu from "./MobileMenu";
 import { AnimatePresence } from "framer-motion";
 
-// const navLinks = [
-//   { label: "Home", href: "/" },
-//   { label: "Shop", href: "/shop" },
-//   { label: "About", href: "/about" },
-//   { label: "Contact", href: "/contact" },
-//   { label: "FAQ", href: "/faq" },
-// ];
 
 export default function Navbar() {
-  const pathname = usePathname();
   const scrolled = useScrolled(10);
 
   const { state: cartState, openDrawer } = useCart();
@@ -63,9 +51,8 @@ export default function Navbar() {
 
   return (
     <header
-      className={`sticky top-0 z-40 w-full border-b border-gray-100 bg-white transition-all duration-300 px-10 ${
-        scrolled ? "py-2 shadow-md" : "py-4"
-      }`}
+      className={`sticky top-10 w-full border-b border-gray-100 bg-white transition-all duration-300 px-4 sm:px-6 lg:px-8 xl:px-10 ${mobileMenuOpen ? "z-[10001]" : "z-40"
+        } ${scrolled ? "py-2 shadow-md" : "py-4"}`}
     >
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8 gap-4">
         {/* Logo */}
@@ -75,40 +62,40 @@ export default function Navbar() {
           </h1>
         </Link>
 
-        {/* Desktop Navigation Links */}
-        {/* <nav className="hidden md:flex items-center gap-6">
-          {navLinks.map((link) => {
-            const isActive = pathname === link.href;
-            return (
-              <Link
-                key={link.label}
-                href={link.href}
-                className={`text-sm font-semibold transition-colors duration-200 hover:text-orange-500 ${
-                  isActive ? "text-orange-500 font-bold" : "text-gray-600"
-                }`}
-              >
-                {link.label}
-              </Link>
-            );
-          })}
-        </nav> */}
-
         {/* Search Bar - Desktop */}
         <div ref={searchRef} className="hidden lg:relative lg:flex flex-1 max-w-2xl items-center justify-center">
           <div className="flex h-10 w-full overflow-hidden rounded-md border border-orange-500 bg-white shadow-sm focus-within:ring-2 focus-within:ring-orange-200">
             {/* Category Dropdown */}
-            <select
-              className="px-3 text-xs font-semibold text-gray-700 outline-none border-r border-gray-200 cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors"
-              value={filters.category ? filters.category.charAt(0).toUpperCase() + filters.category.slice(1) : "All Categories"}
-              onChange={handleCategoryChange}
-            >
-              <option>All Categories</option>
-              <option>Electronics</option>
-              <option>Fashion</option>
-              <option>Accessories</option>
-              <option>Gaming</option>
-              <option>Mobiles</option>
-            </select>
+            <div className="border-r border-gray-200 pr-4 bg-gray-50">
+              <select
+                className="
+      pl-5
+      pr-8
+      h-full
+      text-xs
+      font-semibold
+      text-gray-700
+      outline-none
+      cursor-pointer
+      bg-transparent
+      hover:bg-gray-100
+      transition-colors
+    "
+                value={
+                  filters.category
+                    ? filters.category.charAt(0).toUpperCase() + filters.category.slice(1)
+                    : "All Categories"
+                }
+                onChange={handleCategoryChange}
+              >
+                <option>All Categories</option>
+                <option>Electronics</option>
+                <option>Fashion</option>
+                <option>Accessories</option>
+                <option>Gaming</option>
+                <option>Mobiles</option>
+              </select>
+            </div>
 
             {/* Input */}
             <div className="flex flex-1 items-center px-3 gap-2">

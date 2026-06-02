@@ -107,8 +107,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     try {
       const stored = localStorage.getItem("griva-cart");
       if (stored) {
-        const items: CartItem[] = JSON.parse(stored);
-        items.forEach((item) => dispatch({ type: "ADD", payload: item }));
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((item) => dispatch({ type: "ADD", payload: item }));
+        }
       }
     } catch {
       // ignore

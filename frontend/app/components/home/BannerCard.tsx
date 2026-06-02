@@ -12,6 +12,7 @@ function BannerCard({banner}: {banner: BannerItem}) {
         src={banner.image}
         alt={banner.title}
         fill
+        sizes="(max-width: 768px) 100vw, 50vw"
         priority
         className="object-cover transition duration-500 group-hover:scale-105"
       />

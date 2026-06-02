@@ -35,7 +35,10 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     try {
       const stored = localStorage.getItem("griva-wishlist");
       if (stored) {
-        setItems(JSON.parse(stored));
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setItems(parsed);
+        }
       }
     } catch {
       // ignore
