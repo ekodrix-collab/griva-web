@@ -31,11 +31,19 @@ export default function HeroBanner() {
 
   useEffect(() => {
     const timer = setInterval(() => {
-      goTo((current + 1) % slide.length);
+      if (busyRef.current) return;
+      busyRef.current = true;
+      setVisible(false);
+      setTimeout(() => {
+        setCurrent((prev) => (prev + 1) % slide.length);
+        setAnimKey((k) => k + 1);
+        setVisible(true);
+        busyRef.current = false;
+      }, 300);
     }, 4000);
 
     return () => clearInterval(timer);
-  }, [current]);
+  }, []); // stable: functional updates don't need current in deps
 
   const currentSlide = slide[current];
 

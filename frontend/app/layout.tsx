@@ -6,6 +6,7 @@ import AnnouncementBar from "@/app/components/navbar/AnnouncementBar";
 import Footer from "@/app/components/footer/Footer";
 import { Providers } from "@/app/context/Providers";
 import CartDrawer from "@/app/components/cart/CartDrawer";
+import NotificationBubble from "./components/common/NotificationBubble";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,6 +32,7 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col bg-white text-gray-900" suppressHydrationWarning>
         <Providers>
@@ -41,6 +43,7 @@ export default function RootLayout({
           </main>
           <Footer />
           <CartDrawer />
+          <NotificationBubble />
         </Providers>
       </body>
     </html>
