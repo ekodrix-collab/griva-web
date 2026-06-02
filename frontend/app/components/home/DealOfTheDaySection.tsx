@@ -17,12 +17,15 @@ export default function DealOfTheDaySection() {
   const [current, setCurrent] = useState<number>(0);
   const [activeImage, setActiveImage] = useState<string | StaticImageData | null>(null);
   const [isPaused, setIsPaused] = useState(false); // New state for pausing
+  const [direction, setDirection] = useState<'next' | 'prev'>('next');
 
   const prev = (): void => {
+    setDirection('prev');
     setCurrent((c) => (c - 1 + slides.length) % slides.length);
   };
 
   const next = (): void => {
+    setDirection('next');
     setCurrent((c) => (c + 1) % slides.length);
   };
 
@@ -104,9 +107,9 @@ export default function DealOfTheDaySection() {
           <AnimatePresence mode="wait">
             <motion.div
               key={current}
-              initial={{ opacity: 0, x: 20 }}
+              initial={{ opacity: 0, x: direction === "next" ? 40 : -40 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
+              exit={{ opacity: 0, x: direction === "next" ? -40 : 40 }}
               transition={{ duration: 0.3 }}
               
               // SWIPE LOGIC START
