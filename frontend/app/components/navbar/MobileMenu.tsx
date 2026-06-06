@@ -30,7 +30,7 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
   if (!isOpen) return null;
 
   return (
-    <>
+    <div>
       {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
@@ -81,9 +81,8 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
             >
               <span>Categories</span>
               <ChevronDown
-                className={`h-4 w-4 transition-transform duration-200 ${
-                  categoriesOpen ? "rotate-180 text-orange-500" : "text-gray-400"
-                }`}
+                className={`h-4 w-4 transition-transform duration-200 ${categoriesOpen ? "rotate-180 text-orange-500" : "text-gray-400"
+                  }`}
               />
             </button>
             {categoriesOpen && (
@@ -138,6 +137,6 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
           </div>
         </div>
       </motion.div>
-    </>
+    </div>
   );
 }

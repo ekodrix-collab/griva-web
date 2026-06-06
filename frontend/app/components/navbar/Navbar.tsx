@@ -58,11 +58,11 @@ export default function Navbar() {
   };
 
   return (
-    <>
+    <div>
       <header
-        className={`sticky top-[20px] sm:top-10 w-full border-b border-gray-100 bg-white transition-all duration-300 sm:px-6 lg:px-8 xl:px-10 ${mobileMenuOpen ? "z-[10001]" : "z-40"
-          } ${scrolled ? "py-2 sm:shadow-md shadow-none" : "py-2"}`}
-       
+        className={`w-full border-b border-gray-100 bg-white transition-all duration-300 sm:px-6 lg:px-8 xl:px-10 ${mobileMenuOpen ? "z-[10001]" : "z-40"
+          } ${scrolled ? "fixed top-[28px] sm:top-10 py-2 sm:shadow-md shadow-none" : "sticky top-[28px] sm:top-10 py-2"}`}
+
       >
         {/* Desktop and Tablet Navbar Content (Visible on screens >= 640px) */}
         <div className="hidden sm:flex mx-auto h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8 gap-4 w-full">
@@ -379,6 +379,6 @@ export default function Navbar() {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
