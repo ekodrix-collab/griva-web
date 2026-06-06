@@ -68,7 +68,7 @@ export default function AdminDashboard() {
   const [newDesc, setNewDesc] = useState("");
   const [newBadge, setNewBadge] = useState("");
   const [newMainImage, setNewMainImage] = useState("https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=800&auto=format&fit=crop");
-  
+
   // Specs and Colors
   const [specsList, setSpecsList] = useState<{ label: string; value: string }[]>([]);
   const [newSpecLabel, setNewSpecLabel] = useState("");
@@ -208,7 +208,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 flex font-sans antialiased selection:bg-orange-500 selection:text-white">
-      
+
       {/* Sidebar Panel */}
       <aside className="w-64 bg-gray-900/60 border-r border-gray-800 backdrop-blur-xl flex flex-col justify-between p-6 shrink-0 h-screen sticky top-0">
         <div>
@@ -225,11 +225,10 @@ export default function AdminDashboard() {
           <nav className="space-y-1.5">
             <button
               onClick={() => setActiveTab("overview")}
-              className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
-                activeTab === "overview"
-                  ? "bg-gradient-to-r from-orange-500/20 to-amber-500/10 text-orange-400 border-l-4 border-orange-500"
-                  : "text-gray-400 hover:text-gray-200 hover:bg-gray-800/40"
-              }`}
+              className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${activeTab === "overview"
+                ? "bg-gradient-to-r from-orange-500/20 to-amber-500/10 text-orange-400 border-l-4 border-orange-500"
+                : "text-gray-400 hover:text-gray-200 hover:bg-gray-800/40"
+                }`}
             >
               <LayoutDashboard className="h-4.5 w-4.5" />
               Overview & Campaigns
@@ -237,11 +236,10 @@ export default function AdminDashboard() {
 
             <button
               onClick={() => setActiveTab("products")}
-              className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
-                activeTab === "products"
-                  ? "bg-gradient-to-r from-orange-500/20 to-amber-500/10 text-orange-400 border-l-4 border-orange-500"
-                  : "text-gray-400 hover:text-gray-200 hover:bg-gray-800/40"
-              }`}
+              className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${activeTab === "products"
+                ? "bg-gradient-to-r from-orange-500/20 to-amber-500/10 text-orange-400 border-l-4 border-orange-500"
+                : "text-gray-400 hover:text-gray-200 hover:bg-gray-800/40"
+                }`}
             >
               <Package className="h-4.5 w-4.5" />
               Manage Products
@@ -249,11 +247,10 @@ export default function AdminDashboard() {
 
             <button
               onClick={() => setActiveTab("banners")}
-              className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
-                activeTab === "banners"
-                  ? "bg-gradient-to-r from-orange-500/20 to-amber-500/10 text-orange-400 border-l-4 border-orange-500"
-                  : "text-gray-400 hover:text-gray-200 hover:bg-gray-800/40"
-              }`}
+              className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${activeTab === "banners"
+                ? "bg-gradient-to-r from-orange-500/20 to-amber-500/10 text-orange-400 border-l-4 border-orange-500"
+                : "text-gray-400 hover:text-gray-200 hover:bg-gray-800/40"
+                }`}
             >
               <Sliders className="h-4.5 w-4.5" />
               Banners & Layouts
@@ -261,11 +258,10 @@ export default function AdminDashboard() {
 
             <button
               onClick={() => setActiveTab("subscribers")}
-              className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
-                activeTab === "subscribers"
-                  ? "bg-gradient-to-r from-orange-500/20 to-amber-500/10 text-orange-400 border-l-4 border-orange-500"
-                  : "text-gray-400 hover:text-gray-200 hover:bg-gray-800/40"
-              }`}
+              className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${activeTab === "subscribers"
+                ? "bg-gradient-to-r from-orange-500/20 to-amber-500/10 text-orange-400 border-l-4 border-orange-500"
+                : "text-gray-400 hover:text-gray-200 hover:bg-gray-800/40"
+                }`}
             >
               <Users className="h-4.5 w-4.5" />
               Subscribers Hub
@@ -312,10 +308,10 @@ export default function AdminDashboard() {
               ───────────────────────────────────────────────────────── */}
           {activeTab === "overview" && (
             <div className="space-y-8 animate-in fade-in-50 duration-300">
-              
+
               {/* Campaign Switches (Friday / Midnight Sales) */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                
+
                 {/* Announcement Bar Toggle */}
                 <div className="bg-gray-900/40 border border-gray-800 p-6 rounded-2xl flex flex-col justify-between hover:border-gray-700 transition-colors">
                   <div>
@@ -337,15 +333,15 @@ export default function AdminDashboard() {
                     className="flex items-center gap-2 mt-6 py-2.5 px-4 rounded-xl text-xs font-bold w-full justify-center border transition-all duration-300 cursor-pointer bg-gray-900 border-gray-800 hover:bg-gray-800 text-white"
                   >
                     {announcementBarEnabled ? (
-                      <>
+                      <div>
                         <ToggleRight className="h-5 w-5 text-orange-500" />
                         Enabled (Showing)
-                      </>
+                      </div>
                     ) : (
-                      <>
+                      <div>
                         <ToggleLeft className="h-5 w-5 text-gray-500" />
                         Disabled (Hidden)
-                      </>
+                      </div>
                     )}
                   </button>
                 </div>
@@ -371,15 +367,15 @@ export default function AdminDashboard() {
                     className="flex items-center gap-2 mt-6 py-2.5 px-4 rounded-xl text-xs font-bold w-full justify-center border transition-all duration-300 cursor-pointer bg-gray-900 border-gray-800 hover:bg-gray-800 text-white"
                   >
                     {fridaySaleEnabled ? (
-                      <>
+                      <div>
                         <ToggleRight className="h-5 w-5 text-green-500" />
                         Active (26% Off Applied)
-                      </>
+                      </div>
                     ) : (
-                      <>
+                      <div>
                         <ToggleLeft className="h-5 w-5 text-gray-500" />
                         Inactive
-                      </>
+                      </div>
                     )}
                   </button>
                 </div>
@@ -405,15 +401,15 @@ export default function AdminDashboard() {
                     className="flex items-center gap-2 mt-6 py-2.5 px-4 rounded-xl text-xs font-bold w-full justify-center border transition-all duration-300 cursor-pointer bg-gray-900 border-gray-800 hover:bg-gray-800 text-white"
                   >
                     {midnightSaleEnabled ? (
-                      <>
+                      <div>
                         <ToggleRight className="h-5 w-5 text-red-500" />
                         Active (75% Off Applied)
-                      </>
+                      </div>
                     ) : (
-                      <>
+                      <div>
                         <ToggleLeft className="h-5 w-5 text-gray-500" />
                         Inactive
-                      </>
+                      </div>
                     )}
                   </button>
                 </div>
@@ -429,19 +425,18 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-                  
+
                   {/* Left Column: Homepage schema */}
                   <div className="lg:col-span-7 space-y-3 bg-gray-950 p-6 rounded-2xl border border-gray-850">
                     <span className="text-[9px] font-bold text-gray-600 uppercase tracking-widest block text-center mb-3">GriVA Storefront Homepage Layout</span>
-                    
+
                     {/* Schema Element: Announcement Bar */}
                     <div
                       onMouseEnter={() => setHighlightedSchemaSection("announcement")}
                       onMouseLeave={() => setHighlightedSchemaSection(null)}
                       onClick={() => setActiveTab("overview")}
-                      className={`py-1.5 px-3 rounded text-[9px] font-bold text-center border cursor-pointer transition-all duration-300 ${
-                        announcementBarEnabled ? "bg-orange-500/10 border-orange-500/40 text-orange-400" : "bg-gray-900 border-gray-850 text-gray-600"
-                      } ${highlightedSchemaSection === "announcement" ? "scale-[1.02] ring-2 ring-orange-500" : ""}`}
+                      className={`py-1.5 px-3 rounded text-[9px] font-bold text-center border cursor-pointer transition-all duration-300 ${announcementBarEnabled ? "bg-orange-500/10 border-orange-500/40 text-orange-400" : "bg-gray-900 border-gray-850 text-gray-600"
+                        } ${highlightedSchemaSection === "announcement" ? "scale-[1.02] ring-2 ring-orange-500" : ""}`}
                     >
                       Top Announcement Bar {announcementBarEnabled ? "(ACTIVE)" : "(DISABLED)"}
                     </div>
@@ -456,9 +451,8 @@ export default function AdminDashboard() {
                       onMouseEnter={() => setHighlightedSchemaSection("hero")}
                       onMouseLeave={() => setHighlightedSchemaSection(null)}
                       onClick={() => setActiveTab("banners")}
-                      className={`py-8 px-3 rounded text-[10px] font-black text-center border cursor-pointer transition-all duration-300 ${
-                        highlightedSchemaSection === "hero" ? "bg-orange-500/20 border-orange-500 text-orange-400 scale-[1.01]" : "bg-gray-900/60 border-gray-800 text-gray-400"
-                      }`}
+                      className={`py-8 px-3 rounded text-[10px] font-black text-center border cursor-pointer transition-all duration-300 ${highlightedSchemaSection === "hero" ? "bg-orange-500/20 border-orange-500 text-orange-400 scale-[1.01]" : "bg-gray-900/60 border-gray-800 text-gray-400"
+                        }`}
                     >
                       Hero Promo Carousel Slides (Manage {slidesList.length} Slides)
                     </div>
@@ -468,9 +462,8 @@ export default function AdminDashboard() {
                       onMouseEnter={() => setHighlightedSchemaSection("categories")}
                       onMouseLeave={() => setHighlightedSchemaSection(null)}
                       onClick={() => setActiveTab("banners")}
-                      className={`py-3.5 px-3 rounded text-[9px] font-bold text-center border cursor-pointer transition-all duration-300 ${
-                        highlightedSchemaSection === "categories" ? "bg-orange-500/20 border-orange-500 text-orange-400 scale-[1.01]" : "bg-gray-900/60 border-gray-800 text-gray-400"
-                      }`}
+                      className={`py-3.5 px-3 rounded text-[9px] font-bold text-center border cursor-pointer transition-all duration-300 ${highlightedSchemaSection === "categories" ? "bg-orange-500/20 border-orange-500 text-orange-400 scale-[1.01]" : "bg-gray-900/60 border-gray-800 text-gray-400"
+                        }`}
                     >
                       Category Quick Nav Banners (Manage {categoriesList.length} Categories)
                     </div>
@@ -480,16 +473,14 @@ export default function AdminDashboard() {
                       onMouseEnter={() => setHighlightedSchemaSection("offers")}
                       onMouseLeave={() => setHighlightedSchemaSection(null)}
                       onClick={() => setActiveTab("banners")}
-                      className={`grid grid-cols-4 gap-2 text-center text-[8px] font-bold cursor-pointer transition-all duration-300 ${
-                        highlightedSchemaSection === "offers" ? "scale-[1.01]" : ""
-                      }`}
+                      className={`grid grid-cols-4 gap-2 text-center text-[8px] font-bold cursor-pointer transition-all duration-300 ${highlightedSchemaSection === "offers" ? "scale-[1.01]" : ""
+                        }`}
                     >
                       {offersList.map((o) => (
                         <div
                           key={o.id}
-                          className={`p-2.5 border rounded ${
-                            o.badge === "DISABLED" ? "bg-gray-900 border-gray-850 text-gray-600" : "bg-orange-500/10 border-orange-500/30 text-orange-400"
-                          } ${highlightedSchemaSection === "offers" ? "border-orange-500" : ""}`}
+                          className={`p-2.5 border rounded ${o.badge === "DISABLED" ? "bg-gray-900 border-gray-850 text-gray-600" : "bg-orange-500/10 border-orange-500/30 text-orange-400"
+                            } ${highlightedSchemaSection === "offers" ? "border-orange-500" : ""}`}
                         >
                           {o.title}
                         </div>
@@ -501,9 +492,8 @@ export default function AdminDashboard() {
                       onMouseEnter={() => setHighlightedSchemaSection("products")}
                       onMouseLeave={() => setHighlightedSchemaSection(null)}
                       onClick={() => setActiveTab("products")}
-                      className={`py-6 px-3 rounded text-[10px] font-black text-center border cursor-pointer transition-all duration-300 ${
-                        highlightedSchemaSection === "products" ? "bg-orange-500/20 border-orange-500 text-orange-400 scale-[1.01]" : "bg-gray-900/60 border-gray-800 text-gray-400"
-                      }`}
+                      className={`py-6 px-3 rounded text-[10px] font-black text-center border cursor-pointer transition-all duration-300 ${highlightedSchemaSection === "products" ? "bg-orange-500/20 border-orange-500 text-orange-400 scale-[1.01]" : "bg-gray-900/60 border-gray-800 text-gray-400"
+                        }`}
                     >
                       Catalog Product Grids (Filterable Category Shop views)
                     </div>
@@ -513,7 +503,7 @@ export default function AdminDashboard() {
                   <div className="lg:col-span-5 space-y-4">
                     <div className="p-4 bg-gray-950/40 border border-gray-850 rounded-xl">
                       <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Selected Component Controller</span>
-                      
+
                       {highlightedSchemaSection === null && (
                         <p className="text-xs text-gray-400 mt-2">Hover over the storefront layout schema components to inspect mapping.</p>
                       )}
@@ -715,7 +705,7 @@ export default function AdminDashboard() {
               ───────────────────────────────────────────────────────── */}
           {activeTab === "banners" && (
             <div className="space-y-10 animate-in fade-in-50 duration-300">
-              
+
               {/* Section A: Hero Slideshow Carousel Banners */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between pb-3 border-b border-gray-850">
@@ -734,9 +724,8 @@ export default function AdminDashboard() {
                     return (
                       <div
                         key={index}
-                        className={`rounded-2xl border border-gray-800 overflow-hidden bg-gray-900/30 flex flex-col justify-between transition-opacity duration-300 ${
-                          isSlideDisabled ? "opacity-45" : "opacity-100"
-                        }`}
+                        className={`rounded-2xl border border-gray-800 overflow-hidden bg-gray-900/30 flex flex-col justify-between transition-opacity duration-300 ${isSlideDisabled ? "opacity-45" : "opacity-100"
+                          }`}
                       >
                         <div
                           className="h-36 p-5 flex flex-col justify-between relative"
@@ -824,9 +813,8 @@ export default function AdminDashboard() {
                     return (
                       <div
                         key={offer.id}
-                        className={`p-5 rounded-2xl border border-gray-800 bg-gray-900/30 flex flex-col justify-between transition-opacity duration-300 ${
-                          isOfferDisabled ? "opacity-45" : "opacity-100"
-                        }`}
+                        className={`p-5 rounded-2xl border border-gray-800 bg-gray-900/30 flex flex-col justify-between transition-opacity duration-300 ${isOfferDisabled ? "opacity-45" : "opacity-100"
+                          }`}
                       >
                         <div>
                           <div className="flex items-center justify-between">
@@ -845,15 +833,15 @@ export default function AdminDashboard() {
                             className="flex items-center gap-1.5 text-[10px] font-bold text-gray-300 hover:text-white transition-colors cursor-pointer"
                           >
                             {isOfferDisabled ? (
-                              <>
+                              <div>
                                 <ToggleLeft className="h-5 w-5 text-gray-500" />
                                 Disabled
-                              </>
+                              </div>
                             ) : (
-                              <>
+                              <div>
                                 <ToggleRight className="h-5 w-5 text-orange-500" />
                                 Active
-                              </>
+                              </div>
                             )}
                           </button>
                           <button
@@ -963,22 +951,22 @@ export default function AdminDashboard() {
                       className="w-full flex items-center justify-center gap-2 py-3 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-800 disabled:text-gray-500 text-xs font-bold text-white rounded-xl transition-all cursor-pointer shadow-lg"
                     >
                       {broadcastStatus === "idle" && (
-                        <>
+                        <div>
                           <Send className="h-4 w-4" />
                           Send Broadcast to {subscribersList.length} Emails
-                        </>
+                        </div>
                       )}
                       {broadcastStatus === "sending" && (
-                        <>
+                        <div>
                           <RefreshCw className="h-4 w-4 animate-spin" />
                           Sending Emails...
-                        </>
+                        </div>
                       )}
                       {broadcastStatus === "sent" && (
-                        <>
+                        <div>
                           <Sparkles className="h-4 w-4 text-green-400" />
                           Broadcast Dispatched Successfully!
-                        </>
+                        </div>
                       )}
                     </button>
                   </form>

@@ -124,11 +124,10 @@ export default function ShopPage({ searchParams }: ShopPageProps) {
                 <div className="space-y-2">
                   <button
                     onClick={() => setSelectedCategory("")}
-                    className={`block w-full text-left text-xs py-1 px-2 rounded-md transition-colors cursor-pointer ${
-                      selectedCategory === ""
-                        ? "bg-orange-500 text-white font-semibold"
-                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                    }`}
+                    className={`block w-full text-left text-xs py-1 px-2 rounded-md transition-colors cursor-pointer ${selectedCategory === ""
+                      ? "bg-orange-500 text-white font-semibold"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      }`}
                   >
                     All Categories
                   </button>
@@ -136,11 +135,10 @@ export default function ShopPage({ searchParams }: ShopPageProps) {
                     <button
                       key={cat}
                       onClick={() => setSelectedCategory(cat.toLowerCase())}
-                      className={`block w-full text-left text-xs py-1 px-2 rounded-md transition-colors cursor-pointer ${
-                        selectedCategory === cat.toLowerCase()
-                          ? "bg-orange-500 text-white font-semibold"
-                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                      }`}
+                      className={`block w-full text-left text-xs py-1 px-2 rounded-md transition-colors cursor-pointer ${selectedCategory === cat.toLowerCase()
+                        ? "bg-orange-500 text-white font-semibold"
+                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                        }`}
                     >
                       {cat}
                     </button>
@@ -181,11 +179,10 @@ export default function ShopPage({ searchParams }: ShopPageProps) {
                     <button
                       key={rating}
                       onClick={() => setMinRating(rating)}
-                      className={`flex w-full items-center gap-2 text-xs py-1 px-2 rounded-md transition cursor-pointer ${
-                        minRating === rating
-                          ? "bg-orange-500 text-white font-semibold"
-                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                      }`}
+                      className={`flex w-full items-center gap-2 text-xs py-1 px-2 rounded-md transition cursor-pointer ${minRating === rating
+                        ? "bg-orange-500 text-white font-semibold"
+                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                        }`}
                     >
                       {rating === 0 ? (
                         <span>Any Rating</span>
@@ -195,13 +192,12 @@ export default function ShopPage({ searchParams }: ShopPageProps) {
                             {[...Array(5)].map((_, i) => (
                               <Star
                                 key={i}
-                                className={`h-3 w-3 ${
-                                  i < rating
-                                    ? minRating === rating
-                                      ? "fill-white text-white"
-                                      : "fill-orange-400 text-orange-400"
-                                    : "text-gray-200"
-                                }`}
+                                className={`h-3 w-3 ${i < rating
+                                  ? minRating === rating
+                                    ? "fill-white text-white"
+                                    : "fill-orange-400 text-orange-400"
+                                  : "text-gray-200"
+                                  }`}
                               />
                             ))}
                           </div>
@@ -221,7 +217,7 @@ export default function ShopPage({ searchParams }: ShopPageProps) {
           <div className="lg:col-span-3 space-y-6">
             {/* Header / Controls */}
             <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              
+
               {/* Desktop Product Count */}
               <div className="hidden lg:block">
                 <span className="text-xs text-gray-500 font-semibold">
@@ -249,7 +245,7 @@ export default function ShopPage({ searchParams }: ShopPageProps) {
                     <option value="rating">Sort: Top Rated</option>
                   </select>
                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
-                    <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                    <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
                   </div>
                 </div>
               </div>
@@ -306,7 +302,7 @@ export default function ShopPage({ searchParams }: ShopPageProps) {
          ──────────────────────────────────────────────────────── */}
       <AnimatePresence>
         {mobileFiltersOpen && (
-          <>
+          <div>
             {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
@@ -358,11 +354,10 @@ export default function ShopPage({ searchParams }: ShopPageProps) {
                   <div className="flex flex-wrap gap-2">
                     <button
                       onClick={() => setSelectedCategory("")}
-                      className={`text-xs py-1.5 px-3 rounded-lg border transition cursor-pointer ${
-                        selectedCategory === ""
-                          ? "border-orange-500 bg-orange-50 text-orange-500 font-bold"
-                          : "border-gray-200 text-gray-600 bg-white"
-                      }`}
+                      className={`text-xs py-1.5 px-3 rounded-lg border transition cursor-pointer ${selectedCategory === ""
+                        ? "border-orange-500 bg-orange-50 text-orange-500 font-bold"
+                        : "border-gray-200 text-gray-600 bg-white"
+                        }`}
                     >
                       All Categories
                     </button>
@@ -370,11 +365,10 @@ export default function ShopPage({ searchParams }: ShopPageProps) {
                       <button
                         key={cat}
                         onClick={() => setSelectedCategory(cat.toLowerCase())}
-                        className={`text-xs py-1.5 px-3 rounded-lg border transition cursor-pointer ${
-                          selectedCategory === cat.toLowerCase()
-                            ? "border-orange-500 bg-orange-50 text-orange-500 font-bold"
-                            : "border-gray-200 text-gray-600 bg-white"
-                        }`}
+                        className={`text-xs py-1.5 px-3 rounded-lg border transition cursor-pointer ${selectedCategory === cat.toLowerCase()
+                          ? "border-orange-500 bg-orange-50 text-orange-500 font-bold"
+                          : "border-gray-200 text-gray-600 bg-white"
+                          }`}
                       >
                         {cat}
                       </button>
@@ -415,11 +409,10 @@ export default function ShopPage({ searchParams }: ShopPageProps) {
                       <button
                         key={rating}
                         onClick={() => setMinRating(rating)}
-                        className={`flex items-center justify-center gap-1.5 text-xs py-2 px-3 rounded-lg border transition cursor-pointer ${
-                          minRating === rating
-                            ? "border-orange-500 bg-orange-50 text-orange-500 font-bold"
-                            : "border-gray-200 text-gray-600 bg-white"
-                        }`}
+                        className={`flex items-center justify-center gap-1.5 text-xs py-2 px-3 rounded-lg border transition cursor-pointer ${minRating === rating
+                          ? "border-orange-500 bg-orange-50 text-orange-500 font-bold"
+                          : "border-gray-200 text-gray-600 bg-white"
+                          }`}
                       >
                         {rating === 0 ? (
                           <span>Any Rating</span>
@@ -429,11 +422,10 @@ export default function ShopPage({ searchParams }: ShopPageProps) {
                               {[...Array(5)].map((_, i) => (
                                 <Star
                                   key={i}
-                                  className={`h-3 w-3 ${
-                                    i < rating
-                                      ? "fill-orange-400 text-orange-400"
-                                      : "text-gray-200"
-                                  }`}
+                                  className={`h-3 w-3 ${i < rating
+                                    ? "fill-orange-400 text-orange-400"
+                                    : "text-gray-200"
+                                    }`}
                                 />
                               ))}
                             </div>
@@ -454,7 +446,7 @@ export default function ShopPage({ searchParams }: ShopPageProps) {
                 Show {processedProducts.length} Results
               </button>
             </motion.div>
-          </>
+          </div>
         )}
       </AnimatePresence>
     </div>
