@@ -51,23 +51,16 @@ function MarqueeContent() {
 }
 
 export default function AnnouncementBar() {
-  // ✅ FIX 1: Track mount state to avoid SSR/CSR mismatch
-  const [mounted, setMounted] = useState(false);
-
-  // Start with null — same on server and client
+  // Start with null — same on server and client, no random value
   const [shoppersCount, setShoppersCount] = useState<number | null>(null);
   const [trend, setTrend] = useState<"up" | "down" | "neutral">("neutral");
 
-  // Use ref to track previous count for trend
+  // Use ref to track previous count for trend — avoids setState in setState
   const prevCountRef = useRef<number>(SHOPPER_BASE);
 
   useEffect(() => {
-    // ✅ FIX 2: Set mounted FIRST so the full UI renders only on client
-    setMounted(true);
-
     // Random value only set on client, after mount
-    const initial =
-      SHOPPER_BASE + Math.floor(Math.random() * SHOPPER_VARIANCE);
+    const initial = SHOPPER_BASE + Math.floor(Math.random() * SHOPPER_VARIANCE);
     setShoppersCount(initial);
     prevCountRef.current = initial;
 
@@ -92,19 +85,6 @@ export default function AnnouncementBar() {
     return () => clearInterval(timer);
   }, []);
 
-  // ✅ FIX 3: Render a stable placeholder BEFORE mount.
-  // Same classNames as the real bar so layout doesn't shift.
-  // This is what the server renders — no dynamic content at all.
-  if (!mounted) {
-    return (
-      <div
-        className="h-7 md:h-10 bg-gradient-to-r from-brand-orange via-brand-orange to-brand-orange-dark sticky top-0 z-[9999] border-b border-white/10 shadow-[0_1px_0_rgba(0,0,0,0.08)] w-full select-none"
-        aria-hidden="true"
-      />
-    );
-  }
-
-  // ✅ Full component renders only on client after mount
   const trendClass =
     trend === "up"
       ? "text-[#4ADE80] font-bold scale-[1.03]"
@@ -113,7 +93,10 @@ export default function AnnouncementBar() {
       : "text-white";
 
   return (
-    <div className="h-7 md:h-10 bg-gradient-to-r from-brand-orange via-brand-orange to-brand-orange-dark text-white flex items-center sticky top-0 z-[9999] select-none border-b border-white/10 shadow-[0_1px_0_rgba(0,0,0,0.08)] w-full">
+    <div
+      suppressHydrationWarning
+      className="h-7 md:h-10 bg-gradient-to-r from-brand-orange via-brand-orange to-brand-orange-dark text-white flex items-center sticky top-0 z-[9999] select-none border-b border-white/10 shadow-[0_1px_0_rgba(0,0,0,0.08)] w-full"
+    >
       <div className="mx-auto flex h-full w-full max-w-7xl items-center justify-between">
 
         {/* Left Section - Infinite Marquee */}
@@ -141,10 +124,8 @@ export default function AnnouncementBar() {
               <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
             </span>
             <Users size={12} className="text-white shrink-0" />
+            {/* suppressHydrationWarning on the count span since value differs server vs client */}
             <span className="font-body text-[8px] lg:text-[10px] font-medium tracking-[0.5px] text-white whitespace-nowrap">
-              {/* ✅ FIX 4: suppressHydrationWarning on BOTH the count span
-                  AND its className-changing wrapper since both differ
-                  between server (null/"—"/neutral) and client */}
               <span
                 className={`inline-block transition-all duration-300 ${trendClass}`}
                 suppressHydrationWarning
