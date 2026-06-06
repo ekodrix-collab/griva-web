@@ -7,6 +7,7 @@ import {
   FAQItem,
   CategoryItem,
   SlideData,
+  mobileBannerImage,
 } from "../types/types";
 
 import iphone11pro from "../../public/images/11pro.png";
@@ -33,6 +34,9 @@ import headphoneNew from "../../public/images/headphonenew.png";
 import gamejoysticnew from "../../public/images/gamejoysticnew.png";
 import airbudsnew from "../../public/images/airbudsnew.png";
 import headphone123 from "../../public/images/HeadphoneNew@.png";
+import banner1 from "../../public/images/banner1.png";
+import banner2 from "../../public/images/banner2.png";
+import banner3 from "../../public/images/banner3.png";
 
 // ───────────────────────────────────────────────────────── 
 // Products
@@ -635,6 +639,13 @@ const slide: SlideData[] = [
   },
 ];
 
+
+const mobilebanners: mobileBannerImage[] = [
+  { src: banner1, href: "/shop", alt: "Banner 1" },
+  { src: banner2, href: "/shop", alt: "Banner 2" },
+  { src: banner3, href: "/shop", alt: "Banner 3" },
+];
+
 // ─────────────────────────────────────────────────────────
 // Price parser utility
 // ─────────────────────────────────────────────────────────
@@ -642,4 +653,4 @@ export function parsePriceNumber(price: string): number {
   return parseFloat(price.replace(/[$,]/g, "")) || 0;
 }
 
-export { products, banners, offers, trndingProducts, slides, faqData, categories, slide };
+export { products, banners, offers, trndingProducts, slides, faqData, categories, slide ,mobilebanners};
