@@ -78,7 +78,7 @@ function MobileAdBanner() {
 
       {/* Dot Slider */}
       <div className="flex justify-center items-center gap-1.5 mt-2.5">
-        {mobilebanners.map((_, i) => (
+        {mobilebanners.map((_: any, i: number) => (
           <button
             key={i}
             onClick={() => setCurrent(i)}
