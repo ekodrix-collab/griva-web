@@ -164,11 +164,11 @@ export default function CategorySection() {
   };
 
   return (
-    <>
+    <div>
       {/* Mobile Flipkart-style Categories (Mobile Only, Sticky at top below header) */}
       <div
         id="categories-section"
-        className="sticky top-[79px] z-30 bg-white/95 backdrop-blur-md block sm:hidden w-full overflow-x-auto no-scrollbar border-b border-gray-100/80 shadow-xs transition-all duration-300 ease-in-out"
+        className={`${isCollapsed ? "fixed" : "sticky"} top-[92px] z-30 bg-white/95 backdrop-blur-md block sm:hidden w-full overflow-x-auto no-scrollbar border-b border-gray-100/80 shadow-xs [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] transition-all duration-300 ease-in-out`}
         style={{
           paddingTop: isCollapsed ? "12px" : "12px",
           paddingBottom: isCollapsed ? "12px" : "12px",
@@ -284,6 +284,6 @@ export default function CategorySection() {
           </div>
         </div>
       </section>
-    </>
+    </div>
   );
 }

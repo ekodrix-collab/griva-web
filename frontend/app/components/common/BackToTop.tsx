@@ -55,7 +55,7 @@ export default function BackToTop() {
           whileHover={{ scale: 1.1, translateY: -2 }}
           whileTap={{ scale: 0.9 }}
           onClick={scrollToTop}
-          className="fixed bottom-6 right-6 z-[999] flex h-12 w-12 items-center justify-center rounded-full bg-white text-orange-500 shadow-xl shadow-orange-500/10 border border-gray-100 hover:text-orange-600 transition-colors cursor-pointer group focus:outline-none"
+          className="fixed bottom-6 right-6 z-[999] hidden sm:flex h-12 w-12 items-center justify-center rounded-full bg-white text-orange-500 shadow-xl shadow-orange-500/10 border border-gray-100 hover:text-orange-600 transition-colors cursor-pointer group focus:outline-none"
           aria-label="Back to top"
         >
           {/* Progress Ring */}

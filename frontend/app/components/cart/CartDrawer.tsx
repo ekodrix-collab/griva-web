@@ -34,7 +34,7 @@ export default function CartDrawer() {
   return (
     <AnimatePresence>
       {isDrawerOpen && (
-        <>
+        <div>
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -114,7 +114,7 @@ export default function CartDrawer() {
               </div>
             )}
           </motion.div>
-        </>
+        </div>
       )}
     </AnimatePresence>
   );
