@@ -9,28 +9,10 @@ import {
   Package,
   Sliders,
   Users,
-  Search,
-  Bell,
-  Plus,
-  Trash2,
-  RefreshCw,
-  TrendingUp,
-  DollarSign,
-  ShoppingCart,
-  Percent,
-  ChevronRight,
-  Edit,
   ArrowUpRight,
-  Mail,
-  Send,
-  Eye,
-  AlertTriangle,
   X,
   Sparkles,
-  ToggleLeft,
-  ToggleRight,
   Image as ImageIcon,
-  CheckCircle,
   EyeOff,
 } from "lucide-react";
 
@@ -247,9 +229,9 @@ export default function AdminDashboard() {
       {/* Sidebar Panel */}
       <aside className="w-64 bg-white border-r border-orange-500/30 backdrop-blur-xl flex flex-col justify-between p-6 shrink-0 h-screen sticky top-0">
         <div>
-          <div className="flex flex-col justify-center items-center place-items-center px-6 h-20 -mt-6 -mx-6 mb-6 border-b border-orange-500/30">
-              <span className="font-black text-lg tracking-wider bg-gradient-to-r from-orange-400 to-amber-500 bg-clip-text text-transparent">GRIVA</span>
-              <span className="text-[9px] block text-gray-500 font-bold tracking-widest uppercase">Admin Panel</span>
+          <div className="flex flex-col justify-center items-center place-items-center px-6 h-15 -mt-6 -mx-6 mb-6 border-b border-orange-500/30">
+            <span className="font-black text-lg tracking-wider bg-gradient-to-r from-orange-400 to-amber-500 bg-clip-text text-transparent">GRIVA</span>
+            <span className="text-[9px] block text-gray-500 font-bold tracking-widest uppercase">Admin Panel</span>
           </div>
 
           <nav className="space-y-1.5">
@@ -334,7 +316,7 @@ export default function AdminDashboard() {
 
       {/* Main Panel Workspace */}
       <main className="flex-1 min-w-0 flex flex-col h-screen overflow-y-auto">
-        <header className="h-20 border-b border-orange-500/30 bg-white backdrop-blur-md px-12 flex items-center justify-between sticky top-0 z-40">
+        <header className="h-15 border-b border-orange-500/30 bg-white backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-40">
           <h1 className="text-xl font-bold py-10 text-gray-900 capitalize">{activeTab} Control Room</h1>
           <div className="text-xs text-gray-500 flex items-center gap-1.5 font-semibold bg-white px-3 py-1.5 rounded-full border border-orange-500/30">
             <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
@@ -342,13 +324,13 @@ export default function AdminDashboard() {
           </div>
         </header>
 
-        <div className="p-12 max-w-7xl w-full mx-auto flex-1">
+        <div className="p-6 max-w-7xl w-full mx-auto flex-1">
           {/* ─────────────────────────────────────────────────────────
               TAB 1: OVERVIEW & CAMPAIGNS (Friday/Midnight Sale controls)
               ───────────────────────────────────────────────────────── */}
 
           {activeTab === 'overview' && (
-            <OverviewTab 
+            <OverviewTab
               announcementBarEnabled={announcementBarEnabled}
               setAnnouncementBarEnabled={setAnnouncementBarEnabled}
               fridaySaleEnabled={fridaySaleEnabled}
@@ -403,7 +385,7 @@ export default function AdminDashboard() {
             />
           )}
 
-</div>
+        </div>
       </main>
 
       {/* "ADD NEW PRODUCT" MODAL */}

@@ -75,14 +75,15 @@ export default function ProductsTab(props: ProductsTabProps) {
 
       {/* Products Table */}
       <div className="bg-white border border-orange-500/30 rounded-2xl overflow-hidden shadow-sm">
-        <table className="w-full text-left border-collapse">
+        <div className="overflow-x-auto">
+        <table className="w-full text-left border-collapse min-w-[700px]">
           <thead>
             <tr className="border-b border-orange-500/30 text-[10px] text-gray-400 font-bold uppercase tracking-wider bg-gray-50">
-              <th className="p-4">Product Details</th>
-              <th className="p-4">Category</th>
-              <th className="p-4">Price</th>
-              <th className="p-4 text-center">Stock Inventory</th>
-              <th className="p-4 text-right">Actions</th>
+              <th className="p-3">Product Details</th>
+              <th className="p-3">Category</th>
+              <th className="p-3">Price</th>
+              <th className="p-3 text-center">Stock Inventory</th>
+              <th className="p-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
@@ -94,7 +95,7 @@ export default function ProductsTab(props: ProductsTabProps) {
               filteredProducts.map((p) => (
                 <tr key={p.id} className="hover:bg-gray-50 transition-colors group">
                   {/* Product Details */}
-                  <td className="p-4 flex items-center gap-4">
+                  <td className="p-3 flex items-center gap-3">
                     <div className="h-12 w-12 rounded-xl bg-white p-1 flex items-center justify-center shrink-0 border border-orange-500/30">
                       {p.image && typeof p.image === 'object' ? (
                         <span className="text-[10px] font-black text-orange-500">GRIVA</span>
@@ -103,7 +104,7 @@ export default function ProductsTab(props: ProductsTabProps) {
                       )}
                     </div>
                     <div className="min-w-0">
-                      <span className="text-xs font-bold text-gray-900 block truncate max-w-sm group-hover:text-orange-400 transition-colors">{p.title}</span>
+                      <span className="text-xs font-bold text-gray-900 block truncate max-w-[180px] group-hover:text-orange-400 transition-colors">{p.title}</span>
                       <div className="flex gap-2 items-center mt-1">
                         {p.badge && (
                           <span className="text-[8px] font-bold text-orange-500 px-1.5 py-0.5 rounded uppercase">{p.badge}</span>
@@ -114,14 +115,14 @@ export default function ProductsTab(props: ProductsTabProps) {
                   </td>
 
                   {/* Category */}
-                  <td className="p-4">
+                  <td className="p-3">
                     <span className="text-xs text-gray-700 font-semibold bg-white border border-orange-500/30 px-2.5 py-1 rounded-lg">
                       {p.category}
                     </span>
                   </td>
 
                   {/* Price */}
-                  <td className="p-4">
+                  <td className="p-3">
                     <div>
                       <span className="text-xs font-black text-gray-900">{p.price}</span>
                       {p.oldPrice && (
@@ -131,7 +132,7 @@ export default function ProductsTab(props: ProductsTabProps) {
                   </td>
 
                   {/* Stock Inventory */}
-                  <td className="p-4">
+                  <td className="p-3">
                     <div className="flex items-center justify-center gap-4">
                       {/* Available count — editable by typing */}
                       <div className="flex flex-col items-center">
@@ -166,7 +167,7 @@ export default function ProductsTab(props: ProductsTabProps) {
                   </td>
 
                   {/* Actions */}
-                  <td className="p-4 text-right">
+                  <td className="p-3 text-right">
                     <div className="flex items-center justify-end gap-2.5">
                       <button
                         onClick={() => alert('Loading Product ID: #' + p.id + ' inside details editor...')}
@@ -180,9 +181,9 @@ export default function ProductsTab(props: ProductsTabProps) {
                             setProductsList((prev: any[]) => prev.filter((productItem: any) => productItem.id !== p.id));
                           }
                         }}
-                        className="p-2 text-gray-400 hover:text-red-400 bg-white hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer border border-orange-500/30"
+                        className="p-1.5 text-gray-400 hover:text-red-400 bg-white hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer border border-orange-500/30"
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <Trash2 className="h-3 w-3" />
                       </button>
                     </div>
                   </td>
@@ -191,6 +192,7 @@ export default function ProductsTab(props: ProductsTabProps) {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Custom Add Stock Modal */}
