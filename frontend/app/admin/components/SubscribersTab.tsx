@@ -4,30 +4,22 @@ import {
 } from 'lucide-react';
 interface SubscribersTabProps {
   subscribersList: any[];
-  setSubscribersList: any;
   newSubEmail: string;
   setNewSubEmail: (val: string) => void;
   broadcastMessage: string;
   setBroadcastMessage: (val: string) => void;
   broadcastStatus: string;
   handleSendBroadcast: (e: any) => void;
+  handleAddSubscriber: (e: any) => void;
 }
 
 export default function SubscribersTab(props: SubscribersTabProps) {
-  const { subscribersList, setSubscribersList, newSubEmail, setNewSubEmail, broadcastMessage, setBroadcastMessage, broadcastStatus, handleSendBroadcast } = props;
+  const { subscribersList, newSubEmail, setNewSubEmail, broadcastMessage, setBroadcastMessage, broadcastStatus, handleSendBroadcast, handleAddSubscriber } = props;
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in fade-in-50 duration-300">
               <div className="lg:col-span-7 space-y-6">
                 <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    if (!newSubEmail) return;
-                    setSubscribersList((prev: any[]) => [
-                      { email: newSubEmail, joinedDate: "June 05, 2026", country: "Qatar" },
-                      ...prev,
-                    ]);
-                    setNewSubEmail("");
-                  }}
+                  onSubmit={handleAddSubscriber}
                   className="flex gap-3 bg-white p-4 rounded-xl border border-orange-500/30"
                 >
                   <input

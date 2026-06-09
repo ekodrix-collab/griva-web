@@ -16,7 +16,7 @@ import {
   EyeOff,
 } from "lucide-react";
 
-// Seed data
+// Seed data and types
 import { products as initialProducts, slide as initialSlides, offers as initialOffers, categories as initialCategories } from "../data/data";
 import { Product, SlideData, OfferCard, CategoryItem } from "../types/types";
 import OverviewTab from './components/OverviewTab';
@@ -24,6 +24,19 @@ import ProductsTab from './components/ProductsTab';
 import BannersTab from './components/BannersTab';
 import SubscribersTab from './components/SubscribersTab';
 
+// API Helpers
+import {
+  getProductsApi,
+  createProductApi,
+  updateProductStockApi,
+  deleteProductApi,
+  getSettingsApi,
+  updateSettingsApi,
+  getSubscribersApi,
+  addSubscriberApi,
+  broadcastNewsletterApi,
+  SubscriberInfo,
+} from "../utils/api";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -86,17 +99,30 @@ export default function AdminDashboard() {
   const [newColorHex, setNewColorHex] = useState("#000000");
 
   // Subscribers States
-  const [subscribersList, setSubscribersList] = useState([
-    { email: "jassim.althani@gmail.com", joinedDate: "June 01, 2026", country: "Qatar" },
-    { email: "fatima.almansouri@yahoo.com", joinedDate: "May 29, 2026", country: "Qatar" },
-    { email: "john.doe@verizon.com", joinedDate: "May 25, 2026", country: "United States" },
-  ]);
+  const [subscribersList, setSubscribersList] = useState<SubscriberInfo[]>([]);
   const [newSubEmail, setNewSubEmail] = useState("");
   const [broadcastMessage, setBroadcastMessage] = useState("");
   const [broadcastStatus, setBroadcastStatus] = useState<"idle" | "sending" | "sent">("idle");
 
   // Categories helper
   const categories = Array.from(new Set(productsList.map((p) => p.category)));
+
+  // Load from Express APIs on Mount
+  useEffect(() => {
+    async function loadData() {
+      const dbProducts = await getProductsApi();
+      setProductsList(dbProducts);
+
+      const dbSettings = await getSettingsApi();
+      setAnnouncementBarEnabled(dbSettings.announcementBarEnabled);
+      setFridaySaleEnabled(dbSettings.fridaySaleEnabled);
+      setMidnightSaleEnabled(dbSettings.midnightSaleEnabled);
+
+      const dbSubs = await getSubscribersApi();
+      setSubscribersList(dbSubs);
+    }
+    loadData();
+  }, []);
 
   // Add Spec Tag Helper
   const handleAddSpec = () => {
@@ -124,38 +150,56 @@ export default function AdminDashboard() {
     }
   };
 
+  // Campaign switches hooks
+  const handleToggleAnnouncement = async () => {
+    const nextVal = !announcementBarEnabled;
+    setAnnouncementBarEnabled(nextVal);
+    await updateSettingsApi({ announcementBarEnabled: nextVal });
+  };
+
+  const handleToggleFridaySale = async () => {
+    const nextVal = !fridaySaleEnabled;
+    setFridaySaleEnabled(nextVal);
+    await updateSettingsApi({ fridaySaleEnabled: nextVal });
+  };
+
+  const handleToggleMidnightSale = async () => {
+    const nextVal = !midnightSaleEnabled;
+    setMidnightSaleEnabled(nextVal);
+    await updateSettingsApi({ midnightSaleEnabled: nextVal });
+  };
+
   // Handle Dispatching Broadcast Campaigns
-  const handleSendBroadcast = (e: React.FormEvent) => {
+  const handleSendBroadcast = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!broadcastMessage) return;
     setBroadcastStatus("sending");
-    setTimeout(() => {
+    const res = await broadcastNewsletterApi(broadcastMessage);
+    if (res) {
       setBroadcastStatus("sent");
       setTimeout(() => {
         setBroadcastStatus("idle");
         setBroadcastMessage("");
       }, 3000);
-    }, 1500);
+    } else {
+      setBroadcastStatus("idle");
+    }
   };
 
   // Add New Product Submission Handler
-  const handleAddProductSubmit = (e: React.FormEvent) => {
+  const handleAddProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle || !newPrice) return;
 
-    const newProductItem: Product = {
-      id: Date.now(),
+    const newProductItem = {
       title: newTitle,
       category: newCategory,
-      image: newMainImage as any,
-      images: [newMainImage, ...galleryImages] as any,
+      image: newMainImage,
+      images: [newMainImage, ...galleryImages],
       price: `$${parseFloat(newPrice).toFixed(2)}`,
       oldPrice: newOldPrice ? `$${parseFloat(newOldPrice).toFixed(2)}` : undefined,
       badge: newBadge || undefined,
       badgeColor: newBadge ? "bg-blue-600" : undefined,
-      buttonText: "ADD TO CART",
-      rating: 5,
-      reviewCount: 0,
       stock: newStock,
       description: newDesc,
       specs: specsList,
@@ -163,7 +207,10 @@ export default function AdminDashboard() {
       storageOptions: [{ label: "256GB", value: "256gb" }],
     };
 
-    setProductsList((prev) => [newProductItem, ...prev]);
+    const savedProduct = await createProductApi(newProductItem);
+    if (savedProduct) {
+      setProductsList((prev) => [savedProduct, ...prev]);
+    }
 
     // Reset Form fields
     setNewTitle("");
@@ -190,7 +237,6 @@ export default function AdminDashboard() {
     setSlidesList((prev) =>
       prev.map((s, idx) => {
         if (idx === index) {
-          // In real-world, we toggle a visible flag. Here we toggle values to simulate deactivation.
           return { ...s, badge: s.badge === "DISABLED" ? "ACTIVE DEAL" : "DISABLED" };
         }
         return s;
@@ -211,16 +257,44 @@ export default function AdminDashboard() {
   };
 
   // Adjust stock count inline
-  const handleStockAdjustment = (productId: number, delta: number) => {
+  const handleStockAdjustment = async (productId: number, delta: number) => {
+    const targetProduct = productsList.find((p) => p.id === productId);
+    if (!targetProduct) return;
+    const nextStock = Math.max(0, (targetProduct.stock || 0) + delta);
+
+    // Optimistic UI update
     setProductsList((prev) =>
-      prev.map((p) => {
-        if (p.id === productId) {
-          const nextStock = (p.stock || 0) + delta;
-          return { ...p, stock: nextStock < 0 ? 0 : nextStock };
-        }
-        return p;
-      })
+      prev.map((p) => (p.id === productId ? { ...p, stock: nextStock } : p))
     );
+
+    await updateProductStockApi(productId, nextStock);
+  };
+
+  // Direct Stock Edit Input handler
+  const handleDirectStockEdit = async (productId: number, val: number) => {
+    setProductsList((prev) =>
+      prev.map((p) => (p.id === productId ? { ...p, stock: val } : p))
+    );
+    await updateProductStockApi(productId, val);
+  };
+
+  // Delete product handler
+  const handleDeleteProduct = async (id: number) => {
+    if (confirm("Are you sure you want to delete this product from the catalog?")) {
+      setProductsList((prev) => prev.filter((p) => p.id !== id));
+      await deleteProductApi(id);
+    }
+  };
+
+  // Manual Add Subscriber Handler
+  const handleAddSubscriber = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSubEmail) return;
+    const newSub = await addSubscriberApi(newSubEmail);
+    if (newSub) {
+      setSubscribersList((prev) => [newSub, ...prev]);
+      setNewSubEmail("");
+    }
   };
 
   return (
@@ -325,18 +399,15 @@ export default function AdminDashboard() {
         </header>
 
         <div className="p-6 max-w-7xl w-full mx-auto flex-1">
-          {/* ─────────────────────────────────────────────────────────
-              TAB 1: OVERVIEW & CAMPAIGNS (Friday/Midnight Sale controls)
-              ───────────────────────────────────────────────────────── */}
 
           {activeTab === 'overview' && (
             <OverviewTab
               announcementBarEnabled={announcementBarEnabled}
-              setAnnouncementBarEnabled={setAnnouncementBarEnabled}
+              setAnnouncementBarEnabled={handleToggleAnnouncement}
               fridaySaleEnabled={fridaySaleEnabled}
-              setFridaySaleEnabled={setFridaySaleEnabled}
+              setFridaySaleEnabled={handleToggleFridaySale}
               midnightSaleEnabled={midnightSaleEnabled}
-              setMidnightSaleEnabled={setMidnightSaleEnabled}
+              setMidnightSaleEnabled={handleToggleMidnightSale}
               highlightedSchemaSection={highlightedSchemaSection}
               setHighlightedSchemaSection={setHighlightedSchemaSection}
               setActiveTab={setActiveTab}
@@ -356,6 +427,8 @@ export default function AdminDashboard() {
               setIsAddModalOpen={setIsAddModalOpen}
               filteredProducts={filteredProducts}
               handleStockAdjustment={handleStockAdjustment}
+              handleDeleteProduct={handleDeleteProduct}
+              handleDirectStockEdit={handleDirectStockEdit}
               setProductsList={setProductsList}
             />
           )}
@@ -375,13 +448,13 @@ export default function AdminDashboard() {
           {activeTab === 'subscribers' && (
             <SubscribersTab
               subscribersList={subscribersList}
-              setSubscribersList={setSubscribersList}
               newSubEmail={newSubEmail}
               setNewSubEmail={setNewSubEmail}
               broadcastMessage={broadcastMessage}
               setBroadcastMessage={setBroadcastMessage}
               broadcastStatus={broadcastStatus}
               handleSendBroadcast={handleSendBroadcast}
+              handleAddSubscriber={handleAddSubscriber}
             />
           )}
 
@@ -459,7 +532,7 @@ export default function AdminDashboard() {
                     <button
                       type="button"
                       onClick={handleAddGalleryImage}
-                      className="px-3 bg-orange-500/10 hover:bg-gray-50 text-xs font-bold text-gray-900 rounded-xl transition-colors cursor-pointer"
+                      className="px-3 bg-orange-500/10 hover:bg-gray-55 text-xs font-bold text-gray-900 rounded-xl transition-colors cursor-pointer"
                     >
                       Add Image
                     </button>
@@ -612,18 +685,6 @@ export default function AdminDashboard() {
                     ))}
                   </div>
                 )}
-              </div>
-
-              <div>
-                <label className="text-[10px] text-gray-500 font-bold uppercase block mb-1.5">Product Image Cover URL</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="https://pub-xxxxxx.r2.dev/iphone15.png"
-                  value={newMainImage}
-                  onChange={(e) => setNewMainImage(e.target.value)}
-                  className="w-full bg-white border border-orange-500/30 rounded-xl px-4 py-2.5 text-xs text-gray-800 focus:outline-none"
-                />
               </div>
 
               <div className="flex gap-3 pt-4 border-t border-gray-200">

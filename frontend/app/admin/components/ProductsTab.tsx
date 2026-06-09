@@ -12,6 +12,8 @@ interface ProductsTabProps {
   setIsAddModalOpen: (val: boolean) => void;
   filteredProducts: any[];
   handleStockAdjustment: (id: number, delta: number) => void;
+  handleDeleteProduct: (id: number) => void;
+  handleDirectStockEdit: (id: number, val: number) => void;
   setProductsList: any;
 }
 
@@ -20,7 +22,9 @@ export default function ProductsTab(props: ProductsTabProps) {
     searchQuery, setSearchQuery,
     filterCategory, setFilterCategory,
     categories, setIsAddModalOpen,
-    filteredProducts, handleStockAdjustment, setProductsList
+    filteredProducts, handleStockAdjustment,
+    handleDeleteProduct, handleDirectStockEdit,
+    setProductsList
   } = props;
 
   const [stockPromptProductId, setStockPromptProductId] = useState<number | null>(null);
@@ -142,9 +146,7 @@ export default function ProductsTab(props: ProductsTabProps) {
                           value={p.stock || 0}
                           onChange={(e) => {
                             const val = parseInt(e.target.value) || 0;
-                            setProductsList((prev: any[]) =>
-                              prev.map((item: any) => item.id === p.id ? { ...item, stock: val } : item)
-                            );
+                            handleDirectStockEdit(p.id, val);
                           }}
                         />
                         <span className="text-[9px] text-gray-400 font-semibold uppercase">Available</span>
@@ -176,11 +178,7 @@ export default function ProductsTab(props: ProductsTabProps) {
                         <Edit className="h-3.5 w-3.5" />
                       </button>
                       <button
-                        onClick={() => {
-                          if (confirm('Delete product?')) {
-                            setProductsList((prev: any[]) => prev.filter((productItem: any) => productItem.id !== p.id));
-                          }
-                        }}
+                        onClick={() => handleDeleteProduct(p.id)}
                         className="p-1.5 text-gray-400 hover:text-red-400 bg-white hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer border border-orange-500/30"
                       >
                         <Trash2 className="h-3 w-3" />
