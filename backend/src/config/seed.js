@@ -1,8 +1,6 @@
-/**
- * DATABASE SEEDING UTILITY (seed.js)
- * 
- * Sets up a clean initial database state by force syncing schemas and inserting default seeds.
- */
+const path = require("path");
+require("dotenv").config({ path: path.resolve(__dirname, "../../.env") });
+
 
 // ─── PRODUCTION SAFETY GUARD ──────────────────────────────────────────────────
 // force:true drops ALL tables. This must NEVER run in production.
@@ -26,90 +24,218 @@ const SiteSetting = require("../models/SiteSetting");
 const Order = require("../models/Order");
 const OrderItem = require("../models/OrderItem");
 
-const SEED_CATEGORIES = [
-  { title: "Laptops", href: "/category/laptops", image_url: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?q=80&w=300" },
-  { title: "Television", href: "/category/television", image_url: "https://images.unsplash.com/photo-1593305841991-05c297ba4575?q=80&w=300" },
-  { title: "Speakers", href: "/category/speakers", image_url: "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?q=80&w=300" },
-  { title: "Headphones", href: "/category/headphones", image_url: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=300" },
-  { title: "Gaming", href: "/category/gaming", image_url: "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?q=80&w=300" },
-  { title: "Gadgets", href: "/category/gadgets", image_url: "https://images.unsplash.com/photo-1508614589041-895b88991e3e?q=80&w=300" },
+const SEED_CATEGORIES_TREE = [
+  {
+    title: "Perfumes & Buhoor",
+    image_url: "https://images.unsplash.com/photo-1541643600914-78b084683601?q=80&w=300",
+    subcategories: ["Perfumes", "Body Lotion", "Car Fragrance", "Buhoor", "Body Spray"]
+  },
+  {
+    title: "Toys",
+    image_url: "https://images.unsplash.com/photo-1537655780520-1e392edd816a?q=80&w=300",
+    subcategories: ["Newborn Toys", "Learning Toys", "Islamic Learning Toys", "Remote Control Cars & Toys", "Metal Toys"]
+  },
+  {
+    title: "Baby Products",
+    image_url: "https://images.unsplash.com/photo-1515488042361-404e9250afef?q=80&w=300",
+    subcategories: ["Baby Clothes Storage", "Baby Bath Accessories", "Baby Play Mats", "Baby Bouncers & Cradles"]
+  },
+  {
+    title: "Gadgets & Electronics",
+    image_url: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=300",
+    subcategories: ["Power Banks", "Chargers", "Cables", "Earphones", "Speakers", "Audio Cables", "Screen Protectors", "Phone Cases", "Smartwatches", "Fitness Bands"]
+  },
+  {
+    title: "Gaming Accessories",
+    image_url: "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?q=80&w=300",
+    subcategories: ["Mobile Game Controllers", "Triggers", "Gaming Earbuds", "Gaming Headsets", "Phone Coolers", "Gaming Finger Sleeves", "Gaming Grip Stands"]
+  },
+  {
+    title: "Kitchen Appliances & Essentials",
+    image_url: "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?q=80&w=300",
+    subcategories: ["Kitchen Rack", "Shoe Rack", "Washing Machine Rack", "Vegetable Rack", "Electronic Coffee Maker", "Egg Boilers", "Egg Beaters"]
+  }
 ];
 
 const SEED_PRODUCTS = [
   {
-    categoryName: "Gadgets",
-    title: "DJI Mini 4 Pro Drone Flight Combo - 4K HDR Camera",
-    price: "759.99",
-    old_price: "999.99",
-    badge: "-24%",
-    badge_color: "bg-red-500",
-    button_text: "Buy Combo",
-    brand: "DJI",
-    sku: "DJI-M4P-FC",
-    rating: 4.8,
-    review_count: 12,
+    categoryName: "Perfumes",
+    title: "Oud Ispahan Premium Perfume 100ml",
+    price: "185.00",
+    old_price: "245.00",
+    badge: "BEST SELLER",
+    badge_color: "bg-orange-500",
+    button_text: "Buy Now",
+    brand: "Griva Oud",
+    sku: "GRV-OUD-ISP",
+    rating: 4.9,
+    review_count: 42,
     is_featured: true,
     is_best_seller: true,
-    is_trending: false,
+    is_trending: true,
     discount_percentage: 24,
-    description: "The DJI Mini 4 Pro is our most advanced mini-camera drone to date. It integrates powerful imaging capabilities, omnidirectional obstacle sensing, ActiveTrack 360° with the new Trace Mode, and 20km FHD video transmission.",
-    stock: 8,
-    main_image_url: "https://images.unsplash.com/photo-1508614589041-895b88991e3e?q=80&w=800&auto=format&fit=crop",
-    gallery_image_urls: [
-      "https://images.unsplash.com/photo-1508614589041-895b88991e3e?q=80&w=800&auto=format&fit=crop",
-      "https://images.unsplash.com/photo-1527977966376-1c8408f9f108?q=80&w=800"
-    ],
+    description: "An elegant, woody interpretation of Eastern notes. Oud Ispahan is an invitation to discover the charm of the Orient with intense rose and precious oud woods.",
+    stock: 25,
+    main_image_url: "https://images.unsplash.com/photo-1541643600914-78b084683601?q=80&w=800",
+    gallery_image_urls: ["https://images.unsplash.com/photo-1541643600914-78b084683601?q=80&w=800"],
     specs: [
-      { label: "Takeoff Weight", value: "< 249 g" },
-      { label: "Max Flight Time", value: "34 mins (Standard)" },
-      { label: "Camera Sensor", value: "1/1.3-inch CMOS, 48MP" },
-      { label: "Video Resolution", value: "4K/60fps HDR" },
+      { label: "Volume", value: "100ml" },
+      { label: "Type", value: "Eau de Parfum" },
+      { label: "Fragrance Family", value: "Woody Floral" }
     ],
-    colors: [
-      { name: "Arctic Gray", hex: "#d1d5db" },
-      { name: "Midnight Black", hex: "#111827" },
-    ],
-    storage_options: [
-      { label: "64GB", value: "64gb" },
-      { label: "256GB", value: "256gb" },
-    ]
+    colors: [],
+    storage_options: []
   },
   {
-    categoryName: "Gadgets",
-    title: "Meta Quest 3 128GB VR Headset - Mixed Reality",
-    price: "499.00",
-    old_price: "599.00",
-    badge: "-16%",
-    badge_color: "bg-orange-500",
-    button_text: "Get Quest",
-    brand: "Meta",
-    sku: "META-Q3-128",
-    rating: 4.6,
-    review_count: 8,
+    categoryName: "Buhoor",
+    title: "Premium Arabic Oud Buhoor 50g",
+    price: "75.00",
+    old_price: "95.00",
+    badge: "NEW",
+    badge_color: "bg-green-500",
+    button_text: "Add to Cart",
+    brand: "Griva Oud",
+    sku: "GRV-BUH-50",
+    rating: 4.8,
+    review_count: 15,
     is_featured: true,
     is_best_seller: false,
     is_trending: true,
-    discount_percentage: 16,
-    description: "Breakthrough mixed reality. Transform your home into a virtual playground where virtual elements blend into your physical space. Powerful performance with twice the graphics processing power of Quest 2.",
-    stock: 12,
-    main_image_url: "https://images.unsplash.com/photo-1622979135225-d2ba269cf1ac?q=80&w=800&auto=format&fit=crop",
-    gallery_image_urls: [
-      "https://images.unsplash.com/photo-1622979135225-d2ba269cf1ac?q=80&w=800&auto=format&fit=crop"
-    ],
+    discount_percentage: 21,
+    description: "Rich, slow-burning premium agarwood chips infused with high-quality amber, musk, and natural essential oils. Fills your home with a welcoming Eastern aroma.",
+    stock: 40,
+    main_image_url: "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?q=80&w=800",
+    gallery_image_urls: ["https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?q=80&w=800"],
     specs: [
-      { label: "Display Resolution", value: "2064x2208 pixels per eye" },
-      { label: "Refresh Rate", value: "90Hz, 120Hz experimental" },
-      { label: "Processor", value: "Snapdragon XR2 Gen 2" },
+      { label: "Weight", value: "50g" },
+      { label: "Form", value: "Wood Chips / Incense" }
     ],
-    colors: [{ name: "Classic White", hex: "#f3f4f6" }],
-    storage_options: [
-      { label: "128GB", value: "128gb" },
-      { label: "512GB", value: "512gb" },
-    ]
+    colors: [],
+    storage_options: []
   },
   {
-    categoryName: "Gadgets",
-    title: "Apple Watch Ultra 2 GPS + Cellular Titanium",
+    categoryName: "Islamic Learning Toys",
+    title: "Interactive Islamic Learning Tablet for Kids",
+    price: "49.00",
+    old_price: "69.00",
+    badge: "-28%",
+    badge_color: "bg-red-500",
+    button_text: "Buy Tablet",
+    brand: "IslamicTech",
+    sku: "EDU-TAB-ISL",
+    rating: 4.7,
+    review_count: 18,
+    is_featured: true,
+    is_best_seller: true,
+    is_trending: false,
+    discount_percentage: 28,
+    description: "An educational tablet with high-quality audio recordings of short Surahs, Duas, Arabic alphabets, and prayers. The perfect interactive way to teach children basic Islamic studies.",
+    stock: 15,
+    main_image_url: "https://images.unsplash.com/photo-1587654780291-39c9404d746b?q=80&w=800",
+    gallery_image_urls: ["https://images.unsplash.com/photo-1587654780291-39c9404d746b?q=80&w=800"],
+    specs: [
+      { label: "Language", value: "Arabic & English" },
+      { label: "Battery", value: "3x AAA (Not included)" },
+      { label: "Age Group", value: "3+ years" }
+    ],
+    colors: [
+      { name: "Sky Blue", hex: "#60a5fa" },
+      { name: "Soft Pink", hex: "#f472b6" }
+    ],
+    storage_options: []
+  },
+  {
+    categoryName: "Remote Control Cars & Toys",
+    title: "High-Speed 4WD Remote Control Off-Road Crawler",
+    price: "120.00",
+    old_price: "159.00",
+    badge: "15% OFF",
+    badge_color: "bg-blue-500",
+    button_text: "Buy RC Car",
+    brand: "ToyTech",
+    sku: "TOY-RC-CAR",
+    rating: 4.5,
+    review_count: 9,
+    is_featured: false,
+    is_best_seller: false,
+    is_trending: true,
+    discount_percentage: 15,
+    description: "Conquer any terrain with this 1:16 scale remote control crawler. Features high-torque independent suspension, 2.4GHz anti-interference transmitter, and dual rechargeable batteries.",
+    stock: 12,
+    main_image_url: "https://images.unsplash.com/photo-1594787318286-3d835c1d207f?q=80&w=800",
+    gallery_image_urls: ["https://images.unsplash.com/photo-1594787318286-3d835c1d207f?q=80&w=800"],
+    specs: [
+      { label: "Scale", value: "1:16" },
+      { label: "Max Speed", value: "20 km/h" },
+      { label: "Battery Life", value: "25 mins per battery" }
+    ],
+    colors: [
+      { name: "Racing Red", hex: "#dc2626" },
+      { name: "Lime Green", hex: "#16a34a" }
+    ],
+    storage_options: []
+  },
+  {
+    categoryName: "Baby Play Mats",
+    title: "Extra Thick Non-Toxic Baby Play Mat (200x180cm)",
+    price: "99.00",
+    old_price: "129.00",
+    badge: "SAFE",
+    badge_color: "bg-teal-500",
+    button_text: "Buy Mat",
+    brand: "BabySoft",
+    sku: "BAB-MAT-XG",
+    rating: 4.9,
+    review_count: 21,
+    is_featured: true,
+    is_best_seller: true,
+    is_trending: false,
+    discount_percentage: 23,
+    description: "Reversible, water-resistant play mat constructed with high-density XPE foam. Features textured educational designs on both sides to stimulate baby's crawling and sensory skills safely.",
+    stock: 10,
+    main_image_url: "https://images.unsplash.com/photo-1515488042361-404e9250afef?q=80&w=800",
+    gallery_image_urls: ["https://images.unsplash.com/photo-1515488042361-404e9250afef?q=80&w=800"],
+    specs: [
+      { label: "Dimensions", value: "200 x 180 x 1.5 cm" },
+      { label: "Material", value: "Non-toxic XPE Foam" }
+    ],
+    colors: [],
+    storage_options: []
+  },
+  {
+    categoryName: "Power Banks",
+    title: "Anker PowerCore 20000mAh Ultra High Capacity Power Bank",
+    price: "149.00",
+    old_price: "189.00",
+    badge: "HOT",
+    badge_color: "bg-red-500",
+    button_text: "Shop Anker",
+    brand: "Anker",
+    sku: "ANK-PWR-20K",
+    rating: 4.8,
+    review_count: 35,
+    is_featured: true,
+    is_best_seller: true,
+    is_trending: true,
+    discount_percentage: 21,
+    description: "One of the most compact 20,000mAh portable chargers available. High-speed PowerIQ and VoltageBoost technologies combine to deliver the optimal charge for your devices.",
+    stock: 30,
+    main_image_url: "https://images.unsplash.com/photo-1609592424085-783226db2d71?q=80&w=800",
+    gallery_image_urls: ["https://images.unsplash.com/photo-1609592424085-783226db2d71?q=80&w=800"],
+    specs: [
+      { label: "Capacity", value: "20,000 mAh" },
+      { label: "Ports", value: "2x USB-A, 1x USB-C Input/Output" },
+      { label: "Max Output", value: "18W Power Delivery" }
+    ],
+    colors: [
+      { name: "Matte Black", hex: "#111827" },
+      { name: "Classic White", hex: "#f3f4f6" }
+    ],
+    storage_options: []
+  },
+  {
+    categoryName: "Smartwatches",
+    title: "Apple Watch Ultra 2 GPS + Cellular Titanium 49mm",
     price: "799.00",
     old_price: "899.00",
     badge: "-11%",
@@ -139,7 +265,7 @@ const SEED_PRODUCTS = [
     storage_options: [{ label: "64GB", value: "64gb" }]
   },
   {
-    categoryName: "Headphones",
+    categoryName: "Earphones",
     title: "Sony WH-1000XM5 Wireless Noise Cancelling Headphones",
     price: "348.00",
     old_price: "399.00",
@@ -169,119 +295,58 @@ const SEED_PRODUCTS = [
     storage_options: []
   },
   {
-    categoryName: "Gadgets",
-    title: "GoPro HERO12 Black Waterproof Action Camera",
-    price: "399.00",
-    old_price: "449.00",
-    badge: "NEW",
-    badge_color: "bg-green-500",
-    button_text: "Buy Now",
-    brand: "GoPro",
-    sku: "GOPRO-H12",
-    rating: 4.5,
-    review_count: 6,
-    is_featured: false,
-    is_best_seller: false,
-    is_trending: true,
-    discount_percentage: 11,
-    description: "Incredible image quality, even better HyperSmooth video stabilization, and a huge boost in battery performance. Takes best-in-class 5.3K video and HDR photos.",
-    stock: 9,
-    main_image_url: "https://images.unsplash.com/photo-1564466809058-bf4114d55352?q=80&w=800&auto=format&fit=crop",
-    gallery_image_urls: ["https://images.unsplash.com/photo-1564466809058-bf4114d55352?q=80&w=800&auto=format&fit=crop"],
-    specs: [
-      { label: "Video Resolution", value: "5.3K/60fps, 4K/120fps" },
-      { label: "Photo Resolution", value: "27MP" },
-    ],
-    colors: [{ name: "Standard Black", hex: "#1e293b" }],
-    storage_options: [{ label: "Standard", value: "standard" }]
-  },
-  {
-    categoryName: "Laptops",
-    title: "MacBook Air 15-inch M3 Chip 16GB/512GB SSD",
-    price: "1499.00",
-    old_price: "1699.00",
-    badge: "-11%",
-    badge_color: "bg-amber-500",
-    button_text: "Configure",
-    brand: "Apple",
-    sku: "APL-MBA15-M3",
-    rating: 4.9,
-    review_count: 18,
+    categoryName: "Mobile Game Controllers",
+    title: "Mobile Gaming Controller for iPhone & Android",
+    price: "45.00",
+    old_price: "59.00",
+    badge: "PRO-PLAY",
+    badge_color: "bg-purple-600",
+    button_text: "Buy Controller",
+    brand: "GameGrip",
+    sku: "GAM-MOB-CTR",
+    rating: 4.6,
+    review_count: 14,
     is_featured: true,
-    is_best_seller: true,
-    is_trending: true,
-    discount_percentage: 11,
-    description: "The 15-inch MacBook Air is superlight and fits easily in your bag. Built with the powerhouse M3 chip to handle multitasking and pro workloads easily.",
-    stock: 6,
-    main_image_url: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?q=80&w=800&auto=format&fit=crop",
-    gallery_image_urls: ["https://images.unsplash.com/photo-1517336714731-489689fd1ca8?q=80&w=800&auto=format&fit=crop"],
-    specs: [
-      { label: "Display", value: "15.3-inch Liquid Retina Display" },
-      { label: "Processor", value: "Apple M3 Chip (8-core CPU)" },
-    ],
-    colors: [
-      { name: "Space Gray", hex: "#3a3a3c" },
-      { name: "Silver", hex: "#e8e8e8" },
-    ],
-    storage_options: [
-      { label: "256GB", value: "256gb" },
-      { label: "512GB", value: "512gb" },
-    ]
-  },
-  {
-    categoryName: "Speakers",
-    title: "Anker Soundcore Motion X600 Portable Hi-Res Speaker",
-    price: "199.99",
-    old_price: "249.99",
-    badge: "-20%",
-    badge_color: "bg-red-500",
-    button_text: "Get Speaker",
-    brand: "Anker",
-    sku: "ANK-MX600-P",
-    rating: 4.4,
-    review_count: 10,
-    is_featured: false,
     is_best_seller: false,
     is_trending: true,
-    discount_percentage: 20,
-    description: "Inspired by theater acoustics, Motion X600 has 5 drivers and 5 amplifiers that are positioned to deliver sound all around you. Feels like you're in the room with the artist.",
-    stock: 14,
-    main_image_url: "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?q=80&w=800&auto=format&fit=crop",
-    gallery_image_urls: ["https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?q=80&w=800&auto=format&fit=crop"],
+    discount_percentage: 23,
+    description: "Ergonomic mobile game controller with direct plug-in connection for latency-free gaming. Fits phones up to 6.7 inches and charges while you play.",
+    stock: 20,
+    main_image_url: "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?q=80&w=800",
+    gallery_image_urls: ["https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?q=80&w=800"],
     specs: [
-      { label: "Audio Output", value: "50W Spatial Audio" },
-      { label: "Playtime", value: "Up to 12 hours" },
+      { label: "Connectivity", value: "USB-C / Lightning" },
+      { label: "Compatible Devices", value: "iOS / Android" }
     ],
-    colors: [
-      { name: "Polar Gray", hex: "#4b5563" },
-    ],
+    colors: [{ name: "Matte Black", hex: "#0f172a" }],
     storage_options: []
   },
   {
-    categoryName: "Gaming",
-    title: "Xbox Series X Console 1TB Solid State Digital Drive",
-    price: "499.00",
-    old_price: "549.00",
-    badge: "-9%",
-    badge_color: "bg-slate-500",
-    button_text: "Claim Xbox",
-    brand: "Microsoft",
-    sku: "MS-XBX-1TB",
+    categoryName: "Electronic Coffee Maker",
+    title: "Automatic Drip Coffee Maker with In-Built Grinder",
+    price: "299.00",
+    old_price: "359.00",
+    badge: "KITCHEN DELIGHT",
+    badge_color: "bg-amber-600",
+    button_text: "Shop Coffee Maker",
+    brand: "GrivaHome",
+    sku: "KIT-CFM-GRD",
     rating: 4.8,
-    review_count: 22,
+    review_count: 11,
     is_featured: true,
     is_best_seller: true,
     is_trending: false,
-    discount_percentage: 9,
-    description: "Play thousands of games from four generations of Xbox on the fastest, most powerful Xbox console ever. Experience next-gen speed with the Xbox Velocity Architecture.",
-    stock: 4,
-    main_image_url: "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?q=80&w=800&auto=format&fit=crop",
-    gallery_image_urls: ["https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?q=80&w=800&auto=format&fit=crop"],
+    discount_percentage: 16,
+    description: "Wake up to fresh coffee beans ground right before brewing. Built-in conical burr grinder, 1.5L glass carafe, and programmable 24-hour timer settings.",
+    stock: 8,
+    main_image_url: "https://images.unsplash.com/photo-1517701604599-bb29b565090c?q=80&w=800",
+    gallery_image_urls: ["https://images.unsplash.com/photo-1517701604599-bb29b565090c?q=80&w=800"],
     specs: [
-      { label: "Storage", value: "1TB Custom NVME SSD" },
-      { label: "Resolution", value: "True 4K Gaming" },
+      { label: "Capacity", value: "1.5 Liters (12 Cups)" },
+      { label: "Grinder settings", value: "5 grind size levels" },
+      { label: "Power", value: "1000 Watts" }
     ],
-    colors: [{ name: "Matte Black", hex: "#18181b" }],
+    colors: [{ name: "Brushed Steel", hex: "#94a3b8" }],
     storage_options: []
   }
 ];
@@ -336,13 +401,30 @@ const seedDatabase = async () => {
     });
     console.log("➕ [SEED]: Site setting configurations seed added.");
 
-    // 4. Seed Categories
+    // 4. Seed Categories & Subcategories
     const categoryMap = {};
-    for (const cat of SEED_CATEGORIES) {
-      const dbCat = await Category.create(cat);
-      categoryMap[dbCat.title] = dbCat.id;
+    for (const mainCat of SEED_CATEGORIES_TREE) {
+      const parentHref = `/category/${mainCat.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+      const dbParent = await Category.create({
+        title: mainCat.title,
+        href: parentHref,
+        image_url: mainCat.image_url,
+        parent_id: null
+      });
+      categoryMap[mainCat.title] = dbParent.id;
+
+      for (const subTitle of mainCat.subcategories) {
+        const subHref = `${parentHref}?sub=${subTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+        const dbSub = await Category.create({
+          title: subTitle,
+          href: subHref,
+          image_url: mainCat.image_url,
+          parent_id: dbParent.id
+        });
+        categoryMap[subTitle] = dbSub.id;
+      }
     }
-    console.log("➕ [SEED]: Product category taxonomy generated.");
+    console.log("➕ [SEED]: Product category taxonomy with parent-child subcategories generated.");
 
     // 5. Seed Products
     const productMap = {};
@@ -462,7 +544,7 @@ const seedDatabase = async () => {
       price: "$348.00",
       image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=800",
       bg: "bg-blue-600",
-      href: "/category/headphones",
+      href: "/category/gadgets-electronics?sub=earphones",
       isActive: true,
     });
     console.log("➕ [SEED]: Store Banners and Slides populated.");

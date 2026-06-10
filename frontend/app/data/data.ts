@@ -38,7 +38,7 @@ import banner3 from "../../public/images/banner3.png";
 const products: Product[] = [
   {
     id: 1,
-    category: "Gadgets",
+    category: "gadgets-electronics",
     title: "DJI Mini 4 Pro Drone Flight Combo - 4K HDR Camera",
     image: "https://images.unsplash.com/photo-1508614589041-895b88991e3e?q=80&w=800&auto=format&fit=crop",
     images: ["https://images.unsplash.com/photo-1508614589041-895b88991e3e?q=80&w=800&auto=format&fit=crop"],
@@ -83,7 +83,7 @@ const products: Product[] = [
   },
   {
     id: 2,
-    category: "Gadgets",
+    category: "gadgets-electronics",
     title: "Meta Quest 3 128GB VR Headset - Mixed Reality",
     image: "https://images.unsplash.com/photo-1622979135225-d2ba269cf1ac?q=80&w=800&auto=format&fit=crop",
     images: ["https://images.unsplash.com/photo-1622979135225-d2ba269cf1ac?q=80&w=800&auto=format&fit=crop"],
@@ -114,7 +114,7 @@ const products: Product[] = [
   },
   {
     id: 3,
-    category: "Gadgets",
+    category: "gadgets-electronics",
     title: "Apple Watch Ultra 2 GPS + Cellular Titanium",
     image: iwatch,
     images: [iwatch, iwatch],
@@ -144,7 +144,7 @@ const products: Product[] = [
   },
   {
     id: 4,
-    category: "Headphones",
+    category: "gaming-accessories",
     title: "Sony WH-1000XM5 Wireless Noise Cancelling Headphones",
     image: headphone123,
     images: [headphone123, headphoneNew],
@@ -174,7 +174,7 @@ const products: Product[] = [
   },
   {
     id: 5,
-    category: "Gadgets",
+    category: "gadgets-electronics",
     title: "GoPro HERO12 Black Waterproof Action Camera",
     image: "https://images.unsplash.com/photo-1564466809058-bf4114d55352?q=80&w=800&auto=format&fit=crop",
     images: ["https://images.unsplash.com/photo-1564466809058-bf4114d55352?q=80&w=800&auto=format&fit=crop"],
@@ -198,7 +198,7 @@ const products: Product[] = [
   },
   {
     id: 6,
-    category: "Laptops",
+    category: "gadgets-electronics",
     title: "MacBook Air 15-inch M3 Chip 16GB/512GB SSD",
     image: macb,
     images: [macb, macb],
@@ -231,7 +231,7 @@ const products: Product[] = [
   },
   {
     id: 7,
-    category: "Speakers",
+    category: "gadgets-electronics",
     title: "Anker Soundcore Motion X600 Portable Hi-Res Speaker",
     image: bsspeaker,
     images: [bsspeaker, bsspeaker],
@@ -259,7 +259,7 @@ const products: Product[] = [
   },
   {
     id: 8,
-    category: "Gaming",
+    category: "gaming-accessories",
     title: "Xbox Series X Console 1TB Solid State Digital Drive",
     image: gamejoysticnew,
     images: [gamejoysticnew, joystic],
@@ -283,6 +283,96 @@ const products: Product[] = [
     storageOptions: [],
     reviews: [],
   },
+  {
+    id: 9,
+    category: "perfumes-buhoor",
+    title: "Oud Royale Premium Concentrated Oud & Amber Perfume Oil",
+    image: "https://images.unsplash.com/photo-1541643600914-78b084683601?q=80&w=600",
+    images: ["https://images.unsplash.com/photo-1541643600914-78b084683601?q=80&w=600"],
+    price: "$89.00",
+    oldPrice: "$120.00",
+    badge: "Oud",
+    badgeColor: "bg-amber-600",
+    buttonText: "ADD TO CART",
+    rating: 5,
+    reviewCount: 18,
+    stock: 12,
+    description: "Deep, rich, and mysterious concentrated perfume oil featuring high-quality Cambodian Agarwood, natural Amber, and Warm Spicy notes. Long-lasting scent projection.",
+    specs: [
+      { label: "Volume", value: "12 ml (1 Tola)" },
+      { label: "Origin", value: "Doha, Qatar Central" },
+      { label: "Concentration", value: "100% Pure Perfume Oil" }
+    ],
+    colors: [],
+    storageOptions: []
+  },
+  {
+    id: 10,
+    category: "toys",
+    title: "Interactive Islamic Learning Tablet for Kids",
+    image: "https://images.unsplash.com/photo-1587654780291-39c9404d746b?q=80&w=600",
+    images: ["https://images.unsplash.com/photo-1587654780291-39c9404d746b?q=80&w=600"],
+    price: "$49.00",
+    oldPrice: "$69.00",
+    badge: "-28%",
+    badgeColor: "bg-red-500",
+    buttonText: "ADD TO CART",
+    rating: 5,
+    reviewCount: 22,
+    stock: 25,
+    description: "Fun, educational interactive tablet designed for children to learn basic short Surahs, daily Duas, Arabic alphabets, and prayer steps with crystal clear audio playback.",
+    specs: [
+      { label: "Age Group", value: "3+ years" },
+      { label: "Language", value: "Arabic & English" },
+      { label: "Power", value: "3x AAA Batteries" }
+    ],
+    colors: [],
+    storageOptions: []
+  },
+  {
+    id: 11,
+    category: "baby-products",
+    title: "Extra Thick Non-Toxic Reversible Baby Play Mat",
+    image: "https://images.unsplash.com/photo-1515488042361-404e9250afef?q=80&w=600",
+    images: ["https://images.unsplash.com/photo-1515488042361-404e9250afef?q=80&w=600"],
+    price: "$99.00",
+    oldPrice: "$129.00",
+    badge: "Safe",
+    badgeColor: "bg-teal-500",
+    buttonText: "ADD TO CART",
+    rating: 4.8,
+    reviewCount: 31,
+    stock: 10,
+    description: "Constructed with premium high-density XPE foam material, fully waterproof, slip-resistant, and BPA-free. Soft cushioned structure protects baby during crawling and playing.",
+    specs: [
+      { label: "Size", value: "200 x 180 x 1.5 cm" },
+      { label: "Material", value: "Non-toxic XPE Foam" }
+    ],
+    colors: [],
+    storageOptions: []
+  },
+  {
+    id: 12,
+    category: "kitchen-appliances-essentials",
+    title: "Smart Professional Espresso & Coffee Maker Machine",
+    image: "https://images.unsplash.com/photo-1588854337236-6889d631faa8?q=80&w=600",
+    images: ["https://images.unsplash.com/photo-1588854337236-6889d631faa8?q=80&w=600"],
+    price: "$299.00",
+    oldPrice: "$399.00",
+    badge: "Smart",
+    badgeColor: "bg-orange-500",
+    buttonText: "ADD TO CART",
+    rating: 4.7,
+    reviewCount: 45,
+    stock: 8,
+    description: "Fully automated coffee brewer featuring 15 bars of pressure, digital touch control pad, temperature stabilizer, and build-in steam frother for barista-quality coffees.",
+    specs: [
+      { label: "Water Tank", value: "1.8 Liters" },
+      { label: "Power", value: "1450 Watts" }
+    ],
+    colors: [],
+    storageOptions: []
+  }
 ];
 
 // ─────────────────────────────────────────────────────────
@@ -517,34 +607,117 @@ const faqData: FAQItem[] = [
 
 const categories: CategoryItem[] = [
   {
-    title: "Gaming",
-    href: "/category/gaming",
-    image: gamejoystic,
+    title: "Perfumes & Buhoor",
+    href: "/category/perfumes-buhoor",
+    image: "https://images.unsplash.com/photo-1541643600914-78b084683601?q=80&w=600",
   },
   {
-    title: "Television",
-    href: "/category/television",
-    image: catetv,
+    title: "Toys",
+    href: "/category/toys",
+    image: "https://images.unsplash.com/photo-1558060370-d644479cb6f7?q=80&w=600",
   },
   {
-    title: "Speakers",
-    href: "/category/speakers",
-    image: catespeaker,
+    title: "Baby Products",
+    href: "/category/baby-products",
+    image: "https://images.unsplash.com/photo-1515488042361-404e9250afef?q=80&w=600",
   },
   {
-    title: "Headphones",
-    href: "/category/headphones",
-    image: cateheadphone,
+    title: "Gadgets & Electronics",
+    href: "/category/gadgets-electronics",
+    image: "https://images.unsplash.com/photo-1583394838336-acd977736f90?q=80&w=600",
   },
   {
-    title: "Gadgets",
-    href: "/category/gadgets",
-    image: "https://images.unsplash.com/photo-1622979135225-d2ba269cf1ac?q=80&w=800&auto=format&fit=crop",
+    title: "Gaming Accessories",
+    href: "/category/gaming-accessories",
+    image: "https://images.unsplash.com/photo-1600861195091-690c92f1d2cc?q=80&w=600",
   },
   {
-    title: "Laptops",
-    href: "/category/laptops",
-    image: laptop,
+    title: "Kitchen Appliances & Essentials",
+    href: "/category/kitchen-appliances-essentials",
+    image: "https://images.unsplash.com/photo-1588854337236-6889d631faa8?q=80&w=600",
+  },
+];
+
+const categoriesTree = [
+  {
+    title: "Perfumes & Buhoor",
+    href: "/category/perfumes-buhoor",
+    image: "https://images.unsplash.com/photo-1541643600914-78b084683601?q=80&w=600",
+    subcategories: [
+      { label: "Perfumes", href: "/category/perfumes-buhoor?sub=perfumes" },
+      { label: "Body Lotion", href: "/category/perfumes-buhoor?sub=body-lotion" },
+      { label: "Car Fragrance", href: "/category/perfumes-buhoor?sub=car-fragrance" },
+      { label: "Buhoor", href: "/category/perfumes-buhoor?sub=buhoor" },
+      { label: "Body Spray", href: "/category/perfumes-buhoor?sub=body-spray" },
+    ],
+  },
+  {
+    title: "Toys",
+    href: "/category/toys",
+    image: "https://images.unsplash.com/photo-1558060370-d644479cb6f7?q=80&w=600",
+    subcategories: [
+      { label: "Newborn Toys", href: "/category/toys?sub=newborn-toys" },
+      { label: "Learning Toys", href: "/category/toys?sub=learning-toys" },
+      { label: "Islamic Learning Toys", href: "/category/toys?sub=islamic-learning-toys" },
+      { label: "Remote Control Cars & Toys", href: "/category/toys?sub=remote-control-cars-toys" },
+      { label: "Metal Toys", href: "/category/toys?sub=metal-toys" },
+    ],
+  },
+  {
+    title: "Baby Products",
+    href: "/category/baby-products",
+    image: "https://images.unsplash.com/photo-1515488042361-404e9250afef?q=80&w=600",
+    subcategories: [
+      { label: "Baby Clothes Storage", href: "/category/baby-products?sub=baby-clothes-storage" },
+      { label: "Baby Bath Accessories", href: "/category/baby-products?sub=baby-bath-accessories" },
+      { label: "Baby Play Mats", href: "/category/baby-products?sub=baby-play-mats" },
+      { label: "Baby Bouncers & Cradles", href: "/category/baby-products?sub=baby-bouncers-cradles" },
+    ],
+  },
+  {
+    title: "Gadgets & Electronics",
+    href: "/category/gadgets-electronics",
+    image: "https://images.unsplash.com/photo-1583394838336-acd977736f90?q=80&w=600",
+    subcategories: [
+      { label: "Power Banks", href: "/category/gadgets-electronics?sub=power-banks" },
+      { label: "Chargers", href: "/category/gadgets-electronics?sub=chargers" },
+      { label: "Cables", href: "/category/gadgets-electronics?sub=cables" },
+      { label: "Earphones", href: "/category/gadgets-electronics?sub=earphones" },
+      { label: "Speakers", href: "/category/gadgets-electronics?sub=speakers" },
+      { label: "Audio Cables", href: "/category/gadgets-electronics?sub=audio-cables" },
+      { label: "Screen Protectors", href: "/category/gadgets-electronics?sub=screen-protectors" },
+      { label: "Phone Cases", href: "/category/gadgets-electronics?sub=phone-cases" },
+      { label: "Smartwatches", href: "/category/gadgets-electronics?sub=smartwatches" },
+      { label: "Fitness Bands", href: "/category/gadgets-electronics?sub=fitness-bands" },
+    ],
+  },
+  {
+    title: "Gaming Accessories",
+    href: "/category/gaming-accessories",
+    image: "https://images.unsplash.com/photo-1600861195091-690c92f1d2cc?q=80&w=600",
+    subcategories: [
+      { label: "Mobile Game Controllers", href: "/category/gaming-accessories?sub=mobile-game-controllers" },
+      { label: "Triggers", href: "/category/gaming-accessories?sub=triggers" },
+      { label: "Gaming Earbuds", href: "/category/gaming-accessories?sub=gaming-earbuds" },
+      { label: "Gaming Headsets", href: "/category/gaming-accessories?sub=gaming-headsets" },
+      { label: "Phone Coolers", href: "/category/gaming-accessories?sub=phone-coolers" },
+      { label: "Gaming Finger Sleeves", href: "/category/gaming-accessories?sub=gaming-finger-sleeves" },
+      { label: "Gaming Grip Stands", href: "/category/gaming-accessories?sub=gaming-grip-stands" },
+    ],
+  },
+  {
+    title: "Kitchen Appliances & Essentials",
+    href: "/category/kitchen-appliances-essentials",
+    image: "https://images.unsplash.com/photo-1588854337236-6889d631faa8?q=80&w=600",
+    subcategories: [
+      { label: "Kitchen Rack", href: "/category/kitchen-appliances-essentials?sub=kitchen-rack" },
+      { label: "Shoe Rack", href: "/category/kitchen-appliances-essentials?sub=shoe-rack" },
+      { label: "Washing Machine Rack", href: "/category/kitchen-appliances-essentials?sub=washing-machine-rack" },
+      { label: "Vegetable Rack", href: "/category/kitchen-appliances-essentials?sub=vegetable-rack" },
+      { label: "Electronic Coffee Maker", href: "/category/kitchen-appliances-essentials?sub=electronic-coffee-maker" },
+      { label: "Egg Boilers", href: "/category/kitchen-appliances-essentials?sub=egg-boilers" },
+      { label: "Egg Beaters", href: "/category/kitchen-appliances-essentials?sub=egg-beaters" },
+    ],
   },
 ];
 
@@ -585,4 +758,4 @@ export function parsePriceNumber(price: string): number {
   return parseFloat(price.replace(/[$,]/g, "")) || 0;
 }
 
-export { products, banners, offers, trndingProducts, slides, faqData, categories, slide ,mobilebanners};
+export { products, banners, offers, trndingProducts, slides, faqData, categories, categoriesTree, slide ,mobilebanners};

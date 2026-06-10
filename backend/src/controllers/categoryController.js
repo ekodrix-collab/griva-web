@@ -2,7 +2,23 @@ const Category = require("../models/Category");
 
 exports.getCategories = async (req, res, next) => {
   try {
-    const categories = await Category.findAll({ order: [["title", "ASC"]] });
+    const { tree } = req.query;
+    let categories;
+    if (tree === "true") {
+      categories = await Category.findAll({
+        where: { parent_id: null },
+        include: [{ model: Category, as: "subcategories" }],
+        order: [
+          ["title", "ASC"],
+          [{ model: Category, as: "subcategories" }, "title", "ASC"],
+        ],
+      });
+    } else {
+      categories = await Category.findAll({
+        include: [{ model: Category, as: "parent" }],
+        order: [["title", "ASC"]],
+      });
+    }
     res.status(200).json({ categories });
   } catch (error) {
     next(error);
@@ -12,7 +28,12 @@ exports.getCategories = async (req, res, next) => {
 exports.getCategoryById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const category = await Category.findByPk(id);
+    const category = await Category.findByPk(id, {
+      include: [
+        { model: Category, as: "parent" },
+        { model: Category, as: "subcategories" }
+      ]
+    });
     if (!category) {
       return res.status(404).json({ error: "Category not found." });
     }
@@ -24,7 +45,7 @@ exports.getCategoryById = async (req, res, next) => {
 
 exports.createCategory = async (req, res, next) => {
   try {
-    const { title, href, image_url } = req.body;
+    const { title, href, image_url, parent_id } = req.body;
     if (!title) {
       return res.status(400).json({ error: "Category title is required." });
     }
@@ -35,6 +56,7 @@ exports.createCategory = async (req, res, next) => {
       title,
       href: defaultHref,
       image_url,
+      parent_id: parent_id || null,
     });
 
     res.status(201).json({
@@ -49,7 +71,7 @@ exports.createCategory = async (req, res, next) => {
 exports.updateCategory = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { title, href, image_url } = req.body;
+    const { title, href, image_url, parent_id } = req.body;
 
     const category = await Category.findByPk(id);
     if (!category) {
@@ -59,6 +81,7 @@ exports.updateCategory = async (req, res, next) => {
     if (title !== undefined) category.title = title;
     if (href !== undefined) category.href = href;
     if (image_url !== undefined) category.image_url = image_url;
+    if (parent_id !== undefined) category.parent_id = parent_id || null;
 
     await category.save();
 

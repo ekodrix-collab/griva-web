@@ -4,7 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { ChevronDown, Heart, Menu } from "lucide-react";
 import ShopeCategoryDropDown from "../dropdowns/ShopeCategoryDropDown";
+import MegaMenuDropdown from "../dropdowns/MegaMenuDropdown";
 import { useWishlist } from "@/app/context/WishlistContext";
+import { categoriesTree } from "@/app/data/data";
 
 interface DropdownItem {
   label: string;
@@ -22,39 +24,64 @@ interface NavLink {
   active?: boolean;
 }
 
-const shopCategories: DropdownItem[] = [
-  { label: "Laptops", href: "/category/laptops" },
-  { label: "Television", href: "/category/television" },
-  { label: "Speakers", href: "/category/speakers" },
-  { label: "Headphones", href: "/category/headphones" },
-  { label: "Gaming", href: "/category/gaming" },
-  { label: "Gadgets", href: "/category/gadgets" },
-];
-
 const dropdownData: DropdownData = {
-  Home: [
-    { label: "Home Page", href: "/" },
+  "Perfumes & Buhoor": [
+    { label: "Perfumes", href: "/category/perfumes-buhoor?sub=perfumes" },
+    { label: "Body Lotion", href: "/category/perfumes-buhoor?sub=body-lotion" },
+    { label: "Car Fragrance", href: "/category/perfumes-buhoor?sub=car-fragrance" },
+    { label: "Buhoor", href: "/category/perfumes-buhoor?sub=buhoor" },
+    { label: "Body Spray", href: "/category/perfumes-buhoor?sub=body-spray" },
   ],
-  Laptops: [
-    { label: "MacBook Air/Pro", href: "/category/laptops" },
-    { label: "Windows Laptops", href: "/category/laptops" },
+  "Toys & Baby": [
+    { label: "Newborn Toys", href: "/category/toys?sub=newborn-toys" },
+    { label: "Learning Toys", href: "/category/toys?sub=learning-toys" },
+    { label: "Islamic Learning Toys", href: "/category/toys?sub=islamic-learning-toys" },
+    { label: "Remote Control Cars & Toys", href: "/category/toys?sub=remote-control-cars-toys" },
+    { label: "Metal Toys", href: "/category/toys?sub=metal-toys" },
+    { label: "Baby Clothes Storage", href: "/category/baby-products?sub=baby-clothes-storage" },
+    { label: "Baby Bath Accessories", href: "/category/baby-products?sub=baby-bath-accessories" },
+    { label: "Baby Play Mats", href: "/category/baby-products?sub=baby-play-mats" },
+    { label: "Baby Bouncers & Cradles", href: "/category/baby-products?sub=baby-bouncers-cradles" },
   ],
-  Television: [
-    { label: "OLED Smart TVs", href: "/category/television" },
-    { label: "QLED Displays", href: "/category/television" },
+  "Gadgets & Electronics": [
+    { label: "Power Banks", href: "/category/gadgets-electronics?sub=power-banks" },
+    { label: "Chargers", href: "/category/gadgets-electronics?sub=chargers" },
+    { label: "Cables", href: "/category/gadgets-electronics?sub=cables" },
+    { label: "Earphones", href: "/category/gadgets-electronics?sub=earphones" },
+    { label: "Speakers", href: "/category/gadgets-electronics?sub=speakers" },
+    { label: "Audio Cables", href: "/category/gadgets-electronics?sub=audio-cables" },
+    { label: "Screen Protectors", href: "/category/gadgets-electronics?sub=screen-protectors" },
+    { label: "Phone Cases", href: "/category/gadgets-electronics?sub=phone-cases" },
+    { label: "Smartwatches", href: "/category/gadgets-electronics?sub=smartwatches" },
+    { label: "Fitness Bands", href: "/category/gadgets-electronics?sub=fitness-bands" },
   ],
-  Headphones: [
-    { label: "Over-Ear ANC", href: "/category/headphones" },
-    { label: "Wireless Earbuds", href: "/category/headphones" },
+  "Gaming Accessories": [
+    { label: "Mobile Game Controllers", href: "/category/gaming-accessories?sub=mobile-game-controllers" },
+    { label: "Triggers", href: "/category/gaming-accessories?sub=triggers" },
+    { label: "Gaming Earbuds", href: "/category/gaming-accessories?sub=gaming-earbuds" },
+    { label: "Gaming Headsets", href: "/category/gaming-accessories?sub=gaming-headsets" },
+    { label: "Phone Coolers", href: "/category/gaming-accessories?sub=phone-coolers" },
+    { label: "Gaming Finger Sleeves", href: "/category/gaming-accessories?sub=gaming-finger-sleeves" },
+    { label: "Gaming Grip Stands", href: "/category/gaming-accessories?sub=gaming-grip-stands" },
+  ],
+  "Kitchen Essentials": [
+    { label: "Kitchen Rack", href: "/category/kitchen-appliances-essentials?sub=kitchen-rack" },
+    { label: "Shoe Rack", href: "/category/kitchen-appliances-essentials?sub=shoe-rack" },
+    { label: "Washing Machine Rack", href: "/category/kitchen-appliances-essentials?sub=washing-machine-rack" },
+    { label: "Vegetable Rack", href: "/category/kitchen-appliances-essentials?sub=vegetable-rack" },
+    { label: "Electronic Coffee Maker", href: "/category/kitchen-appliances-essentials?sub=electronic-coffee-maker" },
+    { label: "Egg Boilers", href: "/category/kitchen-appliances-essentials?sub=egg-boilers" },
+    { label: "Egg Beaters", href: "/category/kitchen-appliances-essentials?sub=egg-beaters" },
   ],
 };
 
 const navLinks: NavLink[] = [
-  { label: "Home", href: "/", hasDropdown: true, active: true },
-  { label: "Laptops", href: "/category/laptops", hasDropdown: true },
-  { label: "Headphones", href: "/category/headphones", hasDropdown: true },
-  { label: "Television", href: "/category/television", hasDropdown: true },
-  { label: "Gadgets", href: "/category/gadgets" },
+  { label: "Home", href: "/" },
+  { label: "Perfumes & Buhoor", href: "/category/perfumes-buhoor", hasDropdown: true },
+  { label: "Toys & Baby", href: "/category/toys", hasDropdown: true },
+  { label: "Gadgets & Electronics", href: "/category/gadgets-electronics", hasDropdown: true },
+  { label: "Gaming Accessories", href: "/category/gaming-accessories", hasDropdown: true },
+  { label: "Kitchen Essentials", href: "/category/kitchen-appliances-essentials", hasDropdown: true },
 ];
 
 export default function SubNavbar() {
@@ -80,14 +107,15 @@ export default function SubNavbar() {
               <ChevronDown size={16} className="text-gray-500" />
             </button>
 
-            <ShopeCategoryDropDown
-              items={shopCategories}
+            <MegaMenuDropdown
+              categories={categoriesTree}
               isOpen={activeDropdown === "shop-categories"}
+              onClose={() => setActiveDropdown(null)}
             />
           </div>
 
           {/* Navigation */}
-          <nav className="ml-10 hidden items-center gap-12 lg:flex">
+          <nav className="ml-10 hidden items-center gap-6 lg:flex">
             {navLinks.map((link) => (
               <div
                 key={link.label}
@@ -97,7 +125,7 @@ export default function SubNavbar() {
               >
                 <Link
                   href={link.href}
-                  className={`flex items-center gap-1 text-sm font-semibold transition-colors duration-200 ${
+                  className={`flex items-center gap-1 text-[13px] font-semibold transition-colors duration-200 whitespace-nowrap ${
                     link.active
                       ? "text-orange-500 font-bold"
                       : "text-black hover:text-orange-500"
@@ -105,7 +133,7 @@ export default function SubNavbar() {
                 >
                   {link.label}
                   {link.hasDropdown && (
-                    <ChevronDown size={14} className="mt-[1px]" />
+                    <ChevronDown size={12} className="mt-[1px] text-gray-400 group-hover:text-orange-500" />
                   )}
                 </Link>
 

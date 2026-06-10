@@ -2,8 +2,8 @@
 
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { SlidersHorizontal, Star, RotateCcw, X, ChevronRight, Laptop, Tv, Speaker, Headphones, Gamepad2, Sparkles } from "lucide-react";
+import { useParams, useSearchParams } from "next/navigation";
+import { SlidersHorizontal, Star, RotateCcw, X, ChevronRight, Gamepad2, Sparkles, Smile, Baby, Smartphone, Utensils } from "lucide-react";
 import { products, parsePriceNumber } from "@/app/data/data";
 import ProductCard from "@/app/components/product/ProductCard";
 import { motion, AnimatePresence } from "framer-motion";
@@ -17,47 +17,49 @@ interface CategoryMetadata {
 }
 
 const CATEGORY_META: Record<string, CategoryMetadata> = {
-  laptops: {
-    title: "Premium Laptops",
-    tagline: "Unleash ultimate power and portable computing",
+  "perfumes-buhoor": {
+    title: "Perfumes & Buhoor",
+    tagline: "Premium French perfumes, local Buhoor & Oud oils",
+    gradient: "from-amber-700 via-rose-800 to-amber-900",
+    icon: <Sparkles className="h-6 w-6 text-white" />,
+  },
+  "toys": {
+    title: "Toys & Games",
+    tagline: "Learning toys, Islamic learning kits & RC vehicles",
+    gradient: "from-sky-500 via-indigo-600 to-purple-700",
+    icon: <Smile className="h-6 w-6 text-white" />,
+  },
+  "baby-products": {
+    title: "Baby Products",
+    tagline: "Baby storage, play mats, bath access & bouncers",
+    gradient: "from-teal-400 via-cyan-500 to-emerald-600",
+    icon: <Baby className="h-6 w-6 text-white" />,
+  },
+  "gadgets-electronics": {
+    title: "Gadgets & Electronics",
+    tagline: "Power banks, premium chargers, cables & smart wearables",
     gradient: "from-blue-600 via-indigo-700 to-purple-800",
-    icon: <Laptop className="h-6 w-6 text-white" />,
+    icon: <Smartphone className="h-6 w-6 text-white" />,
   },
-  television: {
-    title: "Smart Televisions",
-    tagline: "Immerse yourself in cinematic 4K QLED displays",
-    gradient: "from-red-650 via-pink-700 to-rose-800",
-    icon: <Tv className="h-6 w-6 text-white" />,
-  },
-  speakers: {
-    title: "Hi-Fi Speakers",
-    tagline: "Experience crystal clear theater-grade acoustics",
-    gradient: "from-amber-600 via-orange-600 to-red-700",
-    icon: <Speaker className="h-6 w-6 text-white" />,
-  },
-  headphones: {
-    title: "Acoustic Headphones",
-    tagline: "Drown the noise with premium studio comfort",
-    gradient: "from-emerald-600 via-teal-700 to-cyan-800",
-    icon: <Headphones className="h-6 w-6 text-white" />,
-  },
-  gaming: {
-    title: "Gaming Zone",
-    tagline: "Next-gen speed and high-precision peripherals",
-    gradient: "from-violet-650 via-purple-750 to-fuchsia-850",
+  "gaming-accessories": {
+    title: "Gaming Accessories",
+    tagline: "Mobile game triggers, cooling fans & high-grade audio",
+    gradient: "from-violet-600 via-purple-750 to-fuchsia-850",
     icon: <Gamepad2 className="h-6 w-6 text-white" />,
   },
-  gadgets: {
-    title: "Smart Gadgets",
-    tagline: "Future-proof smartwatches, VR systems, and drones",
-    gradient: "from-orange-500 via-amber-500 to-yellow-600",
-    icon: <Sparkles className="h-6 w-6 text-white" />,
+  "kitchen-appliances-essentials": {
+    title: "Kitchen Appliances & Essentials",
+    tagline: "Storage racks, automated coffee makers & smart egg boilers",
+    gradient: "from-orange-500 via-amber-600 to-red-700",
+    icon: <Utensils className="h-6 w-6 text-white" />,
   },
 };
 
 export default function CategoryPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const slug = (params.slug as string)?.toLowerCase() || "";
+  const subParam = searchParams.get("sub") || "";
 
   // Filter States
   const [maxPrice, setMaxPrice] = useState<number>(2000);
@@ -80,18 +82,30 @@ export default function CategoryPage() {
       (p) => p.category.toLowerCase() === slug
     );
 
-    // 2. Price filter
+    // 2. Filter by subcategory if parameter is present
+    if (subParam) {
+      const subKeyword = subParam.replace(/-/g, " ");
+      const subResult = result.filter(p => 
+        p.title.toLowerCase().includes(subKeyword.toLowerCase()) || 
+        p.description?.toLowerCase().includes(subKeyword.toLowerCase())
+      );
+      if (subResult.length > 0) {
+        result = subResult;
+      }
+    }
+
+    // 3. Price filter
     result = result.filter((p) => {
       const priceNum = parsePriceNumber(p.price);
       return priceNum <= maxPrice;
     });
 
-    // 3. Rating filter
+    // 4. Rating filter
     if (minRating > 0) {
       result = result.filter((p) => p.rating >= minRating);
     }
 
-    // 4. Sorting
+    // 5. Sorting
     if (sortBy === "price-low-to-high") {
       result.sort((a, b) => parsePriceNumber(a.price) - parsePriceNumber(b.price));
     } else if (sortBy === "price-high-to-low") {
@@ -101,7 +115,7 @@ export default function CategoryPage() {
     }
 
     return result;
-  }, [slug, maxPrice, minRating, sortBy]);
+  }, [slug, subParam, maxPrice, minRating, sortBy]);
 
   const handleResetFilters = () => {
     setMaxPrice(2000);
