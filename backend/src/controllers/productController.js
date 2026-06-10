@@ -147,6 +147,13 @@ exports.getCategories = async (req, res, next) => {
   }
 };
 
+const slugify = (text) => {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "");
+};
+
 /**
  * Admin Action: Create New Catalog Product
  * Powers: Admin Panel dashboard
@@ -166,6 +173,17 @@ exports.createProduct = async (req, res, next) => {
       storage_options,
       main_image_url,
       gallery_image_urls,
+      sku,
+      brand,
+      badge_color,
+      button_text,
+      is_featured,
+      is_best_seller,
+      is_trending,
+      is_new,
+      discount_percentage,
+      meta_title,
+      meta_description,
     } = req.body;
 
     // Guard constraints (Java bean validations equivalent)
@@ -179,9 +197,12 @@ exports.createProduct = async (req, res, next) => {
       return res.status(400).json({ error: "Invalid Category ID lookup." });
     }
 
+    const generatedSlug = req.body.slug || slugify(title);
+
     const product = await Product.create({
       category_id,
       title,
+      slug: generatedSlug,
       price,
       old_price,
       badge,
@@ -192,6 +213,20 @@ exports.createProduct = async (req, res, next) => {
       storage_options: storage_options || [],
       main_image_url,
       gallery_image_urls: gallery_image_urls || [],
+      sku: sku || null,
+      brand: brand || null,
+      rating: 0,
+      review_count: 0,
+      badge_color: badge_color || null,
+      button_text: button_text || "Buy Now",
+      is_featured: !!is_featured,
+      is_best_seller: !!is_best_seller,
+      is_trending: !!is_trending,
+      is_new: is_new !== undefined ? !!is_new : true,
+      discount_percentage: discount_percentage || 0,
+      meta_title: meta_title || null,
+      meta_description: meta_description || null,
+      views_count: 0,
     });
 
     res.status(201).json({
@@ -266,6 +301,7 @@ exports.updateProduct = async (req, res, next) => {
     const {
       category_id,
       title,
+      slug,
       price,
       old_price,
       badge,
@@ -276,6 +312,20 @@ exports.updateProduct = async (req, res, next) => {
       storage_options,
       main_image_url,
       gallery_image_urls,
+      sku,
+      brand,
+      rating,
+      review_count,
+      badge_color,
+      button_text,
+      is_featured,
+      is_best_seller,
+      is_trending,
+      is_new,
+      discount_percentage,
+      meta_title,
+      meta_description,
+      views_count,
     } = req.body;
 
     const product = await Product.findByPk(id);
@@ -292,7 +342,13 @@ exports.updateProduct = async (req, res, next) => {
       product.category_id = category_id;
     }
 
-    if (title !== undefined) product.title = title;
+    if (title !== undefined) {
+      product.title = title;
+      if (!slug) {
+        product.slug = slugify(title);
+      }
+    }
+    if (slug !== undefined) product.slug = slug;
     if (price !== undefined) product.price = price;
     if (old_price !== undefined) product.old_price = old_price;
     if (badge !== undefined) product.badge = badge;
@@ -303,6 +359,20 @@ exports.updateProduct = async (req, res, next) => {
     if (storage_options !== undefined) product.storage_options = storage_options;
     if (main_image_url !== undefined) product.main_image_url = main_image_url;
     if (gallery_image_urls !== undefined) product.gallery_image_urls = gallery_image_urls;
+    if (sku !== undefined) product.sku = sku;
+    if (brand !== undefined) product.brand = brand;
+    if (rating !== undefined) product.rating = rating;
+    if (review_count !== undefined) product.review_count = review_count;
+    if (badge_color !== undefined) product.badge_color = badge_color;
+    if (button_text !== undefined) product.button_text = button_text;
+    if (is_featured !== undefined) product.is_featured = is_featured;
+    if (is_best_seller !== undefined) product.is_best_seller = is_best_seller;
+    if (is_trending !== undefined) product.is_trending = is_trending;
+    if (is_new !== undefined) product.is_new = is_new;
+    if (discount_percentage !== undefined) product.discount_percentage = discount_percentage;
+    if (meta_title !== undefined) product.meta_title = meta_title;
+    if (meta_description !== undefined) product.meta_description = meta_description;
+    if (views_count !== undefined) product.views_count = views_count;
 
     await product.save();
 

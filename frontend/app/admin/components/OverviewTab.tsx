@@ -1,8 +1,14 @@
 import React from 'react';
 import {
-  LayoutDashboard, Package, Sliders, Users, Search, Bell, Plus, Trash2, RefreshCw, TrendingUp, DollarSign, ShoppingCart, Percent, ChevronRight, Edit, ArrowUpRight, Mail, Send, Eye, AlertTriangle, X, Sparkles, ToggleLeft, ToggleRight, Image as ImageIcon, CheckCircle, EyeOff
+  TrendingUp, DollarSign, ShoppingCart, Users, BarChart2,
+  ToggleLeft, ToggleRight, CheckCircle, EyeOff,
+  ChevronRight, Package, Sliders
 } from 'lucide-react';
+import { AnalyticsData } from '../../utils/api';
+
 interface OverviewTabProps {
+  analytics: AnalyticsData | null;
+  analyticsLoading: boolean;
   announcementBarEnabled: boolean;
   setAnnouncementBarEnabled: (val: boolean) => void;
   fridaySaleEnabled: boolean;
@@ -17,258 +23,405 @@ interface OverviewTabProps {
   offersList: any[];
 }
 
+const CATEGORY_COLORS = [
+  '#f97316', '#3b82f6', '#8b5cf6', '#10b981', '#ef4444', '#f59e0b'
+];
+
+function SalesLineChart({ data }: { data: { date: string; sales: number }[] }) {
+  if (!data || data.length < 2) return null;
+  const maxSales = Math.max(...data.map(d => d.sales));
+  const minSales = Math.min(...data.map(d => d.sales));
+  const range = maxSales - minSales || 1;
+  const width = 500;
+  const height = 120;
+  const padding = { top: 10, right: 10, bottom: 25, left: 50 };
+  const chartW = width - padding.left - padding.right;
+  const chartH = height - padding.top - padding.bottom;
+
+  const points = data.map((d, i) => ({
+    x: padding.left + (i / (data.length - 1)) * chartW,
+    y: padding.top + chartH - ((d.sales - minSales) / range) * chartH,
+    sales: d.sales,
+    date: d.date,
+  }));
+
+  const pathD = points
+    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`)
+    .join(' ');
+
+  const areaD = `${pathD} L ${points[points.length - 1].x} ${padding.top + chartH} L ${points[0].x} ${padding.top + chartH} Z`;
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#f97316" stopOpacity="0.2" />
+          <stop offset="100%" stopColor="#f97316" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      {/* Y-axis labels */}
+      {[0, 0.5, 1].map((ratio, i) => {
+        const val = minSales + ratio * range;
+        const y = padding.top + chartH - ratio * chartH;
+        return (
+          <g key={i}>
+            <line x1={padding.left - 4} y1={y} x2={padding.left + chartW} y2={y} stroke="#f3f4f6" strokeWidth="1" />
+            <text x={padding.left - 8} y={y + 4} textAnchor="end" fontSize="9" fill="#9ca3af">
+              ${val >= 1000 ? `${(val / 1000).toFixed(1)}k` : val.toFixed(0)}
+            </text>
+          </g>
+        );
+      })}
+      {/* Area fill */}
+      <path d={areaD} fill="url(#lineGrad)" />
+      {/* Line */}
+      <path d={pathD} fill="none" stroke="#f97316" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      {/* Data points + X labels */}
+      {points.map((p, i) => (
+        <g key={i}>
+          <circle cx={p.x} cy={p.y} r="3" fill="#f97316" stroke="white" strokeWidth="1.5" />
+          {i % 2 === 0 && (
+            <text x={p.x} y={height - 4} textAnchor="middle" fontSize="8" fill="#9ca3af">{p.date}</text>
+          )}
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+function CategoryPieChart({ data }: { data: { category: string; sales: number }[] }) {
+  if (!data || data.length === 0) return null;
+  const total = data.reduce((s, d) => s + d.sales, 0);
+  let cumAngle = -Math.PI / 2;
+  const cx = 70, cy = 70, r = 55, innerR = 30;
+
+  const slices = data.map((d, i) => {
+    const angle = (d.sales / total) * Math.PI * 2;
+    const start = cumAngle;
+    cumAngle += angle;
+    const end = cumAngle;
+    const x1 = cx + r * Math.cos(start);
+    const y1 = cy + r * Math.sin(start);
+    const x2 = cx + r * Math.cos(end);
+    const y2 = cy + r * Math.sin(end);
+    const ix1 = cx + innerR * Math.cos(start);
+    const iy1 = cy + innerR * Math.sin(start);
+    const ix2 = cx + innerR * Math.cos(end);
+    const iy2 = cy + innerR * Math.sin(end);
+    const largeArc = angle > Math.PI ? 1 : 0;
+    return {
+      d: `M ${ix1} ${iy1} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} L ${ix2} ${iy2} A ${innerR} ${innerR} 0 ${largeArc} 0 ${ix1} ${iy1} Z`,
+      color: CATEGORY_COLORS[i % CATEGORY_COLORS.length],
+      category: d.category,
+      pct: ((d.sales / total) * 100).toFixed(0),
+      sales: d.sales,
+    };
+  });
+
+  return (
+    <div className="flex items-center gap-4">
+      <svg viewBox="0 0 140 140" className="h-32 w-32 shrink-0">
+        {slices.map((s, i) => (
+          <path key={i} d={s.d} fill={s.color} className="hover:opacity-80 transition-opacity cursor-pointer" />
+        ))}
+        <text x="70" y="67" textAnchor="middle" fontSize="10" fontWeight="800" fill="#111827">Total</text>
+        <text x="70" y="78" textAnchor="middle" fontSize="8" fill="#6b7280">${(total / 1000).toFixed(1)}k</text>
+      </svg>
+      <div className="space-y-1.5 flex-1 min-w-0">
+        {slices.map((s, i) => (
+          <div key={i} className="flex items-center justify-between gap-2 text-[10px]">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
+              <span className="text-gray-600 font-semibold truncate">{s.category}</span>
+            </div>
+            <span className="font-black text-gray-800 shrink-0">{s.pct}%</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function OverviewTab(props: OverviewTabProps) {
-  const { announcementBarEnabled, setAnnouncementBarEnabled, fridaySaleEnabled, setFridaySaleEnabled, midnightSaleEnabled, setMidnightSaleEnabled, highlightedSchemaSection, setHighlightedSchemaSection, setActiveTab, slidesList, categoriesList, offersList } = props;
+  const {
+    analytics, analyticsLoading,
+    announcementBarEnabled, setAnnouncementBarEnabled,
+    fridaySaleEnabled, setFridaySaleEnabled,
+    midnightSaleEnabled, setMidnightSaleEnabled,
+    highlightedSchemaSection, setHighlightedSchemaSection,
+    setActiveTab, slidesList, categoriesList, offersList
+  } = props;
+
+  const statusCounts = analytics?.orderStatusCounts || { pending: 0, shipped: 0, completed: 0, cancelled: 0 };
+
   return (
     <div className="space-y-8 animate-in fade-in-50 duration-300">
 
-              {/* Campaign Switches (Friday / Midnight Sales) */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-                {/* Announcement Bar Toggle */}
-                <div className="bg-white border border-orange-500/30 p-6 rounded-2xl flex flex-col justify-between hover:border-gray-700 transition-colors">
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[9px] font-bold text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-full uppercase tracking-wider">Top Banner</span>
-                      {announcementBarEnabled ? (
-                        <CheckCircle className="h-4.5 w-4.5 text-green-400" />
-                      ) : (
-                        <EyeOff className="h-4.5 w-4.5 text-gray-400" />
-                      )}
-                    </div>
-                    <h4 className="text-sm font-bold text-gray-900 mt-3">Storefront Top Bar</h4>
-                    <p className="text-[10px] text-gray-400 mt-1.5 leading-relaxed">
-                      Enables the sliding marquee announcement ticker ("Active Shoppers count") at the very top of the website.
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setAnnouncementBarEnabled(!announcementBarEnabled)}
-                    className="flex items-center gap-2 mt-6 py-2.5 px-4 rounded-xl text-xs font-bold w-full justify-center border transition-all duration-300 cursor-pointer bg-white border-orange-500/30 hover:bg-orange-500-white"
-                  >
-                    {announcementBarEnabled ? (
-                      <>
-                        <ToggleRight className="h-5 w-5 text-orange-500" />
-                        Enabled (Showing)
-                      </>
-                    ) : (
-                      <>
-                        <ToggleLeft className="h-5 w-5 text-gray-400" />
-                        Disabled (Hidden)
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                {/* Friday Super Sale Toggle */}
-                <div className="bg-white border border-orange-500/30 p-6 rounded-2xl flex flex-col justify-between hover:border-gray-700 transition-colors">
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[9px] font-bold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full uppercase tracking-wider">Weekly Offer</span>
-                      {fridaySaleEnabled ? (
-                        <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                      ) : (
-                        <span className="h-2 w-2 rounded-full bg-gray-600" />
-                      )}
-                    </div>
-                    <h4 className="text-sm font-bold text-gray-900 mt-3">Friday Super Sale</h4>
-                    <p className="text-[10px] text-gray-400 mt-1.5 leading-relaxed">
-                      Applies a dynamic "-26%" discount badge and special badge styling to products and hero promotion banners on the homepage.
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setFridaySaleEnabled(!fridaySaleEnabled)}
-                    className="flex items-center gap-2 mt-6 py-2.5 px-4 rounded-xl text-xs font-bold w-full justify-center border transition-all duration-300 cursor-pointer bg-white border-orange-500/30 hover:bg-orange-500-white"
-                  >
-                    {fridaySaleEnabled ? (
-                      <>
-                        <ToggleRight className="h-5 w-5 text-green-500" />
-                        Active (26% Off Applied)
-                      </>
-                    ) : (
-                      <>
-                        <ToggleLeft className="h-5 w-5 text-gray-400" />
-                        Inactive
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                {/* Midnight Flash Sale Toggle */}
-                <div className="bg-white border border-orange-500/30 p-6 rounded-2xl flex flex-col justify-between hover:border-gray-700 transition-colors">
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[9px] font-bold text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full uppercase tracking-wider">Midnight Flash</span>
-                      {midnightSaleEnabled ? (
-                        <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                      ) : (
-                        <span className="h-2 w-2 rounded-full bg-gray-600" />
-                      )}
-                    </div>
-                    <h4 className="text-sm font-bold text-gray-900 mt-3">Midnight Flash Sale</h4>
-                    <p className="text-[10px] text-gray-400 mt-1.5 leading-relaxed">
-                      Forces the storefront into Midnight theme mode, updating prices to 75% off and highlighting the "Deal of the Day" countdown timer.
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setMidnightSaleEnabled(!midnightSaleEnabled)}
-                    className="flex items-center gap-2 mt-6 py-2.5 px-4 rounded-xl text-xs font-bold w-full justify-center border transition-all duration-300 cursor-pointer bg-white border-orange-500/30 hover:bg-orange-500-white"
-                  >
-                    {midnightSaleEnabled ? (
-                      <>
-                        <ToggleRight className="h-5 w-5 text-red-500" />
-                        Active (75% Off Applied)
-                      </>
-                    ) : (
-                      <>
-                        <ToggleLeft className="h-5 w-5 text-gray-400" />
-                        Inactive
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Layout Visual Mapper: Showing how admin matches the Homepage UI */}
-              <div className="bg-white border border-orange-500/30 rounded-2xl p-6">
-                <div className="pb-4 mb-6 border-b border-orange-500/20">
-                  <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Visual Storefront Mapping Schema</h4>
-                  <p className="text-[10px] text-gray-400 mt-1">
-                    Hover over any component of the homepage layout below to instantly see which admin module manages its cover content and settings.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-
-                  {/* Left Column: Homepage schema */}
-                  <div className="lg:col-span-7 space-y-3 bg-white p-6 rounded-2xl border border-orange-500/20">
-                    <span className="text-[9px] font-bold text-gray-600 uppercase tracking-widest block text-center mb-3">GriVA Storefront Homepage Layout</span>
-
-                    {/* Schema Element: Announcement Bar */}
-                    <div
-                      onMouseEnter={() => setHighlightedSchemaSection("announcement")}
-                      onMouseLeave={() => setHighlightedSchemaSection(null)}
-                      onClick={() => setActiveTab("overview")}
-                      className={`py-1.5 px-3 rounded text-[9px] font-bold text-center border cursor-pointer transition-all duration-300 ${announcementBarEnabled ? "bg-orange-500/10 border-orange-500/40 text-orange-400" : "bg-white border-orange-500/20 text-gray-600"
-                        } ${highlightedSchemaSection === "announcement" ? "scale-[1.02] ring-2 ring-orange-500" : ""}`}
-                    >
-                      Top Announcement Bar {announcementBarEnabled ? "(ACTIVE)" : "(DISABLED)"}
-                    </div>
-
-                    {/* Schema Element: Main Header */}
-                    <div className="py-2.5 px-3 rounded text-[9px] font-bold text-center border bg-white border-orange-500/20 text-gray-900">
-                      Website Navigation Header (Search, Wishlist, Cart)
-                    </div>
-
-                    {/* Schema Element: Hero Carousel */}
-                    <div
-                      onMouseEnter={() => setHighlightedSchemaSection("hero")}
-                      onMouseLeave={() => setHighlightedSchemaSection(null)}
-                      onClick={() => setActiveTab("banners")}
-                      className={`py-8 px-3 rounded text-[10px] font-black text-center border cursor-pointer transition-all duration-300 ${highlightedSchemaSection === "hero" ? "bg-orange-500/20 border-orange-500 text-orange-400 scale-[1.01]" : "bg-white border-orange-500/30 text-gray-900"
-                        }`}
-                    >
-                      Hero Promo Carousel Slides (Manage {slidesList.length} Slides)
-                    </div>
-
-                    {/* Schema Element: Categories */}
-                    <div
-                      onMouseEnter={() => setHighlightedSchemaSection("categories")}
-                      onMouseLeave={() => setHighlightedSchemaSection(null)}
-                      onClick={() => setActiveTab("banners")}
-                      className={`py-3.5 px-3 rounded text-[9px] font-bold text-center border cursor-pointer transition-all duration-300 ${highlightedSchemaSection === "categories" ? "bg-orange-500/20 border-orange-500 text-orange-400 scale-[1.01]" : "bg-white border-orange-500/30 text-gray-900"
-                        }`}
-                    >
-                      Category Quick Nav Banners (Manage {categoriesList.length} Categories)
-                    </div>
-
-                    {/* Schema Element: Offer Cards */}
-                    <div
-                      onMouseEnter={() => setHighlightedSchemaSection("offers")}
-                      onMouseLeave={() => setHighlightedSchemaSection(null)}
-                      onClick={() => setActiveTab("banners")}
-                      className={`grid grid-cols-4 gap-2 text-center text-[8px] font-bold cursor-pointer transition-all duration-300 ${highlightedSchemaSection === "offers" ? "scale-[1.01]" : ""
-                        }`}
-                    >
-                      {offersList.map((o) => (
-                        <div
-                          key={o.id}
-                          className={`p-2.5 border rounded ${o.badge === "DISABLED" ? "bg-white border-orange-500/20 text-gray-600" : "bg-orange-500/10 border-orange-500/30 text-orange-400"
-                            } ${highlightedSchemaSection === "offers" ? "border-orange-500" : ""}`}
-                        >
-                          {o.title}
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Schema Element: Product Grid */}
-                    <div
-                      onMouseEnter={() => setHighlightedSchemaSection("products")}
-                      onMouseLeave={() => setHighlightedSchemaSection(null)}
-                      onClick={() => setActiveTab("products")}
-                      className={`py-6 px-3 rounded text-[10px] font-bold text-center border cursor-pointer transition-all duration-300 ${highlightedSchemaSection === "products" ? "bg-orange-500/20 border-orange-500 text-orange-400 scale-[1.01]" : "bg-white border-orange-500/30 text-gray-900"
-                        }`}
-                    >
-                      Catalog Product Grids (Filterable Category Shop views)
-                    </div>
-                  </div>
-
-                  {/* Right Column: Explanatory Context Details */}
-                  <div className="lg:col-span-5 space-y-4">
-                    <div className="p-4 bg-gray-50 border border-orange-500/20 rounded-xl">
-                      <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Selected Component Controller</span>
-
-                      {highlightedSchemaSection === null && (
-                        <p className="text-xs text-gray-400 mt-2">Hover over the storefront layout schema components to inspect mapping.</p>
-                      )}
-
-                      {highlightedSchemaSection === "announcement" && (
-                        <div className="mt-2 space-y-2">
-                          <h5 className="text-xs font-bold text-gray-900">Announcement Marquee</h5>
-                          <p className="text-[10px] text-gray-400 leading-relaxed">
-                            Controlled under **Overview & Campaigns** page via the "Storefront Top Bar" switch. Displays custom notifications like "Worldwide Free shipping over $50" to shoppers in Qatar.
-                          </p>
-                        </div>
-                      )}
-
-                      {highlightedSchemaSection === "hero" && (
-                        <div className="mt-2 space-y-2">
-                          <h5 className="text-xs font-bold text-gray-900">Hero Slideshow Carousel</h5>
-                          <p className="text-[10px] text-gray-400 leading-relaxed">
-                            Controlled under **Banners & Layouts** page. Edit text titles, add cover image URLs, configure promotional pricing labels, and change background slide colors dynamically.
-                          </p>
-                        </div>
-                      )}
-
-                      {highlightedSchemaSection === "categories" && (
-                        <div className="mt-2 space-y-2">
-                          <h5 className="text-xs font-bold text-gray-900">Category Grid Elements</h5>
-                          <p className="text-[10px] text-gray-400 leading-relaxed">
-                            Controlled under **Banners & Layouts** page. Modify category cover images (e.g. Speakers, Television) to match promotional inventory styles.
-                          </p>
-                        </div>
-                      )}
-
-                      {highlightedSchemaSection === "offers" && (
-                        <div className="mt-2 space-y-2">
-                          <h5 className="text-xs font-bold text-gray-900">Promotion Offer Tiles</h5>
-                          <p className="text-[10px] text-gray-400 leading-relaxed">
-                            Controlled under **Banners & Layouts** page. Each tile can be toggled Active/Disabled. Turning a tile off automatically hides it from the homepage grid wrapper.
-                          </p>
-                        </div>
-                      )}
-
-                      {highlightedSchemaSection === "products" && (
-                        <div className="mt-2 space-y-2">
-                          <h5 className="text-xs font-bold text-gray-900">Catalog Product Inventory</h5>
-                          <p className="text-[10px] text-gray-400 leading-relaxed">
-                            Controlled under **Manage Products** page. Edit stock parameters, modify prices, configure specifications details list, and upload WebP images to Cloudflare R2 storage.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
+      {/* ── KPI Metric Cards ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          {
+            label: 'Total Revenue',
+            value: analytics ? `$${analytics.totalSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '—',
+            sub: 'All-time sales',
+            icon: <DollarSign className="h-5 w-5 text-orange-500" />,
+            color: 'from-orange-500/10 to-amber-500/5',
+          },
+          {
+            label: 'Total Orders',
+            value: analytics ? analytics.totalOrders.toString() : '—',
+            sub: `${statusCounts.pending} pending`,
+            icon: <ShoppingCart className="h-5 w-5 text-blue-500" />,
+            color: 'from-blue-500/10 to-sky-500/5',
+          },
+          {
+            label: 'Avg Order Value',
+            value: analytics ? `$${analytics.averageOrderValue.toFixed(2)}` : '—',
+            sub: 'Per transaction',
+            icon: <TrendingUp className="h-5 w-5 text-violet-500" />,
+            color: 'from-violet-500/10 to-purple-500/5',
+          },
+          {
+            label: 'Customers',
+            value: analytics ? analytics.totalCustomers.toString() : '—',
+            sub: 'Registered buyers',
+            icon: <Users className="h-5 w-5 text-emerald-500" />,
+            color: 'from-emerald-500/10 to-teal-500/5',
+          },
+        ].map((card, i) => (
+          <div key={i} className={`bg-gradient-to-br ${card.color} border border-orange-500/20 rounded-2xl p-5`}>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{card.label}</span>
+              <div className="h-8 w-8 rounded-lg bg-white border border-orange-500/20 flex items-center justify-center shadow-sm">
+                {card.icon}
               </div>
             </div>
+            <div className="text-2xl font-black text-gray-900 tracking-tight">
+              {analyticsLoading ? <span className="h-6 w-24 bg-gray-200 rounded animate-pulse inline-block" /> : card.value}
+            </div>
+            <p className="text-[10px] text-gray-400 font-semibold mt-1">{card.sub}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Charts Row ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        {/* Sales Over Time Chart */}
+        <div className="lg:col-span-8 bg-white border border-orange-500/30 rounded-2xl p-6">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h4 className="text-sm font-bold text-gray-900">Revenue Over Time</h4>
+              <p className="text-[10px] text-gray-400 mt-0.5">Daily sales performance — last 10 days</p>
+            </div>
+            <BarChart2 className="h-4 w-4 text-orange-400" />
+          </div>
+          <div className="h-32">
+            {analyticsLoading ? (
+              <div className="h-full bg-gray-50 rounded-xl animate-pulse" />
+            ) : (
+              <SalesLineChart data={analytics?.salesOverTime || []} />
+            )}
+          </div>
+        </div>
+
+        {/* Category Breakdown Pie */}
+        <div className="lg:col-span-4 bg-white border border-orange-500/30 rounded-2xl p-6">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h4 className="text-sm font-bold text-gray-900">Sales by Category</h4>
+              <p className="text-[10px] text-gray-400 mt-0.5">Revenue distribution</p>
+            </div>
+          </div>
+          {analyticsLoading ? (
+            <div className="h-32 bg-gray-50 rounded-xl animate-pulse" />
+          ) : (
+            <CategoryPieChart data={analytics?.salesByCategory || []} />
+          )}
+        </div>
+      </div>
+
+      {/* ── Order Status Summary ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { key: 'pending',   label: 'Pending',   color: 'text-amber-600',  bg: 'bg-amber-50',  border: 'border-amber-200' },
+          { key: 'shipped',   label: 'Shipped',   color: 'text-blue-600',   bg: 'bg-blue-50',   border: 'border-blue-200'  },
+          { key: 'completed', label: 'Completed', color: 'text-green-600',  bg: 'bg-green-50',  border: 'border-green-200' },
+          { key: 'cancelled', label: 'Cancelled', color: 'text-red-500',    bg: 'bg-red-50',    border: 'border-red-200'   },
+        ].map((s) => (
+          <div
+            key={s.key}
+            className={`${s.bg} border ${s.border} rounded-xl p-4 cursor-pointer hover:opacity-80 transition-opacity`}
+            onClick={() => setActiveTab('orders')}
+          >
+            <div className={`text-2xl font-black ${s.color}`}>
+              {statusCounts[s.key as keyof typeof statusCounts]}
+            </div>
+            <div className={`text-[10px] font-bold uppercase tracking-wider mt-1 ${s.color}`}>{s.label} Orders</div>
+            <ChevronRight className={`h-3 w-3 mt-1 ${s.color}`} />
+          </div>
+        ))}
+      </div>
+
+      {/* ── Campaign Control Switches ── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {[
+          {
+            label: 'Top Banner',
+            title: 'Storefront Top Bar',
+            desc: 'Enables the sliding marquee announcement ticker at the very top of the storefront.',
+            enabled: announcementBarEnabled,
+            toggle: () => setAnnouncementBarEnabled(!announcementBarEnabled),
+            onText: 'Enabled (Showing)',
+            offText: 'Disabled (Hidden)',
+            iconEnabled: <CheckCircle className="h-4 w-4 text-green-400" />,
+            iconDisabled: <EyeOff className="h-4 w-4 text-gray-400" />,
+            toggleColor: 'text-orange-500',
+          },
+          {
+            label: 'Weekly Offer',
+            title: 'Friday Super Sale',
+            desc: 'Applies a -26% discount badge and special styling to products and hero banners.',
+            enabled: fridaySaleEnabled,
+            toggle: () => setFridaySaleEnabled(!fridaySaleEnabled),
+            onText: 'Active (26% Off Applied)',
+            offText: 'Inactive',
+            iconEnabled: <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />,
+            iconDisabled: <span className="h-2 w-2 rounded-full bg-gray-400" />,
+            toggleColor: 'text-green-500',
+          },
+          {
+            label: 'Midnight Flash',
+            title: 'Midnight Flash Sale',
+            desc: 'Forces storefront into Midnight theme mode with 75% off and a countdown timer.',
+            enabled: midnightSaleEnabled,
+            toggle: () => setMidnightSaleEnabled(!midnightSaleEnabled),
+            onText: 'Active (75% Off Applied)',
+            offText: 'Inactive',
+            iconEnabled: <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />,
+            iconDisabled: <span className="h-2 w-2 rounded-full bg-gray-400" />,
+            toggleColor: 'text-red-500',
+          },
+        ].map((c, i) => (
+          <div key={i} className="bg-white border border-orange-500/30 p-6 rounded-2xl flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] font-bold text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-full uppercase tracking-wider">{c.label}</span>
+                {c.enabled ? c.iconEnabled : c.iconDisabled}
+              </div>
+              <h4 className="text-sm font-bold text-gray-900 mt-3">{c.title}</h4>
+              <p className="text-[10px] text-gray-400 mt-1.5 leading-relaxed">{c.desc}</p>
+            </div>
+            <button
+              onClick={c.toggle}
+              className="flex items-center gap-2 mt-6 py-2.5 px-4 rounded-xl text-xs font-bold w-full justify-center border transition-all duration-300 cursor-pointer bg-white border-orange-500/30 hover:bg-orange-500/5"
+            >
+              {c.enabled ? (
+                <><ToggleRight className={`h-5 w-5 ${c.toggleColor}`} />{c.onText}</>
+              ) : (
+                <><ToggleLeft className="h-5 w-5 text-gray-400" />{c.offText}</>
+              )}
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Storefront Schema Mapper ── */}
+      <div className="bg-white border border-orange-500/30 rounded-2xl p-6">
+        <div className="pb-4 mb-6 border-b border-orange-500/20">
+          <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Visual Storefront Mapping Schema</h4>
+          <p className="text-[10px] text-gray-400 mt-1">
+            Hover over any component to see which admin module controls it.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          <div className="lg:col-span-7 space-y-2.5 bg-gray-50 p-5 rounded-2xl border border-orange-500/10">
+            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest block text-center mb-3">GRIVA Storefront Homepage Layout</span>
+
+            {[
+              { key: 'announcement', label: `Top Announcement Bar ${announcementBarEnabled ? '(ACTIVE)' : '(DISABLED)'}`, tab: 'overview', py: 'py-1.5', bold: false },
+              { key: 'nav', label: 'Website Navigation Header (Search, Wishlist, Cart)', tab: null, py: 'py-2', bold: false },
+              { key: 'hero', label: `Hero Promo Carousel Slides (${slidesList.length} Slides)`, tab: 'banners', py: 'py-7', bold: true },
+              { key: 'categories', label: `Category Quick Nav Banners (${categoriesList.length} Categories)`, tab: 'banners', py: 'py-3', bold: false },
+              { key: 'products', label: 'Catalog Product Grids (Filterable Category Shop views)', tab: 'products', py: 'py-5', bold: true },
+            ].map(({ key, label, tab, py, bold }) => (
+              <div
+                key={key}
+                onMouseEnter={() => setHighlightedSchemaSection(key)}
+                onMouseLeave={() => setHighlightedSchemaSection(null)}
+                onClick={() => tab && setActiveTab(tab)}
+                className={`${py} px-3 rounded-lg text-[9px] font-${bold ? 'black' : 'bold'} text-center border cursor-pointer transition-all duration-200 select-none
+                  ${highlightedSchemaSection === key
+                    ? 'bg-orange-500/15 border-orange-500 text-orange-500 scale-[1.01] shadow-sm'
+                    : key === 'announcement' && announcementBarEnabled
+                      ? 'bg-orange-500/8 border-orange-500/30 text-orange-400'
+                      : 'bg-white border-orange-500/20 text-gray-700'
+                  }`}
+              >
+                {label}
+              </div>
+            ))}
+          </div>
+
+          <div className="lg:col-span-5 space-y-4">
+            <div className="p-4 bg-gray-50 border border-orange-500/20 rounded-xl min-h-[120px]">
+              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Component Controller</span>
+              {!highlightedSchemaSection && (
+                <p className="text-xs text-gray-400 mt-2">Hover over elements on the left schema to inspect admin mappings.</p>
+              )}
+              {highlightedSchemaSection === 'announcement' && (
+                <div className="mt-2 space-y-1">
+                  <h5 className="text-xs font-bold text-gray-900">Announcement Marquee</h5>
+                  <p className="text-[10px] text-gray-400 leading-relaxed">Controlled in <strong>Overview</strong> via the "Storefront Top Bar" toggle. Displays free shipping promos to Doha shoppers.</p>
+                </div>
+              )}
+              {highlightedSchemaSection === 'hero' && (
+                <div className="mt-2 space-y-1">
+                  <h5 className="text-xs font-bold text-gray-900">Hero Slideshow Carousel</h5>
+                  <p className="text-[10px] text-gray-400 leading-relaxed">Managed under <strong>Banners & Layouts</strong>. Edit slide titles, image URLs, pricing labels, and background colors.</p>
+                </div>
+              )}
+              {highlightedSchemaSection === 'categories' && (
+                <div className="mt-2 space-y-1">
+                  <h5 className="text-xs font-bold text-gray-900">Category Grid</h5>
+                  <p className="text-[10px] text-gray-400 leading-relaxed">Managed under <strong>Banners & Layouts</strong>. Modify category cover images to match promotional inventory styles.</p>
+                </div>
+              )}
+              {highlightedSchemaSection === 'products' && (
+                <div className="mt-2 space-y-1">
+                  <h5 className="text-xs font-bold text-gray-900">Catalog Product Grid</h5>
+                  <p className="text-[10px] text-gray-400 leading-relaxed">Managed under <strong>Manage Products</strong>. Add new items, adjust stock levels, manage pricing and gallery images.</p>
+                </div>
+              )}
+              {highlightedSchemaSection === 'nav' && (
+                <div className="mt-2 space-y-1">
+                  <h5 className="text-xs font-bold text-gray-900">Navigation Header</h5>
+                  <p className="text-[10px] text-gray-400 leading-relaxed">This component is hardcoded. Update <code className="text-[9px] bg-gray-100 px-1 py-0.5 rounded">Navbar.tsx</code> directly in the codebase to modify navigation links.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Quick Jump Shortcuts */}
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { icon: <Package className="h-3.5 w-3.5" />, label: 'Manage Products', tab: 'products' },
+                { icon: <Sliders className="h-3.5 w-3.5" />, label: 'Banners & Layouts', tab: 'banners' },
+              ].map((btn) => (
+                <button
+                  key={btn.tab}
+                  onClick={() => setActiveTab(btn.tab)}
+                  className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-bold text-gray-600 border border-orange-500/20 hover:bg-orange-500/5 hover:text-orange-500 transition-all duration-200 cursor-pointer"
+                >
+                  {btn.icon}
+                  {btn.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
   );
 }

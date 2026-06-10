@@ -35,7 +35,7 @@ const Order = sequelize.define(
     },
     user_id: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
       references: {
         model: User,
         key: "id",
@@ -63,6 +63,36 @@ const Order = sequelize.define(
     shipping_address: {
       type: DataTypes.TEXT,
       allowNull: false,
+    },
+    customer_name: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    customer_phone: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    customer_email: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    payment_method: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: "COD",
+    },
+    payment_status: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: "unpaid",
+    },
+    delivery_notes: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    city: {
+      type: DataTypes.STRING,
+      allowNull: true,
     },
   },
   {

@@ -22,14 +22,14 @@
 const express = require("express");
 const router = express.Router();
 const orderController = require("../controllers/orderController");
-const { authenticateJWT, isAdmin } = require("../middleware/auth");
+const { authenticateJWT, authenticateOptionalJWT, isAdmin } = require("../middleware/auth");
 
 // ─────────────────────────────────────────────────────────
 // Customer Authorized Routes (Requires valid JWT session)
 // ─────────────────────────────────────────────────────────
 
 // Maps to: POST /api/orders (Creates new order transaction)
-router.post("/", authenticateJWT, orderController.createOrder);
+router.post("/", authenticateOptionalJWT, orderController.createOrder);
 
 // Maps to: GET /api/orders/my-orders (Fetches past purchase receipts)
 router.get("/my-orders", authenticateJWT, orderController.getMyOrders);
@@ -37,6 +37,12 @@ router.get("/my-orders", authenticateJWT, orderController.getMyOrders);
 // ─────────────────────────────────────────────────────────
 // Admin Authorized Routes (Requires valid JWT & Admin status)
 // ─────────────────────────────────────────────────────────
+
+// Maps to: GET /api/orders (Fetches all orders, newest first)
+router.get("/", authenticateJWT, isAdmin, orderController.getAllOrders);
+
+// Maps to: GET /api/orders/analytics (Fetches dynamic storefront sales metrics)
+router.get("/analytics", authenticateJWT, isAdmin, orderController.getAnalytics);
 
 // Maps to: PATCH /api/orders/:id/status (e.g. /api/orders/12/status)
 router.patch("/:id/status", authenticateJWT, isAdmin, orderController.updateOrderStatus);

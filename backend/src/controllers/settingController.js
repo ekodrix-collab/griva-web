@@ -1,27 +1,21 @@
-/**
- * SETTING CONTROLLER (settingController.js)
- * 
- * ─── JAVA COMPARISON ──────────────────────────────────────────────────────────
- * Equivalent to a configuration properties RestController in Spring Boot.
- * 
- * ─── REAL-WORLD USE CASE ──────────────────────────────────────────────────────
- * Manages active Friday sales campaigns, midnight discounts, and store announcement bars.
- */
-
-const Setting = require("../models/Setting");
+const SiteSetting = require("../models/SiteSetting");
 
 /**
  * Load global configurations
  */
 exports.getSettings = async (req, res, next) => {
   try {
-    let setting = await Setting.findOne();
+    let setting = await SiteSetting.findOne();
     if (!setting) {
       // Create default if none exists
-      setting = await Setting.create({
+      setting = await SiteSetting.create({
         announcementBarEnabled: true,
+        announcementBarText: "Free shipping across Doha for orders over $150!",
         fridaySaleEnabled: true,
         midnightSaleEnabled: false,
+        whatsappNumber: "+97455551234",
+        supportEmail: "support@griva.qa",
+        shippingFee: 15.00,
       });
     }
     res.status(200).json({ settings: setting });
@@ -35,19 +29,35 @@ exports.getSettings = async (req, res, next) => {
  */
 exports.updateSettings = async (req, res, next) => {
   try {
-    const { announcementBarEnabled, fridaySaleEnabled, midnightSaleEnabled } = req.body;
+    const {
+      announcementBarEnabled,
+      announcementBarText,
+      fridaySaleEnabled,
+      midnightSaleEnabled,
+      whatsappNumber,
+      supportEmail,
+      shippingFee,
+    } = req.body;
     
-    let setting = await Setting.findOne();
+    let setting = await SiteSetting.findOne();
     if (!setting) {
-      setting = await Setting.create({
+      setting = await SiteSetting.create({
         announcementBarEnabled: announcementBarEnabled !== undefined ? announcementBarEnabled : true,
+        announcementBarText: announcementBarText || "Free shipping across Doha for orders over $150!",
         fridaySaleEnabled: fridaySaleEnabled !== undefined ? fridaySaleEnabled : true,
         midnightSaleEnabled: midnightSaleEnabled !== undefined ? midnightSaleEnabled : false,
+        whatsappNumber: whatsappNumber || "+97455551234",
+        supportEmail: supportEmail || "support@griva.qa",
+        shippingFee: shippingFee !== undefined ? shippingFee : 15.00,
       });
     } else {
       if (announcementBarEnabled !== undefined) setting.announcementBarEnabled = announcementBarEnabled;
+      if (announcementBarText !== undefined) setting.announcementBarText = announcementBarText;
       if (fridaySaleEnabled !== undefined) setting.fridaySaleEnabled = fridaySaleEnabled;
       if (midnightSaleEnabled !== undefined) setting.midnightSaleEnabled = midnightSaleEnabled;
+      if (whatsappNumber !== undefined) setting.whatsappNumber = whatsappNumber;
+      if (supportEmail !== undefined) setting.supportEmail = supportEmail;
+      if (shippingFee !== undefined) setting.shippingFee = shippingFee;
       await setting.save();
     }
 

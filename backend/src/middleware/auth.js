@@ -67,7 +67,29 @@ const isAdmin = (req, res, next) => {
   }
 };
 
+/**
+ * Optional JWT Verification Middleware
+ * Allows guest requests to proceed without authentication but still parses tokens if present
+ */
+const authenticateOptionalJWT = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    const token = authHeader.split(" ")[1];
+
+    jwt.verify(token, process.env.JWT_SECRET || "default_jwt_fallback_secret", (err, decodedPayload) => {
+      if (!err) {
+        req.user = decodedPayload;
+      }
+      next();
+    });
+  } else {
+    next();
+  }
+};
+
 module.exports = {
   authenticateJWT,
+  authenticateOptionalJWT,
   isAdmin,
 };

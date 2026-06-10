@@ -117,6 +117,77 @@ const Product = sequelize.define(
       allowNull: true,
       defaultValue: [],
     },
+    slug: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+    },
+    sku: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      unique: true,
+    },
+    brand: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    rating: {
+      type: DataTypes.DECIMAL(3, 2),
+      allowNull: false,
+      defaultValue: 0.00,
+    },
+    review_count: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
+    badge_color: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    button_text: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: "Buy Now",
+    },
+    is_featured: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    is_best_seller: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    is_trending: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    is_new: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+    },
+    discount_percentage: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
+    meta_title: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    meta_description: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    views_count: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
   },
   {
     timestamps: true,

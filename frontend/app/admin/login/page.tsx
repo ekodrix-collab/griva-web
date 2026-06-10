@@ -3,9 +3,10 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sparkles, Eye, EyeOff, Lock, Mail, ShieldAlert } from "lucide-react";
+import { loginApi } from "../../utils/api";
 
-const ADMIN_EMAIL = "admin@griva.com";
-const ADMIN_PASSWORD = "admin123";
+const FALLBACK_EMAIL = "admin@griva.qa";
+const FALLBACK_PASSWORD = "AdminPassword123!";
 const ADMIN_KEY = "griva_admin_auth";
 
 export default function AdminLoginPage() {
@@ -16,20 +17,35 @@ export default function AdminLoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    setTimeout(() => {
-      if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+    try {
+      // Try backend first
+      const result = await loginApi(email, password);
+      if (result && result.token) {
+        localStorage.setItem(ADMIN_KEY, "true");
+        localStorage.setItem("token", result.token);
+        localStorage.setItem("admin_user", JSON.stringify(result.user));
+        router.push("/admin");
+        return;
+      }
+
+      // Fallback to hardcoded credentials if backend offline
+      if (email === FALLBACK_EMAIL && password === FALLBACK_PASSWORD) {
         localStorage.setItem(ADMIN_KEY, "true");
         router.push("/admin");
-      } else {
-        setError("Invalid admin credentials. Please try again.");
-        setLoading(false);
+        return;
       }
-    }, 600);
+
+      setError("Invalid admin credentials. Please try again.");
+    } catch {
+      setError("Unable to connect to server. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -75,10 +91,10 @@ export default function AdminLoginPage() {
                 <input
                   type="email"
                   required
-                  placeholder="admin@griva.com"
+                  placeholder="admin@griva.qa"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-white border border-orange-500/30 rounded-xl pl-10 pr-4 py-3 text-sm text-gray-800 placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors"
+                  className="w-full bg-white border border-orange-500/30 rounded-xl pl-10 pr-4 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-500 transition-colors"
                 />
               </div>
             </div>
@@ -96,12 +112,12 @@ export default function AdminLoginPage() {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-white border border-orange-500/30 rounded-xl pl-10 pr-11 py-3 text-sm text-gray-800 placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors"
+                  className="w-full bg-white border border-orange-500/30 rounded-xl pl-10 pr-11 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-500 transition-colors"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300 transition-colors cursor-pointer"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -128,10 +144,12 @@ export default function AdminLoginPage() {
             </button>
           </form>
 
-          {/* Hint */}
-          <p className="text-center text-[10px] text-gray-600 mt-6">
-            Restricted access — authorised personnel only
-          </p>
+          {/* Credentials hint */}
+          <div className="mt-6 p-3 rounded-xl bg-orange-500/5 border border-orange-500/20">
+            <p className="text-center text-[10px] text-gray-500 font-semibold">
+              Default: <span className="text-orange-500 font-bold">admin@griva.qa</span> / <span className="text-orange-500 font-bold">AdminPassword123!</span>
+            </p>
+          </div>
         </div>
       </div>
     </div>
