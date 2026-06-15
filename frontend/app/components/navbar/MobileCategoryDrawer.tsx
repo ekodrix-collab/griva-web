@@ -3,32 +3,30 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { X, Gamepad2, Tv, Speaker, Headphones, Smartphone, Laptop } from "lucide-react";
+import { X, Sparkles, Smile, Baby, Smartphone, Gamepad2, Utensils } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { categories, products } from "@/app/data/data";
 
 function getCategoryIcon(title: string) {
   const cls = "w-6 h-6";
   switch (title.toLowerCase()) {
-    case "games":       return <Gamepad2 className={cls} />;
-    case "television":  return <Tv className={cls} />;
-    case "speakers":    return <Speaker className={cls} />;
-    case "headphones":  return <Headphones className={cls} />;
-    case "smartphone":  return <Smartphone className={cls} />;
-    case "laptops":     return <Laptop className={cls} />;
-    default:            return null;
+    case "perfumes & buhoor":
+    case "perfumes":
+      return <Sparkles className={cls} />;
+    case "toys":
+      return <Smile className={cls} />;
+    case "baby products":
+      return <Baby className={cls} />;
+    case "gadgets & electronics":
+      return <Smartphone className={cls} />;
+    case "gaming accessories":
+      return <Gamepad2 className={cls} />;
+    case "kitchen appliances & essentials":
+      return <Utensils className={cls} />;
+    default:
+      return <Sparkles className={cls} />;
   }
 }
-
-// Map category titles to product category strings used in data
-const categoryMap: Record<string, string[]> = {
-  games:       ["Xbox Series"],
-  television:  ["Samsung Galaxy"],
-  speakers:    ["Bluetooth Speakers"],
-  headphones:  ["iPhone"],
-  smartphone:  ["iPhone", "Samsung Galaxy", "Prepaid Phones"],
-  laptops:     ["Laptops"],
-};
 
 interface Props {
   isOpen: boolean;
@@ -38,10 +36,9 @@ interface Props {
 export default function MobileCategoryDrawer({ isOpen, onClose }: Props) {
   const [activeCategory, setActiveCategory] = useState(categories[0]);
 
-  const key = activeCategory.title.toLowerCase();
-  const matchedCategories = categoryMap[key] ?? [];
+  const key = activeCategory.title.toLowerCase().replace(/ & /g, "-").replace(/ /g, "-");
   const filteredProducts = products.filter((p) =>
-    matchedCategories.includes(p.category)
+    p.category.toLowerCase() === key
   );
 
   return (

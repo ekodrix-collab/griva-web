@@ -1,10 +1,10 @@
 "use client";
 
-import { categories } from "@/app/data/data";
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Gamepad2, Tv, Speaker, Headphones, Smartphone, Laptop } from "lucide-react";
+import { useAdminSettings } from "@/app/context/AdminContext";
+import { Sparkles, Smile, Baby, Smartphone, Gamepad2, Utensils } from "lucide-react";
 
 function getCategoryIcon(title: string, isCollapsed: boolean) {
   const iconClass = "text-gray-600 group-hover:text-orange-500 transition-colors duration-300 flex-shrink-0";
@@ -16,28 +16,27 @@ function getCategoryIcon(title: string, isCollapsed: boolean) {
   };
 
   switch (title.toLowerCase()) {
-    case "gaming":
-      return <Gamepad2 style={style} className={iconClass} />;
-    case "television":
-      return <Tv style={style} className={iconClass} />;
-    case "speakers":
-      return <Speaker style={style} className={iconClass} />;
-    case "headphones":
-      return <Headphones style={style} className={iconClass} />;
-    case "gadgets":
+    case "perfumes & buhoor":
+    case "perfumes":
+      return <Sparkles style={style} className={iconClass} />;
+    case "toys":
+      return <Smile style={style} className={iconClass} />;
+    case "baby products":
+      return <Baby style={style} className={iconClass} />;
+    case "gadgets & electronics":
       return <Smartphone style={style} className={iconClass} />;
-    case "laptops":
-      return <Laptop style={style} className={iconClass} />;
+    case "gaming accessories":
+      return <Gamepad2 style={style} className={iconClass} />;
+    case "kitchen appliances & essentials":
+      return <Utensils style={style} className={iconClass} />;
     default:
-      return null;
+      return <Sparkles style={style} className={iconClass} />;
   }
 }
 
 const GAP = 16;
 const INTERVAL = 1200;
-const TOTAL_CARDS = categories.length;
-
-const loopedCards = [...categories, ...categories, ...categories];
+// We will compute TOTAL_CARDS and loopedCards inside the component since they depend on context
 
 function getVisibleCards(width: number): number {
   if (width < 640) return 3;
@@ -46,6 +45,10 @@ function getVisibleCards(width: number): number {
 }
 
 export default function CategorySection() {
+  const { cmsCategories: categories } = useAdminSettings();
+  const TOTAL_CARDS = categories.length;
+  const loopedCards = [...categories, ...categories, ...categories];
+
   const containerRef = useRef<HTMLDivElement>(null);
   const indexRef = useRef(0);
   const cardWidthRef = useRef(0);

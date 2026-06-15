@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { User, ShoppingCart, Heart, ChevronDown, X, Phone, Globe } from "lucide-react";
-import { motion } from "framer-motion";
+import { User, ShoppingCart, Heart, ChevronDown, ChevronRight, X, Phone, Globe } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "@/app/context/CartContext";
 import { useWishlist } from "@/app/context/WishlistContext";
 import { useState } from "react";
+import { categoriesTree } from "@/app/data/data";
 
 interface MobileMenuProps {
   isOpen: boolean;
@@ -20,14 +21,19 @@ const navLinks = [
   { label: "FAQ", href: "/faq" },
 ];
 
-const categories = ["Laptops", "Television", "Speakers", "Headphones", "Gaming", "Gadgets"];
-
 export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
   const { state: cartState, openDrawer } = useCart();
   const { items: wishlistItems } = useWishlist();
   const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
   if (!isOpen) return null;
+
+  const toggleCategory = (title: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setExpandedCategory(expandedCategory === title ? null : title);
+  };
 
   return (
     <div>
@@ -81,22 +87,56 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
             >
               <span>Categories</span>
               <ChevronDown
-                className={`h-4 w-4 transition-transform duration-200 ${categoriesOpen ? "rotate-180 text-orange-500" : "text-gray-400"
-                  }`}
+                className={`h-4 w-4 transition-transform duration-200 ${
+                  categoriesOpen ? "rotate-180 text-orange-500" : "text-gray-400"
+                }`}
               />
             </button>
+            
             {categoriesOpen && (
-              <div className="pl-6 space-y-1">
-                {categories.map((cat) => (
-                  <Link
-                    key={cat}
-                    href={`/category/${cat.toLowerCase()}`}
-                    onClick={onClose}
-                    className="block rounded-md px-4 py-2 text-xs font-medium text-gray-600 hover:bg-orange-50 hover:text-orange-500 transition-colors"
-                  >
-                    {cat}
-                  </Link>
-                ))}
+              <div className="pl-3 space-y-1 border-l-2 border-gray-100 ml-4 mt-1">
+                {categoriesTree.map((cat) => {
+                  const isExpanded = expandedCategory === cat.title;
+                  return (
+                    <div key={cat.title} className="space-y-1">
+                      <div className="flex items-center justify-between w-full rounded-md pr-2 hover:bg-gray-55">
+                        <Link
+                          href={cat.href}
+                          onClick={onClose}
+                          className="flex-1 block px-3 py-2 text-xs font-semibold text-gray-700 hover:text-orange-500 transition-colors"
+                        >
+                          {cat.title}
+                        </Link>
+                        <button
+                          onClick={(e) => toggleCategory(cat.title, e)}
+                          className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600"
+                        >
+                          <ChevronRight
+                            size={14}
+                            className={`transform transition-transform duration-200 ${
+                              isExpanded ? "rotate-90 text-orange-500" : ""
+                            }`}
+                          />
+                        </button>
+                      </div>
+                      
+                      {isExpanded && (
+                        <div className="pl-4 space-y-1 border-l border-gray-100 ml-4 pb-1">
+                          {cat.subcategories.map((sub) => (
+                            <Link
+                              key={sub.label}
+                              href={sub.href}
+                              onClick={onClose}
+                              className="block rounded-md px-3 py-1.5 text-[11px] font-medium text-gray-500 hover:bg-orange-50 hover:text-orange-500 transition-colors"
+                            >
+                              {sub.label}
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

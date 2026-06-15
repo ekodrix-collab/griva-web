@@ -16,7 +16,14 @@ interface ShopPageProps {
   }>;
 }
 
-const CATEGORIES = ["Laptops", "Television", "Speakers", "Headphones", "Gaming", "Gadgets"];
+const CATEGORIES = [
+  { name: "Perfumes & Buhoor", slug: "perfumes-buhoor" },
+  { name: "Toys", slug: "toys" },
+  { name: "Baby Products", slug: "baby-products" },
+  { name: "Gadgets & Electronics", slug: "gadgets-electronics" },
+  { name: "Gaming Accessories", slug: "gaming-accessories" },
+  { name: "Kitchen Appliances & Essentials", slug: "kitchen-appliances-essentials" },
+];
 
 export default function ShopPage({ searchParams }: ShopPageProps) {
   const resolvedParams = React.use(searchParams);
@@ -133,14 +140,14 @@ export default function ShopPage({ searchParams }: ShopPageProps) {
                   </button>
                   {CATEGORIES.map((cat) => (
                     <button
-                      key={cat}
-                      onClick={() => setSelectedCategory(cat.toLowerCase())}
-                      className={`block w-full text-left text-xs py-1 px-2 rounded-md transition-colors cursor-pointer ${selectedCategory === cat.toLowerCase()
+                      key={cat.slug}
+                      onClick={() => setSelectedCategory(cat.slug)}
+                      className={`block w-full text-left text-xs py-1 px-2 rounded-md transition-colors cursor-pointer ${selectedCategory === cat.slug
                         ? "bg-orange-500 text-white font-semibold"
                         : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                         }`}
                     >
-                      {cat}
+                      {cat.name}
                     </button>
                   ))}
                 </div>
@@ -339,14 +346,14 @@ export default function ShopPage({ searchParams }: ShopPageProps) {
                     </button>
                     {CATEGORIES.map((cat) => (
                       <button
-                        key={cat}
-                        onClick={() => setSelectedCategory(cat.toLowerCase())}
-                        className={`text-xs py-1.5 px-3 rounded-lg border transition cursor-pointer ${selectedCategory === cat.toLowerCase()
+                        key={cat.slug}
+                        onClick={() => setSelectedCategory(cat.slug)}
+                        className={`text-xs py-1.5 px-3 rounded-lg border transition cursor-pointer ${selectedCategory === cat.slug
                           ? "border-orange-500 bg-orange-50 text-orange-500 font-bold"
                           : "border-gray-200 text-gray-600 bg-white"
                           }`}
                       >
-                        {cat}
+                        {cat.name}
                       </button>
                     ))}
                   </div>

@@ -29,99 +29,148 @@
  * item at the exact same millisecond).
  */
 
-const Order = require("../models/Order");
-const OrderItem = require("../models/OrderItem");
-const Product = require("../models/Product");
-const { sequelize } = require("../config/db");
+const SiteSetting = require("../models/SiteSetting");
 
-/**
- * Process Shopping Cart Checkout inside a Safe Database Transaction
- * Powers: Checkout cart submit on Frontend UI
- */
 exports.createOrder = async (req, res, next) => {
-  // Start explicit Sequelize database transaction (Spring @Transactional equivalent)
   const transaction = await sequelize.transaction();
 
   try {
-    const { items, shippingAddress } = req.body;
-    const userId = req.user.id; // Populated by JWT authentication middleware
+    const {
+      items,
+      shipping_address,
+      customer_name,
+      customer_phone,
+      customer_email,
+      payment_method,
+      payment_status,
+      delivery_notes,
+      city,
+      // Also accept camelCase from older frontend calls
+      shippingAddress,
+      customerName,
+      customerPhone,
+      customerEmail,
+      paymentMethod,
+      paymentStatus,
+      deliveryNotes,
+    } = req.body;
+
+    // Accept both camelCase and snake_case field names
+    const resolvedAddress   = shipping_address || shippingAddress;
+    const resolvedName      = customer_name    || customerName    || null;
+    const resolvedPhone     = customer_phone   || customerPhone   || null;
+    const resolvedEmail     = customer_email   || customerEmail   || null;
+    const resolvedMethod    = payment_method   || paymentMethod   || "COD";
+    const resolvedStatus    = payment_status   || paymentStatus   || "unpaid";
+    const resolvedNotes     = delivery_notes   || deliveryNotes   || null;
+    const resolvedCity      = city || null;
+
+    const userId = req.user ? req.user.id : null;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: "Cart items list is missing or empty." });
     }
 
-    if (!shippingAddress) {
+    if (!resolvedAddress) {
       return res.status(400).json({ error: "Shipping delivery address is required." });
     }
 
     let calculatedTotal = 0;
     const itemsToCreate = [];
+    const orderSummaryLines = [];
 
-    // Loop through cart items to validate prices, stock, and variants
     for (const item of items) {
-      const product = await Product.findByPk(item.id, { transaction });
+      // Accept product_id OR id from frontend
+      const productId = item.product_id || item.id;
+      const product = await Product.findByPk(productId, { transaction });
 
       if (!product) {
         await transaction.rollback();
-        return res.status(404).json({ error: `Product ID ${item.id} not found.` });
+        return res.status(404).json({ error: `Product ID ${productId} not found.` });
       }
 
-      // Check Inventory Stock limits
       if (product.stock < item.quantity) {
         await transaction.rollback();
-        return res.status(409).json({ 
-          error: `Insufficient stock for '${product.title}'. Only ${product.stock} units available.` 
+        return res.status(409).json({
+          error: `Insufficient stock for '${product.title}'. Only ${product.stock} units available.`,
         });
       }
 
-      // Decrement stock limits (like typical warehouse operations)
       product.stock -= item.quantity;
       await product.save({ transaction });
 
-      // Strip '$' prefix from price mapping before calculating order values
       const unitPrice = parseFloat(product.getDataValue("price"));
       calculatedTotal += unitPrice * item.quantity;
 
-      // Add to bulk creation list
       itemsToCreate.push({
         product_id: product.id,
         quantity: item.quantity,
-        selected_color: item.selectedColor || null,
-        selected_storage: item.selectedStorage || null,
+        selected_color: item.selectedColor || item.selected_color || null,
+        selected_storage: item.selectedStorage || item.selected_storage || null,
         price_at_purchase: unitPrice,
       });
+
+      orderSummaryLines.push(`▪ ${product.title} x${item.quantity} — QAR ${unitPrice}`);
     }
 
-    // 1. Create the Parent Order entry
     const order = await Order.create({
       user_id: userId,
       total_price: calculatedTotal,
-      shipping_address: shippingAddress,
+      shipping_address: resolvedAddress,
       status: "pending",
+      customer_name: resolvedName,
+      customer_phone: resolvedPhone,
+      customer_email: resolvedEmail,
+      payment_method: resolvedMethod,
+      payment_status: resolvedStatus,
+      delivery_notes: resolvedNotes,
+      city: resolvedCity,
     }, { transaction });
 
-    // Map parent ID to all child items
     const finalizedItems = itemsToCreate.map((item) => ({
       ...item,
       order_id: order.id,
     }));
 
-    // 2. Bulk Create all Child Order Items (performance optimized)
     await OrderItem.bulkCreate(finalizedItems, { transaction });
-
-    // Commit all changes to Azure PostgreSQL Doha region
     await transaction.commit();
 
+    // --- Build WhatsApp redirect URL ---
+    const settings = await SiteSetting.findOne();
+    const waNumber = (settings?.whatsappNumber || "+97455551234").replace(/\D/g, "");
+    const waMessage = [
+      `🛒 *New GriVA Order #${order.id}*`,
+      ``,
+      `👤 *Customer:* ${resolvedName || "Guest"}`,
+      `📞 *Phone:* ${resolvedPhone || "Not provided"}`,
+      `📧 *Email:* ${resolvedEmail || "Not provided"}`,
+      `🏙️ *City:* ${resolvedCity || ""}`,
+      `📍 *Address:* ${resolvedAddress}`,
+      ``,
+      `📦 *Items:*`,
+      ...orderSummaryLines,
+      ``,
+      `💰 *Total:* QAR ${calculatedTotal.toFixed(2)}`,
+      `💳 *Payment:* ${resolvedMethod}`,
+      resolvedNotes ? `📝 *Notes:* ${resolvedNotes}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const whatsapp_url = `https://wa.me/${waNumber}?text=${encodeURIComponent(waMessage)}`;
+
     res.status(201).json({
+      success: true,
       message: "Order placed successfully.",
       order,
+      whatsapp_url,
     });
   } catch (error) {
-    // Rollback the transaction to restore previous state if any error occurs
     await transaction.rollback();
     next(error);
   }
 };
+
 
 /**
  * Fetch personal order receipts for the logged-in customer
@@ -176,6 +225,129 @@ exports.updateOrderStatus = async (req, res, next) => {
     res.status(200).json({
       message: "Order status updated successfully.",
       order,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Fetch all platform order receipts (Admin Panel)
+ */
+exports.getAllOrders = async (req, res, next) => {
+  try {
+    const orders = await Order.findAll({
+      include: [
+        {
+          model: User,
+          as: "user",
+          attributes: ["id", "email"],
+        },
+        {
+          model: OrderItem,
+          as: "items",
+          include: {
+            model: Product,
+            as: "product",
+            attributes: ["id", "title", "main_image_url"],
+          },
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+
+    res.status(200).json({ orders });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Calculate dynamic e-commerce business analytics (Admin Panel)
+ */
+exports.getAnalytics = async (req, res, next) => {
+  try {
+    const orders = await Order.findAll({
+      include: [
+        {
+          model: OrderItem,
+          as: "items",
+          include: {
+            model: Product,
+            as: "product",
+            attributes: ["id", "title", "price"],
+            include: {
+              model: Category,
+              as: "category",
+              attributes: ["id", "title"],
+            }
+          }
+        }
+      ]
+    });
+
+    let totalSales = 0;
+    let totalOrders = orders.length;
+    let uniqueUserIds = new Set();
+    let orderStatusCounts = { pending: 0, shipped: 0, completed: 0, cancelled: 0 };
+    let categorySalesMap = {};
+    let dateSalesMap = {};
+
+    orders.forEach((order) => {
+      // Clean '$' symbol if formatted in getters
+      const rawPrice = order.getDataValue("total_price");
+      const orderTotal = typeof rawPrice === "string" ? parseFloat(rawPrice.replace(/[$,]/g, "")) : parseFloat(rawPrice) || 0;
+      
+      totalSales += orderTotal;
+      uniqueUserIds.add(order.user_id);
+
+      const status = order.status || "pending";
+      if (orderStatusCounts[status] !== undefined) {
+        orderStatusCounts[status]++;
+      }
+
+      // Format Date: e.g. "Jun 09"
+      const dateKey = new Date(order.createdAt).toLocaleDateString("en-US", {
+        month: "short",
+        day: "2-digit",
+      });
+      dateSalesMap[dateKey] = (dateSalesMap[dateKey] || 0) + orderTotal;
+
+      if (order.items) {
+        order.items.forEach((item) => {
+          const categoryTitle = item.product?.category?.title || "Other";
+          const itemPrice = typeof item.price_at_purchase === "string" 
+            ? parseFloat(item.price_at_purchase.replace(/[$,]/g, "")) 
+            : parseFloat(item.price_at_purchase) || 0;
+          const itemTotal = itemPrice * (item.quantity || 1);
+          categorySalesMap[categoryTitle] = (categorySalesMap[categoryTitle] || 0) + itemTotal;
+        });
+      }
+    });
+
+    const totalCustomers = uniqueUserIds.size;
+    const averageOrderValue = totalOrders > 0 ? (totalSales / totalOrders) : 0;
+
+    const salesByCategory = Object.keys(categorySalesMap).map((cat) => ({
+      category: cat,
+      sales: parseFloat(categorySalesMap[cat].toFixed(2)),
+    }));
+
+    const salesOverTime = Object.keys(dateSalesMap).map((date) => ({
+      date,
+      sales: parseFloat(dateSalesMap[date].toFixed(2)),
+    })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    res.status(200).json({
+      analytics: {
+        totalSales: parseFloat(totalSales.toFixed(2)),
+        totalOrders,
+        averageOrderValue: parseFloat(averageOrderValue.toFixed(2)),
+        totalCustomers,
+        salesByCategory,
+        orderStatusCounts,
+        salesOverTime,
+      }
     });
   } catch (error) {
     next(error);

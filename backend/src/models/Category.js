@@ -45,12 +45,25 @@ const Category = sequelize.define(
     },
     image_url: {
       type: DataTypes.STRING,
-      allowNull: true, // Optional category icon/banner path
+      allowNull: true,
+    },
+    parent_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: "Categories",
+        key: "id",
+      },
+      onDelete: "CASCADE",
     },
   },
   {
     timestamps: true,
   }
 );
+
+// Self-referential associations for main categories and subcategories
+Category.belongsTo(Category, { foreignKey: "parent_id", as: "parent" });
+Category.hasMany(Category, { foreignKey: "parent_id", as: "subcategories" });
 
 module.exports = Category;
