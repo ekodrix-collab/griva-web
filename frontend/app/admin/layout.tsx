@@ -7,14 +7,14 @@ interface AdminLayoutProps {
   children: ReactNode;
 }
 
-export default function AdminLayout({children}: AdminLayoutProps) {
+export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Skip auth check if we are on an auth page (login, forgot-password, reset-password)
-    if (pathname.startsWith("/admin/auth/")) {
+    if (pathname.startsWith("/admin")) {
       setLoading(false);
       return;
     }
@@ -29,8 +29,10 @@ export default function AdminLayout({children}: AdminLayoutProps) {
 
     try {
       const parsedUser = JSON.parse(user);
-
+      console.log(parsedUser.role);
       if (parsedUser.role !== "admin") {
+        // Non-admin users don't belong here — send them to frontend home
+        router.replace("/");
         router.replace("/admin");
         return;
       }
