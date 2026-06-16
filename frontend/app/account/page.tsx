@@ -51,6 +51,10 @@ export default function AccountPage() {
           const data = await authService.getProfile();
           console.log("Profile data:", data);
           if (data.success) {
+            if (data.user.role === 'admin') {
+              router.push('/admin');
+              return;
+            }
             setProfile(data.user);
           } else {
             setProfileError("Failed to load profile.");
