@@ -137,7 +137,7 @@ export default function ForgotPasswordPage() {
 
             <button
               type="button"
-              onClick={() => router.push("/login")}
+              onClick={() => router.push("/admin/auth/login")}
               className="w-full flex items-center justify-center gap-2 py-3 text-sm font-semibold text-gray-500 hover:text-orange-500 transition-colors cursor-pointer"
             >
               <ArrowLeft className="h-4 w-4" />

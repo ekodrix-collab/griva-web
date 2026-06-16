@@ -11,16 +11,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    // Skip auth check if we are on an auth page (login, forgot-password, reset-password)
-    if (pathname.startsWith("/admin")) {
+    // Skip auth check for admin auth pages (login, forgot-password, reset-password)
+    if (pathname && pathname.startsWith("/admin/auth")) {
       setLoading(false);
       return;
     }
 
-    const token = localStorage.getItem("token");
-    const user = localStorage.getItem("user");
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const user = typeof window !== "undefined" ? localStorage.getItem("user") : null;
 
     if (!token || !user) {
       router.replace("/admin/auth/login");
@@ -29,19 +30,19 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
     try {
       const parsedUser = JSON.parse(user);
-      console.log(parsedUser.role);
-      if (parsedUser.role !== "admin") {
-        // Non-admin users don't belong here — send them to frontend home
-        router.replace("/");
-        router.replace("/admin");
+      if (!parsedUser || parsedUser.role !== "admin") {
+        // Clear any invalid or non-admin credentials and redirect away
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        setErrorMsg("Access denied. Admin credentials required.");
+
         return;
       }
 
       setLoading(false);
-    } catch {
+    } catch (e) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
-
       router.replace("/admin/auth/login");
     }
   }, [router, pathname]);
