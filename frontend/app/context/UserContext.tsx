@@ -25,6 +25,7 @@ export type Address = {
 export type User = {
   name: string;
   email: string;
+  role?: string;
 };
 
 export type Order = {
@@ -38,6 +39,7 @@ export type Order = {
 interface UserState {
   isLoggedIn: boolean;
   user: User | null;
+  role: string | null;
   profileData: ProfileData | null;
   addresses: Address[];
   orders: Order[];
@@ -60,6 +62,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<UserState>({
     isLoggedIn: false,
     user: null,
+    role: null,
     profileData: null,
     addresses: [],
     orders: [],
@@ -69,8 +72,21 @@ export function UserProvider({ children }: { children: ReactNode }) {
     try {
       const token = localStorage.getItem("token");
       const storedUser = localStorage.getItem("griva_user");
+      const storedRole = localStorage.getItem("griva_role");
       const storedAddresses = localStorage.getItem("griva_addresses");
       const storedOrders = localStorage.getItem("griva_orders");
+
+      // Also check admin user stored by admin login
+      const adminUser = localStorage.getItem("user");
+      let resolvedRole = storedRole;
+      let resolvedUser = storedUser ? JSON.parse(storedUser) : null;
+      if (!resolvedRole && adminUser) {
+        try {
+          const parsed = JSON.parse(adminUser);
+          resolvedRole = parsed?.role || null;
+          if (!resolvedUser) resolvedUser = parsed;
+        } catch { /* ignore */ }
+      }
 
       // Fallback for previous single address storage
       const legacyAddress = localStorage.getItem("griva_address");
@@ -84,7 +100,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
       setState((prev) => ({
         ...prev,
         isLoggedIn: !!token,
-        user: storedUser ? JSON.parse(storedUser) : null,
+        user: resolvedUser,
+        role: resolvedRole,
         addresses,
         orders: storedOrders ? JSON.parse(storedOrders) : [],
       }));
@@ -109,15 +126,19 @@ export function UserProvider({ children }: { children: ReactNode }) {
 };
 
   const login = (user: User) => {
-    setState((prev) => ({ ...prev, isLoggedIn: true, user }));
+    const role = user.role || "customer";
+    setState((prev) => ({ ...prev, isLoggedIn: true, user, role }));
     // Store user info separately — do NOT overwrite "token" (the raw JWT)
     localStorage.setItem("griva_user", JSON.stringify(user));
+    localStorage.setItem("griva_role", role);
   };
 
   const logout = () => {
-    setState((prev) => ({ ...prev, isLoggedIn: false, user: null, profileData: null }));
+    setState((prev) => ({ ...prev, isLoggedIn: false, user: null, role: null, profileData: null }));
     localStorage.removeItem("token");
     localStorage.removeItem("griva_user");
+    localStorage.removeItem("griva_role");
+    localStorage.removeItem("user");
   };
 
   const addAddress = (address: Address) => {

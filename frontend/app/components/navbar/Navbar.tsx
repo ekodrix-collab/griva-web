@@ -33,6 +33,9 @@ export default function Navbar() {
   const { searchQuery, setSearchQuery, filters, setFilters } = useSearch();
   const { state: userState } = useUser();
 
+  // Only treat user as logged-in on the frontend if they are a customer (not admin)
+  const isCustomerLoggedIn = userState.isLoggedIn && userState.role !== "admin";
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [categoryDrawerOpen, setCategoryDrawerOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
@@ -172,16 +175,16 @@ export default function Navbar() {
 
             {/* User */}
             <Link
-              href={userState.isLoggedIn ? "/account" : "/auth/login"}
+              href={isCustomerLoggedIn ? "/account" : "/auth/login"}
               className="relative flex items-center gap-2 group cursor-pointer"
             >
               <div className="relative">
                 <User size={18} className="text-black group-hover:text-orange-500 transition-colors" />
               </div>
               <div className="text-left leading-tight">
-                <p className="text-[10px] text-gray-400">{userState.isLoggedIn ? "Account" : "Welcome"}</p>
+                <p className="text-[10px] text-gray-400">{isCustomerLoggedIn ? "Account" : "Welcome"}</p>
                 <p className="text-xs font-bold text-black group-hover:text-orange-500 transition-colors truncate max-w-20">
-                  {userState.isLoggedIn ? userState.user?.name : "Sign In"}
+                  {isCustomerLoggedIn ? userState.user?.name : "Sign In"}
                 </p>
               </div>
             </Link>
@@ -226,7 +229,7 @@ export default function Navbar() {
 
             {/* User Button */}
             <Link
-              href={userState.isLoggedIn ? "/account" : "/auth/login"}
+              href={isCustomerLoggedIn ? "/account" : "/auth/login"}
               className="p-2 text-gray-700 hover:text-orange-500 transition-colors rounded-lg"
             >
               <User size={20} />
@@ -367,13 +370,13 @@ export default function Navbar() {
 
             {/* Account / User */}
             <Link
-              href={userState.isLoggedIn ? "/account" : "/auth/login"}
+              href={isCustomerLoggedIn ? "/account" : "/auth/login"}
               className={`flex flex-col items-center justify-center w-14 h-full transition-colors ${pathname === "/account" || pathname === "/auth/login" ? "text-orange-500" : "text-gray-600 hover:text-orange-500"
                 }`}
             >
               <User size={20} />
               <span className="text-[10px] mt-1 font-medium tracking-tight">
-                {userState.isLoggedIn ? "Account" : "Sign In"}
+                {isCustomerLoggedIn ? "Account" : "Sign In"}
               </span>
             </Link>
 
