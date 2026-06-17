@@ -9,7 +9,7 @@ interface AdminHeaderProps {
 
 export default function AdminHeader({ activeTab }: AdminHeaderProps) {
   return (
-    <header className="h-16 border-b border-orange-500/30 bg-white px-6 flex items-center justify-between sticky top-0 z-40">
+    <header className=" py-[17px] border-b border-orange-500/30 bg-white px-6 flex items-center justify-between sticky top-0 z-40">
       {/* Page Title */}
       <h1 className="text-lg font-bold text-gray-900 capitalize">
         {activeTab.replace("-", " ")} Control Room

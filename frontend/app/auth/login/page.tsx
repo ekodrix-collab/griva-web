@@ -29,10 +29,12 @@ export default function LoginPage() {
 
         login({ name: response.user?.name || email.split("@")[0], email });
 
-        if (response.user?.role === "customer") {
-          router.push("/");
-        } else {
-          router.push("/auth/login");
+        if (response.user?.role === "customer" ) {
+          router.push("/account");
+        } else if(response.user?.role === "admin") {
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          setError("admin can not use these credentials");
         }
       } else {
         setError("Invalid credentials");
