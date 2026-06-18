@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAdminSettings } from "@/app/context/AdminContext";
 import { CategoryItem, OfferCard, Product, SlideData } from "@/app/types/types";
-import { addSubscriberApi, AdminOrder, AnalyticsData, broadcastNewsletterApi, deleteProductApi, getAllOrdersApi, getAnalyticsApi, getProductsApi, getSettingsApi, getSubscribersApi, SubscriberInfo, updateProductStockApi, updateSettingsApi } from "@/app/utils/api";
+import { addSubscriberApi, AdminOrder, AnalyticsData, broadcastNewsletterApi, getAllOrdersApi, getAnalyticsApi, getSettingsApi, getSubscribersApi, SubscriberInfo, updateSettingsApi } from "@/app/utils/api";
 import { products as initialProducts, slide as initialSlides, offers as initialOffers, categories as initialCategories } from "@/app/data/data";
 import AdminSidebar from "./AdminSidebar";
 import AdminHeader from "./AdminHeader";
@@ -12,9 +12,11 @@ import ProductsTab from "./ProductsTab";
 import OrdersTab from "./OrdersTab";
 import BannersTab from "./BannersTab";
 import SubscribersTab from "./SubscribersTab";
-import AddProductModal from "./AddProductModal";
 
-export type TabType = "overview" | "products" | "banners" | "subscribers" | "orders";
+import CategoriesTab from "./CategoriesTab";
+import SubCategoriesTab from "./SubCategoriesTab";
+
+export type TabType = "overview" | "products" | "banners" | "subscribers" | "orders" | "categories" | "subcategories";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -33,7 +35,7 @@ export default function AdminDashboard() {
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab]       = useState<TabType>("overview");
-  const [productsList, setProductsList] = useState<Product[]>(initialProducts);
+
   const [slidesList]                    = useState<SlideData[]>(initialSlides);
   const [offersList, setOffersList]     = useState<OfferCard[]>(initialOffers);
   const [categoriesList]                = useState<CategoryItem[]>(initialCategories);
@@ -53,15 +55,14 @@ export default function AdminDashboard() {
   const [broadcastMessage, setBroadcastMessage] = useState("");
   const [broadcastStatus, setBroadcastStatus]   = useState<"idle" | "sending" | "sent">("idle");
 
-  const categories = Array.from(new Set(productsList.map((p) => p.category)));
+
 
   // ── Data load ──────────────────────────────────────────────────────────────
   useEffect(() => {
     async function load() {
-      const [dbProducts, dbSettings, dbSubs, dbOrders, dbAnalytics] = await Promise.all([
-        getProductsApi(), getSettingsApi(), getSubscribersApi(), getAllOrdersApi(), getAnalyticsApi(),
+      const [dbSettings, dbSubs, dbOrders, dbAnalytics] = await Promise.all([
+        getSettingsApi(), getSubscribersApi(), getAllOrdersApi(), getAnalyticsApi(),
       ]);
-      setProductsList(dbProducts);
       setAnnouncementBarEnabled(dbSettings.announcementBarEnabled);
       setFridaySaleEnabled(dbSettings.fridaySaleEnabled);
       setMidnightSaleEnabled(dbSettings.midnightSaleEnabled);
@@ -102,24 +103,7 @@ export default function AdminDashboard() {
       prev.map((o) => o.id === id ? { ...o, badge: o.badge === "DISABLED" ? "ACTIVE PROMO" : "DISABLED" } : o)
     );
 
-  const handleStockAdjustment = async (id: number, delta: number) => {
-    const p = productsList.find((x) => x.id === id); if (!p) return;
-    const next = Math.max(0, (p.stock || 0) + delta);
-    setProductsList((prev) => prev.map((x) => x.id === id ? { ...x, stock: next } : x));
-    await updateProductStockApi(id, next);
-  };
 
-  const handleDirectStockEdit = async (id: number, val: number) => {
-    setProductsList((prev) => prev.map((p) => p.id === id ? { ...p, stock: val } : p));
-    await updateProductStockApi(id, val);
-  };
-
-  const handleDeleteProduct = async (id: number) => {
-    if (confirm("Delete this product?")) {
-      setProductsList((prev) => prev.filter((p) => p.id !== id));
-      await deleteProductApi(id);
-    }
-  };
 
   const handleAddSubscriber = async (e: React.FormEvent) => {
     e.preventDefault(); if (!newSubEmail) return;
@@ -127,11 +111,7 @@ export default function AdminDashboard() {
     if (s) { setSubscribersList((prev) => [s, ...prev]); setNewSubEmail(""); }
   };
 
-  const filteredProducts = productsList.filter((p) => {
-    const ms = p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-               p.category.toLowerCase().includes(searchQuery.toLowerCase());
-    return ms && (filterCategory === "all" || p.category === filterCategory);
-  });
+
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -161,16 +141,7 @@ export default function AdminDashboard() {
             />
           )}
           {activeTab === "products" && (
-            <ProductsTab
-              searchQuery={searchQuery}       setSearchQuery={setSearchQuery}
-              filterCategory={filterCategory} setFilterCategory={setFilterCategory}
-              categories={categories}         setIsAddModalOpen={setIsAddModalOpen}
-              filteredProducts={filteredProducts}
-              handleStockAdjustment={handleStockAdjustment}
-              handleDeleteProduct={handleDeleteProduct}
-              handleDirectStockEdit={handleDirectStockEdit}
-              setProductsList={setProductsList}
-            />
+            <ProductsTab />
           )}
           {activeTab === "orders" && (
             <OrdersTab ordersList={ordersList} setOrdersList={setOrdersList} />
@@ -191,15 +162,16 @@ export default function AdminDashboard() {
               handleAddSubscriber={handleAddSubscriber}
             />
           )}
+          {activeTab === "categories" && (
+            <CategoriesTab />
+          )}
+          {activeTab === "subcategories" && (
+            <SubCategoriesTab />
+          )}
         </div>
       </main>
 
-      {/* ── Add Product Modal ── */}
-      <AddProductModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onProductAdded={(saved) => setProductsList((prev) => [saved, ...prev])}
-      />
+
     </div>
   );
 }
