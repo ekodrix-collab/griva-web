@@ -56,22 +56,22 @@ export default function AdminDashboard() {
   const categories = Array.from(new Set(productsList.map((p) => p.category)));
 
   // ── Data load ──────────────────────────────────────────────────────────────
-  // useEffect(() => {
-  //   async function load() {
-  //     const [dbProducts, dbSettings, dbSubs, dbOrders, dbAnalytics] = await Promise.all([
-  //       getProductsApi(), getSettingsApi(), getSubscribersApi(), getAllOrdersApi(), getAnalyticsApi(),
-  //     ]);
-  //     setProductsList(dbProducts);
-  //     setAnnouncementBarEnabled(dbSettings.announcementBarEnabled);
-  //     setFridaySaleEnabled(dbSettings.fridaySaleEnabled);
-  //     setMidnightSaleEnabled(dbSettings.midnightSaleEnabled);
-  //     setSubscribersList(dbSubs);
-  //     setOrdersList(dbOrders);
-  //     setAnalytics(dbAnalytics);
-  //     setAnalyticsLoading(false);
-  //   }
-  //   load();
-  // }, []);
+  useEffect(() => {
+    async function load() {
+      const [dbProducts, dbSettings, dbSubs, dbOrders, dbAnalytics] = await Promise.all([
+        getProductsApi(), getSettingsApi(), getSubscribersApi(), getAllOrdersApi(), getAnalyticsApi(),
+      ]);
+      setProductsList(dbProducts);
+      setAnnouncementBarEnabled(dbSettings.announcementBarEnabled);
+      setFridaySaleEnabled(dbSettings.fridaySaleEnabled);
+      setMidnightSaleEnabled(dbSettings.midnightSaleEnabled);
+      setSubscribersList(dbSubs);
+      setOrdersList(dbOrders);
+      setAnalytics(dbAnalytics);
+      setAnalyticsLoading(false);
+    }
+    load();
+  }, []);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
   const handleToggleAnnouncement = async () => {

@@ -33,6 +33,11 @@ const Order = sequelize.define(
       autoIncrement: true,
       primaryKey: true,
     },
+    order_number: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      unique: true,
+    },
     user_id: {
       type: DataTypes.INTEGER,
       allowNull: true,

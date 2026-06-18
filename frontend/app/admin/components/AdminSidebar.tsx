@@ -32,7 +32,8 @@ export default function AdminSidebar({ activeTab, setActiveTab }: AdminSidebarPr
 
   const handleSignOut = () => {
     localStorage.removeItem("griva_admin_auth");
-    localStorage.removeItem("token");
+    localStorage.removeItem("griva_admin_token");
+    localStorage.removeItem("griva_admin_user");
     router.replace("/admin/auth/login");
   };
 
