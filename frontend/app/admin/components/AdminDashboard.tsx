@@ -12,11 +12,12 @@ import ProductsTab from "./ProductsTab";
 import OrdersTab from "./OrdersTab";
 import BannersTab from "./BannersTab";
 import SubscribersTab from "./SubscribersTab";
-
 import CategoriesTab from "./CategoriesTab";
 import SubCategoriesTab from "./SubCategoriesTab";
+import AddProductModal from "./AddProductModal";
+import DeliveryTab from "./DeliveryTab";
 
-export type TabType = "overview" | "products" | "banners" | "subscribers" | "orders" | "categories" | "subcategories";
+export type TabType = "overview" | "products" | "banners" | "subscribers" | "orders" | "categories" | "subcategories" | "delivery";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -167,6 +168,9 @@ export default function AdminDashboard() {
           )}
           {activeTab === "subcategories" && (
             <SubCategoriesTab />
+          )}
+          {activeTab === "delivery" && (
+            <DeliveryTab />
           )}
         </div>
       </main>

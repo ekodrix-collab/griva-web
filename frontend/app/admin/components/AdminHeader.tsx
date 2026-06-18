@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 
-type TabType = "overview" | "products" | "banners" | "subscribers" | "orders" | "categories" | "subcategories";
+type TabType = "overview" | "products" | "banners" | "subscribers" | "orders" | "categories" | "subcategories" | "delivery";
 
 interface AdminHeaderProps {
   activeTab: TabType;

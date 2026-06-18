@@ -388,3 +388,144 @@ exports.getAnalytics = async (req, res, next) => {
     next(error);
   }
 };
+
+// ─────────────────────────────────────────────────────────
+// FEATURE: Delivery Boy System
+// Created: 2026-06-18
+// Do not modify without checking delivery feature docs
+// ─────────────────────────────────────────────────────────
+
+/**
+ * PATCH /api/orders/:id/assign
+ * Admin assigns a delivery boy to an order
+ */
+exports.assignDeliveryBoy = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { deliveryBoyId } = req.body;
+
+    if (!deliveryBoyId) {
+      return res.status(400).json({
+        success: false,
+        message: "deliveryBoyId is required.",
+      });
+    }
+
+    const order = await Order.findByPk(id);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found.",
+      });
+    }
+
+    // Verify the delivery boy exists and has role 'delivery'
+    const deliveryBoy = await User.findByPk(deliveryBoyId);
+    if (!deliveryBoy || deliveryBoy.role !== "delivery") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid delivery boy ID or user is not a delivery staff member.",
+      });
+    }
+
+    order.delivery_boy_id = deliveryBoyId;
+    order.assigned_at = new Date();
+    order.status = "assigned";
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Order ${order.order_number || order.id} assigned to ${deliveryBoy.name}.`,
+      order,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/admin/delivery-boys
+ * Admin fetches all delivery boy accounts with active order count
+ */
+exports.getDeliveryBoys = async (req, res, next) => {
+  try {
+    const deliveryBoys = await User.findAll({
+      where: { role: "delivery" },
+      attributes: ["id", "name", "email", "createdAt"],
+    });
+
+    // Count active (non-delivered, non-cancelled) orders per driver
+    const result = [];
+    for (const driver of deliveryBoys) {
+      const activeOrderCount = await Order.count({
+        where: {
+          delivery_boy_id: driver.id,
+          status: {
+            [Op.notIn]: ["delivered", "completed", "cancelled"],
+          },
+        },
+      });
+
+      result.push({
+        id: driver.id,
+        name: driver.name,
+        email: driver.email,
+        activeOrderCount,
+        createdAt: driver.createdAt,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      deliveryBoys: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/orders/admin/delivery-boys
+ * Admin creates/registers a new delivery boy account
+ */
+exports.createDeliveryBoy = async (req, res, next) => {
+  try {
+    const { name, email, password } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Name, email, and password are required.",
+      });
+    }
+
+    const existingUser = await User.findOne({ where: { email } });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is already registered.",
+      });
+    }
+
+    const newDriver = await User.create({
+      name,
+      email,
+      password,
+      role: "delivery",
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Delivery boy account created successfully.",
+      deliveryBoy: {
+        id: newDriver.id,
+        name: newDriver.name,
+        email: newDriver.email,
+        role: newDriver.role,
+        createdAt: newDriver.createdAt,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
