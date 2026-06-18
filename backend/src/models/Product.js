@@ -58,11 +58,13 @@ const Product = sequelize.define(
       allowNull: false,
       get() {
         const rawValue = this.getDataValue("price");
-        return rawValue ? `$${rawValue}` : null; // Formats price for Next.js UI automatically
+        if (!rawValue) return null;
+        const cleaned = typeof rawValue === "string" ? rawValue.replace(/([$]|qar|[\s,])/gi, "") : rawValue;
+        return `QAR ${parseFloat(cleaned).toFixed(2)}`;
       },
       set(val) {
-        // Strips '$' symbols automatically before writing decimal to Azure PostgreSQL
-        const cleanedVal = typeof val === "string" ? parseFloat(val.replace(/[$,]/g, "")) : val;
+        // Strips '$', 'QAR' symbols automatically before writing decimal to Azure PostgreSQL
+        const cleanedVal = typeof val === "string" ? parseFloat(val.replace(/([$]|qar|[\s,])/gi, "")) : val;
         this.setDataValue("price", cleanedVal);
       },
     },
@@ -71,11 +73,13 @@ const Product = sequelize.define(
       allowNull: true,
       get() {
         const rawValue = this.getDataValue("old_price");
-        return rawValue ? `$${rawValue}` : null;
+        if (!rawValue) return null;
+        const cleaned = typeof rawValue === "string" ? rawValue.replace(/([$]|qar|[\s,])/gi, "") : rawValue;
+        return `QAR ${parseFloat(cleaned).toFixed(2)}`;
       },
       set(val) {
         if (!val) return this.setDataValue("old_price", null);
-        const cleanedVal = typeof val === "string" ? parseFloat(val.replace(/[$,]/g, "")) : val;
+        const cleanedVal = typeof val === "string" ? parseFloat(val.replace(/([$]|qar|[\s,])/gi, "")) : val;
         this.setDataValue("old_price", cleanedVal);
       },
     },

@@ -221,7 +221,7 @@ export default function HeroBanner() {
                       >
                         {currentSlide.price}
                       </motion.span>
-                      <span className="mb-0.5 text-sm text-gray-400 line-through lg:mb-1 lg:text-lg">$599</span>
+                      <span className="mb-0.5 text-sm text-gray-400 line-through lg:mb-1 lg:text-lg">QAR 599</span>
                     </div>
                     <div className="mt-8 w-full lg:w-fit">
                       <Link

@@ -331,7 +331,7 @@ exports.getAnalytics = async (req, res, next) => {
     orders.forEach((order) => {
       // Clean '$' symbol if formatted in getters
       const rawPrice = order.getDataValue("total_price");
-      const orderTotal = typeof rawPrice === "string" ? parseFloat(rawPrice.replace(/[$,]/g, "")) : parseFloat(rawPrice) || 0;
+      const orderTotal = typeof rawPrice === "string" ? parseFloat(rawPrice.replace(/([$]|qar|[\s,])/gi, "")) : parseFloat(rawPrice) || 0;
       
       totalSales += orderTotal;
       uniqueUserIds.add(order.user_id);
@@ -352,7 +352,7 @@ exports.getAnalytics = async (req, res, next) => {
         order.items.forEach((item) => {
           const categoryTitle = item.product?.category?.title || "Other";
           const itemPrice = typeof item.price_at_purchase === "string" 
-            ? parseFloat(item.price_at_purchase.replace(/[$,]/g, "")) 
+            ? parseFloat(item.price_at_purchase.replace(/([$]|qar|[\s,])/gi, "")) 
             : parseFloat(item.price_at_purchase) || 0;
           const itemTotal = itemPrice * (item.quantity || 1);
           categorySalesMap[categoryTitle] = (categorySalesMap[categoryTitle] || 0) + itemTotal;

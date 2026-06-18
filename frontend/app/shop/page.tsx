@@ -159,7 +159,7 @@ export default function ShopPage({ searchParams }: ShopPageProps) {
                   <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider">
                     Max Price
                   </h4>
-                  <span className="text-xs font-bold text-orange-500">${maxPrice}</span>
+                  <span className="text-xs font-bold text-orange-500">QAR {maxPrice}</span>
                 </div>
                 <input
                   type="range"
@@ -171,8 +171,8 @@ export default function ShopPage({ searchParams }: ShopPageProps) {
                   className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-500"
                 />
                 <div className="flex justify-between text-[10px] text-gray-400 mt-1 font-semibold">
-                  <span>$0</span>
-                  <span>$2,000</span>
+                  <span>QAR 0</span>
+                  <span>QAR 2,000</span>
                 </div>
               </div>
 
@@ -365,7 +365,7 @@ export default function ShopPage({ searchParams }: ShopPageProps) {
                     <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider">
                       Max Price
                     </h4>
-                    <span className="text-xs font-bold text-orange-500">${maxPrice}</span>
+                    <span className="text-xs font-bold text-orange-500">QAR {maxPrice}</span>
                   </div>
                   <input
                     type="range"
@@ -377,8 +377,8 @@ export default function ShopPage({ searchParams }: ShopPageProps) {
                     className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-500"
                   />
                   <div className="flex justify-between text-[10px] text-gray-400 mt-1 font-semibold">
-                    <span>$0</span>
-                    <span>$2,000</span>
+                    <span>QAR 0</span>
+                    <span>QAR 2,000</span>
                   </div>
                 </div>
 

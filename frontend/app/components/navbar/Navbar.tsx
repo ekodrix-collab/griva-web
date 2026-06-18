@@ -168,7 +168,7 @@ export default function Navbar() {
               <div className="text-left leading-tight">
                 <p className="text-[10px] text-gray-400">My Cart</p>
                 <p className="text-xs font-bold text-black group-hover:text-orange-500 transition-colors">
-                  ${cartState.totalPrice.toFixed(2)}
+                  QAR {cartState.totalPrice.toFixed(2)}
                 </p>
               </div>
             </button>

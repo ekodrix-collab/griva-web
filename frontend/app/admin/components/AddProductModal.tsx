@@ -58,8 +58,8 @@ export default function AddProductModal({ isOpen, onClose, onProductAdded }: Add
       category: newCategory,
       image: newMainImage,
       images: [newMainImage, ...galleryImages],
-      price: `$${parseFloat(newPrice).toFixed(2)}`,
-      oldPrice: newOldPrice ? `$${parseFloat(newOldPrice).toFixed(2)}` : undefined,
+      price: `QAR ${parseFloat(newPrice).toFixed(2)}`,
+      oldPrice: newOldPrice ? `QAR ${parseFloat(newOldPrice).toFixed(2)}` : undefined,
       badge: newBadge || undefined,
       stock: newStock,
       description: newDesc,
@@ -203,7 +203,7 @@ export default function AddProductModal({ isOpen, onClose, onProductAdded }: Add
           <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="text-[10px] text-gray-500 font-bold uppercase block mb-1">
-                Sale Price ($)
+                Sale Price (QAR)
               </label>
               <input
                 type="number" step="0.01" required placeholder="699.99"
@@ -213,7 +213,7 @@ export default function AddProductModal({ isOpen, onClose, onProductAdded }: Add
             </div>
             <div>
               <label className="text-[10px] text-gray-500 font-bold uppercase block mb-1">
-                Original Price ($)
+                Original Price (QAR)
               </label>
               <input
                 type="number" step="0.01" placeholder="949.99"

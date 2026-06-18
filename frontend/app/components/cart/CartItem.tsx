@@ -100,7 +100,7 @@ export default function CartItem({ item }: CartItemProps) {
           </div>
 
           <span className="text-sm font-bold text-orange-500">
-            ${(item.priceNumber * item.quantity).toFixed(2)}
+            QAR {(item.priceNumber * item.quantity).toFixed(2)}
           </span>
         </div>
       </div>

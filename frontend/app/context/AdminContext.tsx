@@ -116,17 +116,42 @@ const defaults: AdminSettings = {
   }
 };
 
+function sanitizeLoadedSettings(settings: any): AdminSettings {
+  const sanitized = { ...settings };
+  if (sanitized.cmsHeroSlides) {
+    sanitized.cmsHeroSlides = sanitized.cmsHeroSlides.map((s: any) => ({
+      ...s,
+      price: typeof s.price === "string" ? s.price.replace(/^\s*\$\s*/, "QAR ").replace(/\s*\$\s*/g, " QAR ") : s.price,
+    }));
+  }
+  if (sanitized.cmsDealSlides) {
+    sanitized.cmsDealSlides = sanitized.cmsDealSlides.map((s: any) => ({
+      ...s,
+      price: typeof s.price === "string" ? s.price.replace(/^\s*\$\s*/, "QAR ").replace(/\s*\$\s*/g, " QAR ") : s.price,
+      oldPrice: typeof s.oldPrice === "string" ? s.oldPrice.replace(/^\s*\$\s*/, "QAR ").replace(/\s*\$\s*/g, " QAR ") : s.oldPrice,
+    }));
+  }
+  if (sanitized.cmsOffers) {
+    sanitized.cmsOffers = sanitized.cmsOffers.map((o: any) => ({
+      ...o,
+      subtitle: typeof o.subtitle === "string" ? o.subtitle.replace(/\$\s*(\d+)/g, "QAR $1") : o.subtitle,
+    }));
+  }
+  return sanitized as AdminSettings;
+}
+
 function loadFromStorage(): AdminSettings {
   if (typeof window === "undefined") return defaults;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return defaults;
     const parsed = JSON.parse(raw);
-    return {
+    const combined = {
       ...defaults,
       ...parsed,
       cmsCategories: defaults.cmsCategories,
     };
+    return sanitizeLoadedSettings(combined);
   } catch {
     return defaults;
   }
