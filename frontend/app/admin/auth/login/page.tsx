@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sparkles, Eye, EyeOff, Lock, Mail, ShieldAlert } from "lucide-react";
 import { authService } from "@/app/services/auth.service";
+import { useUser } from "@/app/context/UserContext";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -12,6 +13,7 @@ export default function AdminLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const { login } = useUser();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,10 +23,14 @@ export default function AdminLoginPage() {
     try {
       const result = await authService.login({ email, password });
       if (result && result.token) {
-        localStorage.setItem("griva_admin_token", result.token);
-        localStorage.setItem("griva_admin_user", JSON.stringify(result.user));
-        router.push("/admin");
-        return;
+        if (result.user?.role === "admin") {
+          login({ name: result.user?.name || email.split("@")[0], email, role: "admin" }, result.token);
+          router.push("/admin");
+          return;
+        } else {
+          setError("Invalid admin credentials. Please try again.");
+          return;
+        }
       }
 
       setError("Invalid admin credentials. Please try again.");

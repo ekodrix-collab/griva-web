@@ -5,11 +5,9 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/a
 
 // Helper to retrieve auth headers
 function getAuthHeaders(): HeadersInit {
-  // Check if running on client side
   if (typeof window !== "undefined") {
-    const isAdminPath = window.location.pathname.startsWith("/admin");
-    const tokenKey = isAdminPath ? "griva_admin_token" : "token";
-    const token = localStorage.getItem(tokenKey);
+    // We now use a unified "token" key for both customers and admins
+    const token = localStorage.getItem("token");
     if (token) {
       return {
         "Content-Type": "application/json",

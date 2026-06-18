@@ -58,20 +58,23 @@ const labelColors = {
 
 export default function AccountPage() {
   const router = useRouter();
-  const { logout } = useUser();
+  const { logout, isAuthenticated, isCustomer, loading: userLoading, state } = useUser();
   const [activeTab, setActiveTab] = useState("profile");
 
-  // Redirect to login if no token is found
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      router.push("/auth/login");
-    }
-  }, [router]);
+  const profile = state.profileData;
+  const profileLoading = userLoading;
+  const profileError = "";
 
-  const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [profileLoading, setProfileLoading] = useState(false);
-  const [profileError, setProfileError] = useState("");
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!userLoading) {
+      if (!isAuthenticated) {
+        router.push("/auth/login");
+      } else if (!isCustomer) {
+        router.push("/admin");
+      }
+    }
+  }, [isAuthenticated, isCustomer, userLoading, router]);
 
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [addressesLoading, setAddressesLoading] = useState(false);
@@ -87,33 +90,6 @@ export default function AccountPage() {
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState("");
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
-
-  // Fetch profile
-  useEffect(() => {
-    if (activeTab === "profile" && !profile) {
-      const fetchProfile = async () => {
-        setProfileLoading(true);
-        setProfileError("");
-        try {
-          const data = await authService.getProfile();
-          if (data.success) {
-            if (data.user.role === "admin") {
-              router.push("/admin");
-              return;
-            }
-            setProfile(data.user);
-          } else {
-            setProfileError("Failed to load profile.");
-          }
-        } catch {
-          setProfileError("Unable to connect to server.");
-        } finally {
-          setProfileLoading(false);
-        }
-      };
-      fetchProfile();
-    }
-  }, [activeTab, profile]);
 
   // Fetch addresses when tab is active
   useEffect(() => {

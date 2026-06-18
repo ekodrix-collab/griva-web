@@ -8,7 +8,8 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("griva_admin_token");
+  // Use the unified token key established in UserContext
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;

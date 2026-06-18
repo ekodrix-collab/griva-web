@@ -24,23 +24,20 @@ export default function LoginPage() {
     try {
       const response = await authService.login({ email, password });
       if (response && response.token) {
-        localStorage.setItem("token", response.token);
-        localStorage.setItem("user", JSON.stringify(response.user));
-
-        login({ name: response.user?.name || email.split("@")[0], email });
-
-        if (response.user?.role === "customer" ) {
+        if (response.user?.role === "customer") {
+          login({ name: response.user?.name || email.split("@")[0], email, role: "customer" }, response.token);
           router.push("/account");
-        } else if(response.user?.role === "admin") {
-          localStorage.removeItem("token");
-          localStorage.removeItem("user");
-          setError("admin can not use these credentials");
+        } else if (response.user?.role === "admin") {
+          setError("Admin accounts cannot use this login page.");
+        } else {
+          // Default to customer if not specified or unrecognized
+          login({ name: response.user?.name || email.split("@")[0], email, role: "customer" }, response.token);
+          router.push("/account");
         }
       } else {
         setError("Invalid credentials");
       }
     } catch {
-      // ← removed unused `err` variable (like AdminLoginPage)
       setError("Login failed. Please check your credentials and try again.");
     } finally {
       setLoading(false);

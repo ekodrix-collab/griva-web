@@ -1,18 +1,17 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { CartItem } from "@/app/types/types";
 import { authService } from "../services/auth.service";
 
-
-export type ProfileData ={
+export type ProfileData = {
   id: number;
   name: string;
   email: string;
   role: string;
   createdAt: string;
   updatedAt: string;
-}
+};
 
 export type Address = {
   fullName: string;
@@ -43,17 +42,26 @@ interface UserState {
   profileData: ProfileData | null;
   addresses: Address[];
   orders: Order[];
+  loading: boolean;
+  token: string | null;
 }
 
 interface UserContextType {
   state: UserState;
-  login: (user: User) => void;
+  login: (user: User, token: string) => void;
   logout: () => void;
   getUserProfile: () => Promise<ProfileData>;
   addAddress: (address: Address) => void;
   updateAddress: (index: number, address: Address) => void;
   deleteAddress: (index: number) => void;
   saveOrder: (order: Order) => void;
+  // Helpers
+  user: User | null;
+  role: string | null;
+  loading: boolean;
+  isAuthenticated: boolean;
+  isAdmin: boolean;
+  isCustomer: boolean;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -66,78 +74,118 @@ export function UserProvider({ children }: { children: ReactNode }) {
     profileData: null,
     addresses: [],
     orders: [],
+    loading: true,
+    token: null,
   });
 
-  useEffect(() => {
+  const getUserProfile = useCallback(async () => {
     try {
-      const token = localStorage.getItem("token");
-      const storedUser = localStorage.getItem("griva_user");
-      const storedRole = localStorage.getItem("griva_role");
-      const storedAddresses = localStorage.getItem("griva_addresses");
-      const storedOrders = localStorage.getItem("griva_orders");
-
-      // Also check admin user stored by admin login
-      const adminUser = localStorage.getItem("griva_admin_user");
-      let resolvedRole = storedRole;
-      let resolvedUser = storedUser ? JSON.parse(storedUser) : null;
-      if (!resolvedRole && adminUser) {
-        try {
-          const parsed = JSON.parse(adminUser);
-          resolvedRole = parsed?.role || null;
-          if (!resolvedUser) resolvedUser = parsed;
-        } catch { /* ignore */ }
-      }
-
-      // Fallback for previous single address storage
-      const legacyAddress = localStorage.getItem("griva_address");
-      let addresses: Address[] = [];
-      if (storedAddresses) {
-        addresses = JSON.parse(storedAddresses);
-      } else if (legacyAddress) {
-        addresses = [JSON.parse(legacyAddress)];
-      }
-
+      const response = await authService.getProfile();
+      const profile = response.user || response.data || response;
+      const role = profile.role || "customer";
+      
       setState((prev) => ({
         ...prev,
-        isLoggedIn: !!token,
-        user: resolvedUser,
-        role: resolvedRole,
-        addresses,
-        orders: storedOrders ? JSON.parse(storedOrders) : [],
+        profileData: profile,
+        role: role,
       }));
-    } catch (e) {
-      console.error("Failed to load user data from localStorage", e);
+      return profile;
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+      throw error;
     }
   }, []);
 
+  useEffect(() => {
+    const initializeAuth = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const storedUser = localStorage.getItem("griva_user");
+        const storedAddresses = localStorage.getItem("griva_addresses");
+        const storedOrders = localStorage.getItem("griva_orders");
 
- const getUserProfile = async () => {
-  try {
-    const response = await authService.getProfile();
-    setState((prev) => ({
-      ...prev,
-      profileData: response.data,
-    }));
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching profile:", error);
-    throw error;
-  }
-};
+        const legacyAddress = localStorage.getItem("griva_address");
+        let addresses: Address[] = [];
+        if (storedAddresses) {
+          addresses = JSON.parse(storedAddresses);
+        } else if (legacyAddress) {
+          addresses = [JSON.parse(legacyAddress)];
+        }
 
-  const login = (user: User) => {
+        let parsedUser = null;
+        if (storedUser) {
+          try {
+            parsedUser = JSON.parse(storedUser);
+          } catch { /* ignore */ }
+        }
+
+        if (token) {
+          setState((prev) => ({
+            ...prev,
+            isLoggedIn: true,
+            token,
+            user: parsedUser,
+            addresses,
+            orders: storedOrders ? JSON.parse(storedOrders) : [],
+          }));
+
+          try {
+            const profile = await getUserProfile();
+            setState((prev) => ({
+              ...prev,
+              role: profile.role,
+              user: prev.user || { name: profile.name, email: profile.email, role: profile.role }
+            }));
+          } catch (e) {
+            console.error("Token valid but profile fetch failed", e);
+            // If profile fails, clear token and state to prevent hanging auth states
+            setState((prev) => ({ ...prev, isLoggedIn: false, token: null, user: null, role: null }));
+            localStorage.removeItem("token");
+            localStorage.removeItem("griva_user");
+          }
+        } else {
+          setState((prev) => ({
+            ...prev,
+            isLoggedIn: false,
+            addresses,
+            orders: storedOrders ? JSON.parse(storedOrders) : [],
+          }));
+        }
+      } catch (e) {
+        console.error("Failed to load user data from localStorage", e);
+      } finally {
+        setState((prev) => ({ ...prev, loading: false }));
+      }
+    };
+
+    initializeAuth();
+  }, [getUserProfile]);
+
+  const login = (user: User, token: string) => {
     const role = user.role || "customer";
-    setState((prev) => ({ ...prev, isLoggedIn: true, user, role }));
-    // Store user info separately — do NOT overwrite "token" (the raw JWT)
+    setState((prev) => ({ 
+      ...prev, 
+      isLoggedIn: true, 
+      user, 
+      role,
+      token
+    }));
+    localStorage.setItem("token", token);
     localStorage.setItem("griva_user", JSON.stringify(user));
-    localStorage.setItem("griva_role", role);
   };
 
   const logout = () => {
-    setState((prev) => ({ ...prev, isLoggedIn: false, user: null, role: null, profileData: null }));
+    setState((prev) => ({ 
+      ...prev, 
+      isLoggedIn: false, 
+      user: null, 
+      role: null, 
+      profileData: null,
+      token: null
+    }));
     localStorage.removeItem("token");
     localStorage.removeItem("griva_user");
-    localStorage.removeItem("griva_role");
+    // Also remove old admin credentials for clean up
     localStorage.removeItem("griva_admin_token");
     localStorage.removeItem("griva_admin_user");
   };
@@ -175,8 +223,26 @@ export function UserProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const contextValue: UserContextType = {
+    state,
+    login,
+    logout,
+    getUserProfile,
+    addAddress,
+    updateAddress,
+    deleteAddress,
+    saveOrder,
+    // Helpers
+    user: state.user,
+    role: state.role,
+    loading: state.loading,
+    isAuthenticated: state.isLoggedIn,
+    isAdmin: state.role === "admin",
+    isCustomer: state.role === "customer",
+  };
+
   return (
-    <UserContext.Provider value={{ state, login, logout, addAddress, updateAddress, deleteAddress, saveOrder, getUserProfile }}>
+    <UserContext.Provider value={contextValue}>
       {children}
     </UserContext.Provider>
   );
