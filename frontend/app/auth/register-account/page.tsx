@@ -32,9 +32,7 @@ export default function RegisterPage() {
       const data = await authService.register({ name, email, password });
 
       if (data.success && data.token) {
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("user", JSON.stringify(data.user));
-        login({ name: data.user?.name || name, email });
+        login({ name: data.user?.name || name, email, role: data.user?.role || "customer" }, data.token);
         router.push("/account");
       } else {
         setError(data.message || "Registration failed. Please try again.");

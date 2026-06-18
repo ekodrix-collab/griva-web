@@ -31,10 +31,10 @@ export default function Navbar() {
   const { state: cartState, openDrawer } = useCart();
   const { items: wishlistItems } = useWishlist();
   const { searchQuery, setSearchQuery, filters, setFilters } = useSearch();
-  const { state: userState } = useUser();
+  const { state: userState, isAuthenticated, isCustomer } = useUser();
 
   // Only treat user as logged-in on the frontend if they are a customer (not admin)
-  const isCustomerLoggedIn = userState.isLoggedIn && userState.role !== "admin";
+  const isCustomerLoggedIn = isAuthenticated && isCustomer;
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [categoryDrawerOpen, setCategoryDrawerOpen] = useState(false);

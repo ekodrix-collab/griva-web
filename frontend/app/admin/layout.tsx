@@ -2,6 +2,7 @@
 
 import { ReactNode, useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { useUser } from "@/app/context/UserContext";
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -12,6 +13,7 @@ type AuthState = "loading" | "authorized" | "denied";
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const { isAuthenticated, isAdmin, loading, logout } = useUser();
   const [authState, setAuthState] = useState<AuthState>("loading");
 
   useEffect(() => {
@@ -20,31 +22,24 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       return;
     }
 
-    const token = typeof window !== "undefined" ? localStorage.getItem("griva_admin_token") : null;
-    const user = typeof window !== "undefined" ? localStorage.getItem("griva_admin_user") : null;
+    if (loading) {
+      setAuthState("loading");
+      return;
+    }
 
-    if (!token || !user) {
+    if (!isAuthenticated) {
       router.replace("/admin/auth/login");
       return;
     }
 
-    try {
-      const parsedUser = JSON.parse(user);
-      if (!parsedUser || parsedUser.role !== "admin") {
-        if (typeof window !== "undefined") {
-          localStorage.removeItem("griva_admin_token");
-          localStorage.removeItem("griva_admin_user");
-        }
-        setAuthState("denied");
-        return;
-      }
-      setAuthState("authorized");
-    } catch (e) {
-      localStorage.removeItem("griva_admin_token");
-      localStorage.removeItem("griva_admin_user");
-      router.replace("/admin/auth/login");
+    if (!isAdmin) {
+      logout();
+      setAuthState("denied");
+      return;
     }
-  }, [router, pathname]);
+
+    setAuthState("authorized");
+  }, [router, pathname, isAuthenticated, isAdmin, loading, logout]);
 
   if (authState === "loading") {
     return (
