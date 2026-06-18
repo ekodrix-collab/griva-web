@@ -299,7 +299,7 @@ export default function CheckoutPage() {
                 {cartState.items.map((item) => (
                   <div key={item.id} className="flex justify-between text-gray-600">
                     <span className="truncate pr-4">{item.quantity} x {item.title}</span>
-                    <span className="font-semibold text-gray-900">${(item.priceNumber * item.quantity).toFixed(2)}</span>
+                    <span className="font-semibold text-gray-900">QAR {(item.priceNumber * item.quantity).toFixed(2)}</span>
                   </div>
                 ))}
               </div>
@@ -307,19 +307,19 @@ export default function CheckoutPage() {
               <div className="border-t pt-4 space-y-4 text-sm">
                 <div className="flex justify-between text-gray-600">
                   <span>Subtotal</span>
-                  <span className="font-semibold text-gray-900">${cartState.totalPrice.toFixed(2)}</span>
+                  <span className="font-semibold text-gray-900">QAR {cartState.totalPrice.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-gray-600">
                   <span>Shipping</span>
-                  <span className="font-semibold text-gray-900">{shippingCost === 0 ? "Free" : `$${shippingCost.toFixed(2)}`}</span>
+                  <span className="font-semibold text-gray-900">{shippingCost === 0 ? "Free" : `QAR ${shippingCost.toFixed(2)}`}</span>
                 </div>
                 <div className="flex justify-between text-gray-600">
                   <span>Estimated Tax</span>
-                  <span className="font-semibold text-gray-900">${estimatedTax.toFixed(2)}</span>
+                  <span className="font-semibold text-gray-900">QAR {estimatedTax.toFixed(2)}</span>
                 </div>
                 <div className="border-t pt-4 flex justify-between text-base font-bold text-gray-900">
                   <span>Total</span>
-                  <span className="text-orange-500">${orderTotal.toFixed(2)}</span>
+                  <span className="text-orange-500">QAR {orderTotal.toFixed(2)}</span>
                 </div>
               </div>
 

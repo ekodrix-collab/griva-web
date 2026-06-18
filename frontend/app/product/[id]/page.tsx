@@ -258,7 +258,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                 <div className="flex flex-col items-center text-center p-2 rounded-lg bg-gray-50/50">
                   <Truck className="h-4 w-4 text-orange-500 mb-1" />
                   <span className="font-semibold text-gray-700">Free Shipping</span>
-                  <span>Orders over $50</span>
+                  <span>Orders over QAR 50</span>
                 </div>
                 <div className="flex flex-col items-center text-center p-2 rounded-lg bg-gray-50/50">
                   <RotateCcw className="h-4 w-4 text-orange-500 mb-1" />

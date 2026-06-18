@@ -15,7 +15,7 @@ const SiteSetting = sequelize.define(
     },
     announcementBarText: {
       type: DataTypes.STRING,
-      defaultValue: "Free shipping across Doha for orders over $150!",
+      defaultValue: "Free shipping across Doha for orders over QAR 150!",
     },
     fridaySaleEnabled: {
       type: DataTypes.BOOLEAN,

@@ -207,7 +207,9 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
 
                         {/* Total */}
                         <td className="p-4">
-                          <span className="text-xs font-black text-gray-900">{order.total_price}</span>
+                          <span className="text-xs font-black text-gray-900">
+                            {order.total_price ? `QAR ${parseFloat(String(order.total_price).replace(/([$]|qar|[\s,])/gi, "") || "0").toFixed(2)}` : "—"}
+                          </span>
                         </td>
 
                         {/* Status Badge */}
@@ -275,10 +277,10 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
                                     </div>
                                     <div className="min-w-0 flex-1">
                                       <p className="text-xs font-bold text-gray-800 truncate">{item.product?.title || `Product #${item.product_id}`}</p>
-                                      <p className="text-[10px] text-gray-400">Qty: {item.quantity} × ${Number(item.price_at_purchase).toFixed(2)}</p>
+                                      <p className="text-[10px] text-gray-400">Qty: {item.quantity} × QAR {Number(String(item.price_at_purchase).replace(/([$]|qar|[\s,])/gi, "")).toFixed(2)}</p>
                                     </div>
                                     <span className="text-xs font-black text-gray-800 shrink-0">
-                                      ${(Number(item.price_at_purchase) * item.quantity).toFixed(2)}
+                                      QAR {(Number(String(item.price_at_purchase).replace(/([$]|qar|[\s,])/gi, "")) * item.quantity).toFixed(2)}
                                     </span>
                                   </div>
                                 ))}
@@ -306,7 +308,9 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
                                     <ShoppingCart className="h-3.5 w-3.5 text-orange-500 mt-0.5 shrink-0" />
                                     <div>
                                       <p className="text-[10px] text-gray-400 font-semibold uppercase">Order Total</p>
-                                      <p className="text-sm font-black text-gray-900 mt-0.5">{order.total_price}</p>
+                                      <p className="text-sm font-black text-gray-900 mt-0.5">
+                                        {order.total_price ? `QAR ${parseFloat(String(order.total_price).replace(/([$]|qar|[\s,])/gi, "") || "0").toFixed(2)}` : "—"}
+                                      </p>
                                     </div>
                                   </div>
                                 </div>

@@ -134,10 +134,10 @@ export default function CartPage() {
                       {/* Price */}
                       <div className="text-right sm:min-w-[80px]">
                         <span className="text-sm font-bold text-orange-500">
-                          ${(item.priceNumber * item.quantity).toFixed(2)}
+                          QAR {(item.priceNumber * item.quantity).toFixed(2)}
                         </span>
                         <p className="text-[10px] text-gray-400">
-                          ${item.priceNumber.toFixed(2)} each
+                          QAR {item.priceNumber.toFixed(2)} each
                         </p>
                       </div>
 
@@ -164,7 +164,7 @@ export default function CartPage() {
                 <div className="space-y-4 text-sm">
                   <div className="flex justify-between text-gray-600">
                     <span>Subtotal</span>
-                    <span className="font-semibold text-gray-900">${state.totalPrice.toFixed(2)}</span>
+                    <span className="font-semibold text-gray-900">QAR {state.totalPrice.toFixed(2)}</span>
                   </div>
 
                   <div className="flex justify-between text-gray-600">
@@ -173,19 +173,19 @@ export default function CartPage() {
                       {shippingCost === 0 ? (
                         <span className="text-green-600">Free</span>
                       ) : (
-                        `$${shippingCost.toFixed(2)}`
+                        `QAR ${shippingCost.toFixed(2)}`
                       )}
                     </span>
                   </div>
 
                   <div className="flex justify-between text-gray-600">
                     <span>Estimated Tax (8%)</span>
-                    <span className="font-semibold text-gray-900">${estimatedTax.toFixed(2)}</span>
+                    <span className="font-semibold text-gray-900">QAR {estimatedTax.toFixed(2)}</span>
                   </div>
 
                   <div className="border-t pt-4 flex justify-between text-base font-bold text-gray-900">
                     <span>Order Total</span>
-                    <span className="text-orange-500">${orderTotal.toFixed(2)}</span>
+                    <span className="text-orange-500">QAR {orderTotal.toFixed(2)}</span>
                   </div>
                 </div>
 

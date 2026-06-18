@@ -31,8 +31,8 @@ const getFormattedCart = async (userId) => {
 
   const formattedItems = items.map((item) => {
     const p = item.product;
-    const priceStr = p ? p.price : "$0.00";
-    const priceNumber = p ? parseFloat(priceStr.replace(/[$,]/g, "")) : 0;
+    const priceStr = p ? p.price : "QAR 0.00";
+    const priceNumber = p ? parseFloat(priceStr.replace(/([$]|qar|[\s,])/gi, "")) : 0;
 
     return {
       id: item.id,

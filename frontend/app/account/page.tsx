@@ -645,7 +645,9 @@ export default function AccountPage() {
                                   {cfg.icon}
                                   {cfg.label}
                                 </span>
-                                <span className="text-sm font-black text-gray-900">{order.total_price}</span>
+                                <span className="text-sm font-black text-gray-900">
+                                  {order.total_price ? `QAR ${parseFloat(String(order.total_price).replace(/([$]|qar|[\s,])/gi, "") || "0").toFixed(2)}` : "—"}
+                                </span>
                                 <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
                               </div>
                             </div>
@@ -675,7 +677,7 @@ export default function AccountPage() {
                                         </div>
                                       </div>
                                       <span className="text-xs font-black text-gray-800 shrink-0">
-                                        ${(Number(String(item.price_at_purchase).replace(/[$,]/g, "")) * item.quantity).toFixed(2)}
+                                        QAR {(Number(String(item.price_at_purchase).replace(/([$]|qar|[\s,])/gi, "")) * item.quantity).toFixed(2)}
                                       </span>
                                     </div>
                                   ))}
@@ -685,7 +687,7 @@ export default function AccountPage() {
                                     Payment: {order.payment_method || "COD"}
                                   </span>
                                   <span className="text-sm font-black text-gray-900">
-                                    Total: {order.total_price}
+                                    Total: {order.total_price ? `QAR ${parseFloat(String(order.total_price).replace(/([$]|qar|[\s,])/gi, "") || "0").toFixed(2)}` : "—"}
                                   </span>
                                 </div>
                               </div>
