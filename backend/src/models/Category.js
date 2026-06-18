@@ -45,7 +45,7 @@ const Category = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: true,
       references: {
-        model: "Categories",
+        model: "categories",
         key: "id",
       },
       onDelete: "CASCADE",
