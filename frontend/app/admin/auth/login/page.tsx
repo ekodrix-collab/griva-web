@@ -21,8 +21,8 @@ export default function AdminLoginPage() {
     try {
       const result = await authService.login({ email, password });
       if (result && result.token) {
-        localStorage.setItem("token", result.token);
-        localStorage.setItem("user", JSON.stringify(result.user));
+        localStorage.setItem("griva_admin_token", result.token);
+        localStorage.setItem("griva_admin_user", JSON.stringify(result.user));
         router.push("/admin");
         return;
       }

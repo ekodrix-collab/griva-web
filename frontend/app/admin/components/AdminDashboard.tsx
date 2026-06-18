@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAdminSettings } from "@/app/context/AdminContext";
 import { CategoryItem, OfferCard, Product, SlideData } from "@/app/types/types";
-import { addSubscriberApi, AdminOrder, AnalyticsData, broadcastNewsletterApi, deleteProductApi, getAllOrdersApi, getAnalyticsApi, getProductsApi, getSettingsApi, getSubscribersApi, SubscriberInfo, updateProductStockApi, updateSettingsApi } from "@/app/utils/api";
+import { addSubscriberApi, AdminOrder, AnalyticsData, broadcastNewsletterApi, getAllOrdersApi, getAnalyticsApi, getSettingsApi, getSubscribersApi, SubscriberInfo, updateSettingsApi } from "@/app/utils/api";
 import { products as initialProducts, slide as initialSlides, offers as initialOffers, categories as initialCategories } from "@/app/data/data";
 import AdminSidebar from "./AdminSidebar";
 import AdminHeader from "./AdminHeader";
@@ -58,22 +58,21 @@ export default function AdminDashboard() {
 
 
   // ── Data load ──────────────────────────────────────────────────────────────
-  // useEffect(() => {
-  //   async function load() {
-  //     const [dbProducts, dbSettings, dbSubs, dbOrders, dbAnalytics] = await Promise.all([
-  //       getProductsApi(), getSettingsApi(), getSubscribersApi(), getAllOrdersApi(), getAnalyticsApi(),
-  //     ]);
-  //     setProductsList(dbProducts);
-  //     setAnnouncementBarEnabled(dbSettings.announcementBarEnabled);
-  //     setFridaySaleEnabled(dbSettings.fridaySaleEnabled);
-  //     setMidnightSaleEnabled(dbSettings.midnightSaleEnabled);
-  //     setSubscribersList(dbSubs);
-  //     setOrdersList(dbOrders);
-  //     setAnalytics(dbAnalytics);
-  //     setAnalyticsLoading(false);
-  //   }
-  //   load();
-  // }, []);
+  useEffect(() => {
+    async function load() {
+      const [dbSettings, dbSubs, dbOrders, dbAnalytics] = await Promise.all([
+        getSettingsApi(), getSubscribersApi(), getAllOrdersApi(), getAnalyticsApi(),
+      ]);
+      setAnnouncementBarEnabled(dbSettings.announcementBarEnabled);
+      setFridaySaleEnabled(dbSettings.fridaySaleEnabled);
+      setMidnightSaleEnabled(dbSettings.midnightSaleEnabled);
+      setSubscribersList(dbSubs);
+      setOrdersList(dbOrders);
+      setAnalytics(dbAnalytics);
+      setAnalyticsLoading(false);
+    }
+    load();
+  }, []);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
   const handleToggleAnnouncement = async () => {

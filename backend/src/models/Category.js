@@ -32,10 +32,23 @@ const Category = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
-
     is_active: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,
+    },
+    banner_image_url: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      comment: "Full-width hero banner image for this category page",
+    },
+    parent_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: "Categories",
+        key: "id",
+      },
+      onDelete: "CASCADE",
     },
   },
   {

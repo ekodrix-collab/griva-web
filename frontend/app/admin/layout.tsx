@@ -20,8 +20,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       return;
     }
 
-    const token = localStorage.getItem("token");
-    const user = localStorage.getItem("user");
+    const token = typeof window !== "undefined" ? localStorage.getItem("griva_admin_token") : null;
+    const user = typeof window !== "undefined" ? localStorage.getItem("griva_admin_user") : null;
 
     if (!token || !user) {
       router.replace("/admin/auth/login");
@@ -31,15 +31,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     try {
       const parsedUser = JSON.parse(user);
       if (!parsedUser || parsedUser.role !== "admin") {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        setAuthState("denied"); // ✅ show message instead of redirect
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("griva_admin_token");
+          localStorage.removeItem("griva_admin_user");
+        }
+        setAuthState("denied");
         return;
       }
       setAuthState("authorized");
     } catch (e) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
+      localStorage.removeItem("griva_admin_token");
+      localStorage.removeItem("griva_admin_user");
       router.replace("/admin/auth/login");
     }
   }, [router, pathname]);

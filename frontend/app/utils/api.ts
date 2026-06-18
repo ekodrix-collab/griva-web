@@ -7,7 +7,9 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/a
 function getAuthHeaders(): HeadersInit {
   // Check if running on client side
   if (typeof window !== "undefined") {
-    const token = localStorage.getItem("token");
+    const isAdminPath = window.location.pathname.startsWith("/admin");
+    const tokenKey = isAdminPath ? "griva_admin_token" : "token";
+    const token = localStorage.getItem(tokenKey);
     if (token) {
       return {
         "Content-Type": "application/json",
@@ -341,6 +343,7 @@ export interface OrderItem {
 
 export interface AdminOrder {
   id: number;
+  order_number?: string;
   user_id: number;
   status: string;
   total_price: string;

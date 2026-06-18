@@ -56,6 +56,7 @@ const bannerRoutes = require("./routes/bannerRoutes");
 const addressRoutes = require("./routes/addressRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
 const subCategoryRoutes = require("./routes/subCategoryRoutes");
+const cartRoutes = require("./routes/cartRoutes");
 
 // Mount API Routers
 app.use("/api/auth", authRoutes);
@@ -70,6 +71,7 @@ app.use("/api/banners", bannerRoutes);
 app.use("/api/addresses", addressRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/subcategories", subCategoryRoutes);
+app.use("/api/cart", cartRoutes);
 
 // Global Error Handler Middleware
 app.use((err, req, res, next) => {

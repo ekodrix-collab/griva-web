@@ -117,7 +117,7 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
                         <td className="p-4">
                           <div className="flex items-center gap-2">
                             <Hash className="h-3 w-3 text-orange-400" />
-                            <span className="text-xs font-black text-gray-800">ORD-{String(order.id).padStart(4, '0')}</span>
+                            <span className="text-xs font-black text-gray-800">{order.order_number || `ORD-${String(order.id).padStart(4, '0')}`}</span>
                           </div>
                         </td>
 
