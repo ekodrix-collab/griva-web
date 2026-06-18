@@ -1,8 +1,8 @@
 const { DataTypes } = require("sequelize");
 const { sequelize } = require("../config/db");
 
-const Category = sequelize.define(
-  "Category",
+const SubCategory = sequelize.define(
+  "SubCategory",
   {
     id: {
       type: DataTypes.INTEGER,
@@ -10,7 +10,17 @@ const Category = sequelize.define(
       autoIncrement: true,
     },
 
+    category_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+
     title: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+
+    href: {
       type: DataTypes.STRING,
       allowNull: false,
       unique: true,
@@ -22,46 +32,32 @@ const Category = sequelize.define(
       unique: true,
     },
 
-    href: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      unique: true,
-    },
-
     image_url: {
       type: DataTypes.STRING,
       allowNull: true,
     },
+
     is_active: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,
     },
-    banner_image_url: {
-      type: DataTypes.STRING,
-      allowNull: true,
-      comment: "Full-width hero banner image for this category page",
-    },
-    parent_id: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      references: {
-        model: "Categories",
-        key: "id",
-      },
-      onDelete: "CASCADE",
-    },
   },
   {
-    tableName: "categories",
+    tableName: "sub_categories",
     timestamps: true,
-  },
+  }
 );
 
-Category.associate = (models) => {
-  Category.hasMany(models.SubCategory, {
+SubCategory.associate = (models) => {
+  SubCategory.belongsTo(models.Category, {
     foreignKey: "category_id",
-    as: "subcategories",
+    as: "category",
+  });
+
+  SubCategory.hasMany(models.Product, {
+    foreignKey: "subcategory_id",
+    as: "products",
   });
 };
 
-module.exports = Category;
+module.exports = SubCategory;

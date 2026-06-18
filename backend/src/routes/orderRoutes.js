@@ -47,4 +47,17 @@ router.get("/analytics", authenticateJWT, isAdmin, orderController.getAnalytics)
 // Maps to: PATCH /api/orders/:id/status (e.g. /api/orders/12/status)
 router.patch("/:id/status", authenticateJWT, isAdmin, orderController.updateOrderStatus);
 
+// ─────────────────────────────────────────────────────────
+// FEATURE: Delivery Boy System (Admin routes)
+// ─────────────────────────────────────────────────────────
+
+// Maps to: PATCH /api/orders/:id/assign (Admin assigns a delivery boy)
+router.patch("/:id/assign", authenticateJWT, isAdmin, orderController.assignDeliveryBoy);
+
+// Maps to: GET /api/admin/delivery-boys (Admin fetches all delivery staff)
+router.get("/admin/delivery-boys", authenticateJWT, isAdmin, orderController.getDeliveryBoys);
+
+// Maps to: POST /api/orders/admin/delivery-boys (Admin creates a delivery boy account)
+router.post("/admin/delivery-boys", authenticateJWT, isAdmin, orderController.createDeliveryBoy);
+
 module.exports = router;

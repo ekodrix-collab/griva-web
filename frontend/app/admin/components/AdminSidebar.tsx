@@ -10,9 +10,12 @@ import {
   ArrowUpRight,
   EyeOff,
   ShoppingBag,
+  List,
+  Layers,
+  Truck,
 } from "lucide-react";
 
-type TabType = "overview" | "products" | "banners" | "subscribers" | "orders";
+type TabType = "overview" | "products" | "banners" | "subscribers" | "orders" | "categories" | "subcategories" | "delivery";
 
 interface AdminSidebarProps {
   activeTab: TabType;
@@ -21,8 +24,11 @@ interface AdminSidebarProps {
 
 const NAV = [
   { id: "overview",     label: "Overview & Analytics",  icon: <LayoutDashboard className="h-4 w-4" /> },
+  { id: "categories",   label: "Categories",             icon: <List className="h-4 w-4" /> },
+  { id: "subcategories",label: "Sub Categories",         icon: <Layers className="h-4 w-4" /> },
   { id: "products",     label: "Manage Products",        icon: <Package className="h-4 w-4" /> },
   { id: "orders",       label: "Orders Control Room",    icon: <ShoppingBag className="h-4 w-4" /> },
+  { id: "delivery",     label: "Manage Drivers",         icon: <Truck className="h-4 w-4" /> },
   { id: "banners",      label: "Banners & Layouts",      icon: <Sliders className="h-4 w-4" /> },
   { id: "subscribers",  label: "Subscribers Hub",        icon: <Users className="h-4 w-4" /> },
 ] as const;

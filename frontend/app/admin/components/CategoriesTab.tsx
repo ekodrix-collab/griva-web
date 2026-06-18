@@ -1,0 +1,329 @@
+import React, { useState, useEffect } from 'react';
+import { Search, Plus, Trash2, Edit, Check, X } from 'lucide-react';
+import { Category, CategoryRequest } from '@/app/types/types';
+import { categoryService } from '@/app/services/category.service';
+
+export default function CategoriesTab() {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  
+  const [formData, setFormData] = useState<CategoryRequest>({
+    title: '',
+    slug: '',
+    href: '',
+    image_url: '',
+    is_active: true
+  });
+  
+  const [formLoading, setFormLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  useEffect(() => {
+    loadCategories();
+  }, []);
+
+  const loadCategories = async () => {
+    setLoading(true);
+    try {
+      const res = await categoryService.getCategories();
+      const actualData = res?.data || res;
+      setCategories(Array.isArray(actualData) ? actualData : []);
+    } catch (err) {
+      console.error("Failed to load categories", err);
+    }
+    setLoading(false);
+  };
+
+  const handleOpenAdd = () => {
+    setEditingCategory(null);
+    setFormData({ title: '', slug: '', href: '', image_url: '', is_active: true });
+    setError('');
+    setSuccess('');
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = (cat: Category) => {
+    setEditingCategory(cat);
+    setFormData({
+      title: cat.title,
+      slug: cat.slug,
+      href: cat.href,
+      image_url: cat.image_url || '',
+      is_active: cat.is_active
+    });
+    setError('');
+    setSuccess('');
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = async (id: number) => {
+    if (confirm("Are you sure you want to delete this category?")) {
+      try {
+        await categoryService.deleteCategory(id);
+        setCategories(prev => prev.filter(c => c.id !== id));
+      } catch (err) {
+        alert("Failed to delete category");
+      }
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.title || !formData.slug || !formData.href) {
+      setError("Title, Slug, and Href are required.");
+      return;
+    }
+
+    setFormLoading(true);
+    setError('');
+    setSuccess('');
+    
+    try {
+      if (editingCategory) {
+        await categoryService.updateCategory(editingCategory.id, formData);
+        setSuccess("Category updated successfully!");
+        loadCategories();
+      } else {
+        await categoryService.createCategory(formData);
+        setSuccess("Category created successfully!");
+        loadCategories();
+      }
+      setTimeout(() => {
+        setIsModalOpen(false);
+      }, 1000);
+    } catch (err: any) {
+      setError(err?.response?.data?.message || "Something went wrong.");
+    }
+    setFormLoading(false);
+  };
+
+  const filteredCategories = categories.filter((c) =>
+    (c.title?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
+    (c.slug?.toLowerCase() || "").includes(searchQuery.toLowerCase())
+  );
+
+  return (
+    <div className="space-y-6 animate-in fade-in-50 duration-300">
+      {/* Search & Action Bar */}
+      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white p-4 rounded-xl border border-orange-500/30">
+        <div className="flex flex-1 gap-3 w-full sm:w-auto">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search category title or slug..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-white border border-orange-500/30 rounded-xl pl-9 pr-4 py-2 text-xs text-gray-800 focus:outline-none"
+            />
+          </div>
+        </div>
+
+        <button
+          onClick={handleOpenAdd}
+          className="flex items-center gap-2 px-4 py-2.5 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition-colors cursor-pointer w-full sm:w-auto justify-center font-semibold text-sm shadow-md"
+        >
+          <Plus className="h-4.5 w-4.5" />
+          Add Category
+        </button>
+      </div>
+
+      {/* Categories Table */}
+      <div className="bg-white border border-orange-500/30 rounded-2xl overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[700px]">
+            <thead>
+              <tr className="border-b border-orange-500/30 text-[10px] text-gray-400 font-bold uppercase tracking-wider bg-gray-50">
+                <th className="p-3">Category Details</th>
+                <th className="p-3">Slug</th>
+                <th className="p-3">Href</th>
+                <th className="p-3 text-center">Status</th>
+                <th className="p-3">Created</th>
+                <th className="p-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="p-8 text-center text-xs text-gray-400">Loading categories...</td>
+                </tr>
+              ) : filteredCategories.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="p-8 text-center text-xs text-gray-400">No categories found.</td>
+                </tr>
+              ) : (
+                filteredCategories.map((cat) => (
+                  <tr key={cat.id} className="hover:bg-gray-50 transition-colors group">
+                    <td className="p-3 flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-white p-1 flex items-center justify-center shrink-0 border border-orange-500/30 overflow-hidden">
+                        {cat.image_url ? (
+                          <img src={cat.image_url} alt={cat.title} className="h-full w-full object-cover" />
+                        ) : (
+                          <span className="text-[10px] font-black text-orange-500">N/A</span>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-sm font-bold text-gray-900 block truncate group-hover:text-orange-500 transition-colors">
+                          {cat.title}
+                        </span>
+                        <span className="text-[9px] text-gray-400 font-semibold">ID: #{cat.id}</span>
+                      </div>
+                    </td>
+                    <td className="p-3">
+                      <span className="text-xs text-gray-700 bg-gray-100 px-2 py-1 rounded-md">{cat.slug}</span>
+                    </td>
+                    <td className="p-3">
+                      <span className="text-xs text-gray-500 truncate max-w-[150px] block">{cat.href}</span>
+                    </td>
+                    <td className="p-3 text-center">
+                      {cat.is_active ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-md text-[10px] font-bold">
+                          <Check className="w-3 h-3" /> Active
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded-md text-[10px] font-bold">
+                          <X className="w-3 h-3" /> Inactive
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-3">
+                      <span className="text-xs text-gray-500">
+                        {new Date(cat.createdAt).toLocaleDateString()}
+                      </span>
+                    </td>
+                    <td className="p-3 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => handleOpenEdit(cat)}
+                          className="p-2 text-gray-400 hover:text-gray-900 bg-white hover:bg-gray-100 rounded-lg transition-colors cursor-pointer border border-orange-500/30"
+                        >
+                          <Edit className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(cat.id)}
+                          className="p-1.5 text-gray-400 hover:text-red-500 bg-white hover:bg-red-50 rounded-lg transition-colors cursor-pointer border border-orange-500/30"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md border border-orange-500/20 shadow-xl overflow-hidden">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+              <h3 className="text-lg font-bold text-gray-900">
+                {editingCategory ? "Edit Category" : "Add Category"}
+              </h3>
+              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-900">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              {error && <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">{error}</div>}
+              {success && <div className="mb-4 p-3 bg-green-50 text-green-600 text-sm rounded-lg border border-green-100">{success}</div>}
+              
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Title *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.title}
+                    onChange={(e) => {
+                      const newTitle = e.target.value;
+                      const newSlug = newTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+                      setFormData({...formData, title: newTitle, slug: newSlug});
+                    }}
+                    className="w-full text-sm p-2.5 border border-gray-200 focus:border-orange-500 outline-none rounded-xl"
+                    placeholder="e.g. Electronics"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Slug *</label>
+                  <input
+                    type="text"
+                    required
+                    disabled
+                    value={formData.slug}
+                    onChange={(e) => setFormData({...formData, slug: e.target.value})}
+                    className="w-full text-sm p-2.5 border border-gray-200 bg-gray-50 text-gray-500 cursor-not-allowed outline-none rounded-xl"
+                    placeholder="e.g. electronics"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Href *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.href}
+                    onChange={(e) => setFormData({...formData, href: e.target.value})}
+                    className="w-full text-sm p-2.5 border border-gray-200 focus:border-orange-500 outline-none rounded-xl"
+                    placeholder="e.g. /shop/electronics"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Image URL</label>
+                  <input
+                    type="text"
+                    value={formData.image_url || ''}
+                    onChange={(e) => setFormData({...formData, image_url: e.target.value})}
+                    className="w-full text-sm p-2.5 border border-gray-200 focus:border-orange-500 outline-none rounded-xl"
+                    placeholder="https://..."
+                  />
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="is_active"
+                    checked={formData.is_active}
+                    onChange={(e) => setFormData({...formData, is_active: e.target.checked})}
+                    className="rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                  />
+                  <label htmlFor="is_active" className="text-sm font-semibold text-gray-700 cursor-pointer">
+                    Is Active
+                  </label>
+                </div>
+
+                <div className="pt-4 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="px-4 py-2 text-sm font-bold text-gray-500 hover:text-gray-900 transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={formLoading}
+                    className="px-5 py-2 bg-orange-500 text-white text-sm font-bold rounded-xl hover:bg-orange-600 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {formLoading ? "Saving..." : "Save Category"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

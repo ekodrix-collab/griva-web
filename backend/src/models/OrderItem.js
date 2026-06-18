@@ -46,11 +46,12 @@ const OrderItem = sequelize.define(
     },
     product_id: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true, // Nullable so order history survives product deletion
       references: {
         model: Product,
         key: "id",
       },
+      onDelete: "SET NULL",
     },
     quantity: {
       type: DataTypes.INTEGER,
@@ -90,6 +91,6 @@ OrderItem.belongsTo(Order, { foreignKey: "order_id", as: "order" });
 Order.hasMany(OrderItem, { foreignKey: "order_id", as: "items", onDelete: "CASCADE" });
 
 OrderItem.belongsTo(Product, { foreignKey: "product_id", as: "product" });
-Product.hasMany(OrderItem, { foreignKey: "product_id", as: "orderItems" });
+Product.hasMany(OrderItem, { foreignKey: "product_id", as: "orderItems", onDelete: "SET NULL" });
 
 module.exports = OrderItem;
