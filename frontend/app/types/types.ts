@@ -1,8 +1,5 @@
 import { StaticImageData } from "next/image";
 
-
-
-
 // ─────────────────────────────────────────────────────────
 //authentication
 // ─────────────────────────────────────────────────────────
@@ -12,34 +9,28 @@ export interface AuthUser {
   email: string;
   role: string;
 }
-
 export interface RegisterRequest {
   name: string;
   email: string;
   password: string;
 }
-
 export interface AuthResponse {
   message?: string;
   token?: string;
   user?: AuthUser;
 }
-
 export interface GenericMessageResponse {
   message: string;
 }
-
 export interface LoginRequest {
   email: string;
   password: string;
 }
-
 export interface ForgotPasswordResponse {
   message: string;
   resetUrl: string;
   success: boolean;
 }
-
 export interface ProfileData {
   id: number;
   name: string;
@@ -49,12 +40,9 @@ export interface ProfileData {
   updatedAt: string;
 }
 
-
 // ─────────────────────────────────────────────────────────
 //address
 // ─────────────────────────────────────────────────────────
-
-
 export interface AddressRequest {
   label: "home" | "office" | "other";
   fullName: string;
@@ -88,6 +76,93 @@ export interface Address {
   createdAt: string;
   updatedAt: string;
 }
+
+// ─────────────────────────────────────────────────────────
+// category
+// ─────────────────────────────────────────────────────────
+
+export interface CategoryRequest {
+  title: string;
+  slug: string;
+  href: string;
+  image_url?: string;
+  is_active?: boolean;
+};
+export interface Category  {
+  id: number;
+  title: string;
+  slug: string;
+  href: string;
+  image_url: string | null;
+  is_active: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+// ─────────────────────────────────────────────────────────
+// subcategory
+// ─────────────────────────────────────────────────────────
+
+export interface SubCategoryRequest  {
+  category_id: number;
+  title: string;
+  slug: string;
+  href: string;
+  image_url?: string;
+  is_active?: boolean;
+};
+
+export interface SubCategory  {
+  id: number;
+  category_id: number;
+  title: string;
+  slug: string;
+  href: string;
+  image_url: string | null;
+  is_active: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+// ─────────────────────────────────────────────────────────
+// Product Types
+// ─────────────────────────────────────────────────────────
+export interface ApiProductVariant  {
+  color: string;
+  size: string;
+};
+
+export interface ProductSpecification  {
+  name: string;
+  value: string;
+};
+
+export interface ProductRequest  {
+  subcategory_id: number;
+  title: string;
+  slug: string;
+  short_description?: string;
+  description?: string;
+  price: number;
+  old_price?: number;
+  discount_percentage?: number;
+  stock?: number;
+  sku?: string;
+  brand?: string;
+  main_image_url: string;
+  gallery_images?: string[];
+  variants?: ApiProductVariant[];
+  specifications?: ProductSpecification[];
+  tags?: string[];
+  is_featured?: boolean;
+  is_best_seller?: boolean;
+  is_trending?: boolean;
+  is_new?: boolean;
+  is_active?: boolean;
+  meta_title?: string;
+  meta_description?: string;
+};
+
 
 
 
