@@ -106,7 +106,7 @@ export default function AddProductModal({ isOpen, onClose, onSuccess, productToE
     const subId = Number(e.target.value);
     const sub = subCategories.find(s => s.id === subId);
     let newSku = formData.sku;
-    
+
     if (sub) {
       const prefix = sub.title.substring(0, 3).toUpperCase();
       const randomDigits = Math.floor(10000 + Math.random() * 90000);
@@ -203,7 +203,7 @@ export default function AddProductModal({ isOpen, onClose, onSuccess, productToE
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white border border-orange-500/20 rounded-3xl w-full max-w-4xl max-h-[90vh] shadow-2xl flex flex-col">
-        
+
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100 shrink-0">
           <div className="flex items-center gap-2">
@@ -220,9 +220,9 @@ export default function AddProductModal({ isOpen, onClose, onSuccess, productToE
         {/* Content */}
         <div className="p-6 overflow-y-auto flex-1">
           {error && <div className="mb-6 p-4 bg-red-50 text-red-600 text-sm rounded-xl border border-red-100 font-semibold">{error}</div>}
-          
+
           <form id="productForm" onSubmit={handleSubmit} className="space-y-8">
-            
+
             {/* Basic Info */}
             <div>
               <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">Basic Information</h5>
@@ -500,7 +500,7 @@ export default function AddProductModal({ isOpen, onClose, onSuccess, productToE
             <div>
               <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">Specs, Variants & Tags</h5>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
+
                 {/* Specs */}
                 <div>
                   <label className="text-[11px] font-bold text-gray-700 block mb-1">Specifications</label>

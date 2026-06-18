@@ -50,7 +50,7 @@ const Order = sequelize.define(
       type: DataTypes.STRING,
       defaultValue: "pending",
       validate: {
-        isIn: [["pending", "shipped", "completed", "cancelled"]],
+        isIn: [["pending", "processing", "assigned", "out_for_delivery", "shipped", "delivered", "completed", "cancelled"]],
       },
     },
     total_price: {
@@ -58,10 +58,12 @@ const Order = sequelize.define(
       allowNull: false,
       get() {
         const rawValue = this.getDataValue("total_price");
-        return rawValue ? `$${rawValue}` : null;
+        if (!rawValue) return null;
+        const cleaned = typeof rawValue === "string" ? rawValue.replace(/([$]|qar|[\s,])/gi, "") : rawValue;
+        return `QAR ${parseFloat(cleaned).toFixed(2)}`;
       },
       set(val) {
-        const cleanedVal = typeof val === "string" ? parseFloat(val.replace(/[$,]/g, "")) : val;
+        const cleanedVal = typeof val === "string" ? parseFloat(val.replace(/([$]|qar|[\s,])/gi, "")) : val;
         this.setDataValue("total_price", cleanedVal);
       },
     },
@@ -99,6 +101,19 @@ const Order = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    // FEATURE: Delivery Boy System
+    delivery_boy_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: "Users",
+        key: "id",
+      },
+    },
+    assigned_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
   },
   {
     timestamps: true,
@@ -108,5 +123,8 @@ const Order = sequelize.define(
 // Mappings
 Order.belongsTo(User, { foreignKey: "user_id", as: "user" });
 User.hasMany(Order, { foreignKey: "user_id", as: "orders" });
+
+// FEATURE: Delivery Boy System
+Order.belongsTo(User, { foreignKey: "delivery_boy_id", as: "deliveryBoy" });
 
 module.exports = Order;

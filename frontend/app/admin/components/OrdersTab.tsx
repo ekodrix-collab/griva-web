@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  ShoppingCart, CheckCircle, Truck, XCircle, Clock,
+  ShoppingCart, CheckCircle, Truck, XCircle, Clock, UserCheck,
   ChevronDown, Package, MapPin, Mail, Hash
 } from 'lucide-react';
 import { AdminOrder, updateOrderStatusApi } from '../../utils/api';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 interface OrdersTabProps {
   ordersList: AdminOrder[];
@@ -11,23 +13,80 @@ interface OrdersTabProps {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
-  pending:   { label: 'Pending',   color: 'text-amber-600',  bg: 'bg-amber-50 border-amber-200',    icon: <Clock className="h-3 w-3" /> },
-  shipped:   { label: 'Shipped',   color: 'text-blue-600',   bg: 'bg-blue-50 border-blue-200',      icon: <Truck className="h-3 w-3" /> },
-  completed: { label: 'Completed', color: 'text-green-600',  bg: 'bg-green-50 border-green-200',    icon: <CheckCircle className="h-3 w-3" /> },
-  cancelled: { label: 'Cancelled', color: 'text-red-500',    bg: 'bg-red-50 border-red-200',        icon: <XCircle className="h-3 w-3" /> },
+  pending:          { label: 'Pending',          color: 'text-amber-600',  bg: 'bg-amber-50 border-amber-200',    icon: <Clock className="h-3 w-3" /> },
+  processing:       { label: 'Processing',       color: 'text-indigo-600', bg: 'bg-indigo-50 border-indigo-200',  icon: <Package className="h-3 w-3" /> },
+  assigned:         { label: 'Assigned',         color: 'text-blue-600',   bg: 'bg-blue-50 border-blue-200',      icon: <UserCheck className="h-3 w-3" /> },
+  out_for_delivery: { label: 'Out for Delivery', color: 'text-orange-600', bg: 'bg-orange-50 border-orange-200',  icon: <Truck className="h-3 w-3" /> },
+  shipped:          { label: 'Shipped',          color: 'text-blue-600',   bg: 'bg-blue-50 border-blue-200',      icon: <Truck className="h-3 w-3" /> },
+  delivered:        { label: 'Delivered',        color: 'text-green-600',  bg: 'bg-green-50 border-green-200',    icon: <CheckCircle className="h-3 w-3" /> },
+  completed:        { label: 'Completed',        color: 'text-green-600',  bg: 'bg-green-50 border-green-200',    icon: <CheckCircle className="h-3 w-3" /> },
+  cancelled:        { label: 'Cancelled',        color: 'text-red-500',    bg: 'bg-red-50 border-red-200',        icon: <XCircle className="h-3 w-3" /> },
 };
 
 const STATUS_FLOW: Record<string, string[]> = {
-  pending:   ['shipped', 'cancelled'],
-  shipped:   ['completed', 'cancelled'],
-  completed: [],
-  cancelled: [],
+  pending:          ['processing', 'cancelled'],
+  processing:       ['shipped', 'cancelled'],
+  assigned:         ['out_for_delivery', 'cancelled'],
+  out_for_delivery: ['delivered', 'cancelled'],
+  shipped:          ['completed', 'cancelled'],
+  delivered:        [],
+  completed:        [],
+  cancelled:        [],
 };
+
+interface DeliveryBoy {
+  id: number;
+  name: string;
+  email: string;
+  activeOrderCount: number;
+}
 
 export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps) {
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
+
+  // FEATURE: Delivery Boy System — assign driver state
+  const [deliveryBoys, setDeliveryBoys] = useState<DeliveryBoy[]>([]);
+  const [selectedDriverId, setSelectedDriverId] = useState<Record<number, number>>({});
+  const [assigningId, setAssigningId] = useState<number | null>(null);
+
+  useEffect(() => {
+    const fetchDeliveryBoys = async () => {
+      try {
+        const token = localStorage.getItem('griva_admin_token') || localStorage.getItem('griva_token') || localStorage.getItem('token') || '';
+        const res = await fetch(`${API_BASE}/orders/admin/delivery-boys`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setDeliveryBoys(data.deliveryBoys || []);
+        }
+      } catch {}
+    };
+    fetchDeliveryBoys();
+  }, []);
+
+  const handleAssignDriver = async (orderId: number) => {
+    const driverId = selectedDriverId[orderId];
+    if (!driverId) return;
+    setAssigningId(orderId);
+    try {
+      const token = localStorage.getItem('griva_admin_token') || localStorage.getItem('griva_token') || localStorage.getItem('token') || '';
+      const res = await fetch(`${API_BASE}/orders/${orderId}/assign`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ deliveryBoyId: driverId }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setOrdersList(prev =>
+          prev.map(o => o.id === orderId ? { ...o, status: 'assigned', delivery_boy_id: driverId } : o)
+        );
+      }
+    } catch {}
+    setAssigningId(null);
+  };
 
   const handleStatusChange = async (orderId: number, newStatus: string) => {
     setUpdatingId(orderId);
@@ -42,10 +101,14 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
     ? ordersList
     : ordersList.filter(o => o.status === filterStatus);
 
-  const counts = {
+  const counts: Record<string, number> = {
     all: ordersList.length,
     pending: ordersList.filter(o => o.status === 'pending').length,
+    processing: ordersList.filter(o => o.status === 'processing').length,
+    assigned: ordersList.filter(o => o.status === 'assigned').length,
+    out_for_delivery: ordersList.filter(o => o.status === 'out_for_delivery').length,
     shipped: ordersList.filter(o => o.status === 'shipped').length,
+    delivered: ordersList.filter(o => o.status === 'delivered').length,
     completed: ordersList.filter(o => o.status === 'completed').length,
     cancelled: ordersList.filter(o => o.status === 'cancelled').length,
   };
@@ -55,7 +118,7 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
 
       {/* Filter Tabs */}
       <div className="flex flex-wrap gap-2 bg-white p-3 rounded-xl border border-orange-500/30">
-        {(['all', 'pending', 'shipped', 'completed', 'cancelled'] as const).map((status) => {
+        {(['all', 'pending', 'processing', 'assigned', 'out_for_delivery', 'shipped', 'delivered', 'completed', 'cancelled']).map((status) => {
           const cfg = status === 'all' ? null : STATUS_CONFIG[status];
           const isActive = filterStatus === status;
           return (
@@ -144,7 +207,9 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
 
                         {/* Total */}
                         <td className="p-4">
-                          <span className="text-xs font-black text-gray-900">{order.total_price}</span>
+                          <span className="text-xs font-black text-gray-900">
+                            {order.total_price ? `QAR ${parseFloat(String(order.total_price).replace(/([$]|qar|[\s,])/gi, "") || "0").toFixed(2)}` : "—"}
+                          </span>
                         </td>
 
                         {/* Status Badge */}
@@ -212,10 +277,10 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
                                     </div>
                                     <div className="min-w-0 flex-1">
                                       <p className="text-xs font-bold text-gray-800 truncate">{item.product?.title || `Product #${item.product_id}`}</p>
-                                      <p className="text-[10px] text-gray-400">Qty: {item.quantity} × ${Number(item.price_at_purchase).toFixed(2)}</p>
+                                      <p className="text-[10px] text-gray-400">Qty: {item.quantity} × QAR {Number(String(item.price_at_purchase).replace(/([$]|qar|[\s,])/gi, "")).toFixed(2)}</p>
                                     </div>
                                     <span className="text-xs font-black text-gray-800 shrink-0">
-                                      ${(Number(item.price_at_purchase) * item.quantity).toFixed(2)}
+                                      QAR {(Number(String(item.price_at_purchase).replace(/([$]|qar|[\s,])/gi, "")) * item.quantity).toFixed(2)}
                                     </span>
                                   </div>
                                 ))}
@@ -243,9 +308,41 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
                                     <ShoppingCart className="h-3.5 w-3.5 text-orange-500 mt-0.5 shrink-0" />
                                     <div>
                                       <p className="text-[10px] text-gray-400 font-semibold uppercase">Order Total</p>
-                                      <p className="text-sm font-black text-gray-900 mt-0.5">{order.total_price}</p>
+                                      <p className="text-sm font-black text-gray-900 mt-0.5">
+                                        {order.total_price ? `QAR ${parseFloat(String(order.total_price).replace(/([$]|qar|[\s,])/gi, "") || "0").toFixed(2)}` : "—"}
+                                      </p>
                                     </div>
                                   </div>
+                                </div>
+
+                                {/* FEATURE: Delivery Boy System — Assign Driver */}
+                                <div className="pt-3 border-t border-orange-500/10">
+                                  <p className="text-[10px] text-gray-400 font-semibold uppercase mb-1.5">🚚 Assign Delivery Driver</p>
+                                  {(order as any).delivery_boy_id ? (
+                                    <p className="text-xs font-bold text-blue-600">
+                                      ✅ Assigned to: {deliveryBoys.find(d => d.id === (order as any).delivery_boy_id)?.name || `Driver #${(order as any).delivery_boy_id}`}
+                                    </p>
+                                  ) : (
+                                    <div className="flex items-center gap-2">
+                                      <select
+                                        value={selectedDriverId[order.id] || ''}
+                                        onChange={(e) => setSelectedDriverId(prev => ({ ...prev, [order.id]: Number(e.target.value) }))}
+                                        className="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-2 focus:outline-none focus:border-orange-400"
+                                      >
+                                        <option value="">Select Driver...</option>
+                                        {deliveryBoys.map(d => (
+                                          <option key={d.id} value={d.id}>{d.name} ({d.activeOrderCount} active)</option>
+                                        ))}
+                                      </select>
+                                      <button
+                                        disabled={!selectedDriverId[order.id] || assigningId === order.id}
+                                        onClick={(e) => { e.stopPropagation(); handleAssignDriver(order.id); }}
+                                        className="text-[10px] font-bold text-white bg-blue-500 hover:bg-blue-600 disabled:opacity-50 px-3 py-2 rounded-lg cursor-pointer"
+                                      >
+                                        {assigningId === order.id ? '...' : 'Assign'}
+                                      </button>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </div>

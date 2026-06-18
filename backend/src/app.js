@@ -3,6 +3,9 @@ const cors = require("cors");
 const morgan = require("morgan");
 const path = require("path");
 
+// Initialize Database Models and Associations
+require("./models");
+
 const app = express();
 
 // Apply Global Middlewares
@@ -57,6 +60,7 @@ const addressRoutes = require("./routes/addressRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
 const subCategoryRoutes = require("./routes/subCategoryRoutes");
 const cartRoutes = require("./routes/cartRoutes");
+const deliveryRoutes = require("./routes/deliveryRoutes"); // FEATURE: Delivery Boy System
 
 // Mount API Routers
 app.use("/api/auth", authRoutes);
@@ -72,6 +76,7 @@ app.use("/api/addresses", addressRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/subcategories", subCategoryRoutes);
 app.use("/api/cart", cartRoutes);
+app.use("/api/delivery", deliveryRoutes); // FEATURE: Delivery Boy System
 
 // Global Error Handler Middleware
 app.use((err, req, res, next) => {

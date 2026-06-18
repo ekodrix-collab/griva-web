@@ -34,6 +34,7 @@ const { sequelize } = require("../config/db");
 const Order = require("../models/Order");
 const OrderItem = require("../models/OrderItem");
 const Product = require("../models/Product");
+const SubCategory = require("../models/SubCategory");
 const Category = require("../models/Category");
 const User = require("../models/User");
 const Cart = require("../models/Cart");
@@ -312,9 +313,14 @@ exports.getAnalytics = async (req, res, next) => {
             as: "product",
             attributes: ["id", "title", "price"],
             include: {
-              model: Category,
-              as: "category",
+              model: SubCategory,
+              as: "subcategory",
               attributes: ["id", "title"],
+              include: {
+                model: Category,
+                as: "category",
+                attributes: ["id", "title"],
+              }
             }
           }
         }
@@ -331,7 +337,7 @@ exports.getAnalytics = async (req, res, next) => {
     orders.forEach((order) => {
       // Clean '$' symbol if formatted in getters
       const rawPrice = order.getDataValue("total_price");
-      const orderTotal = typeof rawPrice === "string" ? parseFloat(rawPrice.replace(/[$,]/g, "")) : parseFloat(rawPrice) || 0;
+      const orderTotal = typeof rawPrice === "string" ? parseFloat(rawPrice.replace(/([$]|qar|[\s,])/gi, "")) : parseFloat(rawPrice) || 0;
       
       totalSales += orderTotal;
       uniqueUserIds.add(order.user_id);
@@ -350,9 +356,9 @@ exports.getAnalytics = async (req, res, next) => {
 
       if (order.items) {
         order.items.forEach((item) => {
-          const categoryTitle = item.product?.category?.title || "Other";
+          const categoryTitle = item.product?.subcategory?.category?.title || "Other";
           const itemPrice = typeof item.price_at_purchase === "string" 
-            ? parseFloat(item.price_at_purchase.replace(/[$,]/g, "")) 
+            ? parseFloat(item.price_at_purchase.replace(/([$]|qar|[\s,])/gi, "")) 
             : parseFloat(item.price_at_purchase) || 0;
           const itemTotal = itemPrice * (item.quantity || 1);
           categorySalesMap[categoryTitle] = (categorySalesMap[categoryTitle] || 0) + itemTotal;
@@ -383,6 +389,147 @@ exports.getAnalytics = async (req, res, next) => {
         orderStatusCounts,
         salesOverTime,
       }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─────────────────────────────────────────────────────────
+// FEATURE: Delivery Boy System
+// Created: 2026-06-18
+// Do not modify without checking delivery feature docs
+// ─────────────────────────────────────────────────────────
+
+/**
+ * PATCH /api/orders/:id/assign
+ * Admin assigns a delivery boy to an order
+ */
+exports.assignDeliveryBoy = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { deliveryBoyId } = req.body;
+
+    if (!deliveryBoyId) {
+      return res.status(400).json({
+        success: false,
+        message: "deliveryBoyId is required.",
+      });
+    }
+
+    const order = await Order.findByPk(id);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found.",
+      });
+    }
+
+    // Verify the delivery boy exists and has role 'delivery'
+    const deliveryBoy = await User.findByPk(deliveryBoyId);
+    if (!deliveryBoy || deliveryBoy.role !== "delivery") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid delivery boy ID or user is not a delivery staff member.",
+      });
+    }
+
+    order.delivery_boy_id = deliveryBoyId;
+    order.assigned_at = new Date();
+    order.status = "assigned";
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Order ${order.order_number || order.id} assigned to ${deliveryBoy.name}.`,
+      order,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/admin/delivery-boys
+ * Admin fetches all delivery boy accounts with active order count
+ */
+exports.getDeliveryBoys = async (req, res, next) => {
+  try {
+    const deliveryBoys = await User.findAll({
+      where: { role: "delivery" },
+      attributes: ["id", "name", "email", "createdAt"],
+    });
+
+    // Count active (non-delivered, non-cancelled) orders per driver
+    const result = [];
+    for (const driver of deliveryBoys) {
+      const activeOrderCount = await Order.count({
+        where: {
+          delivery_boy_id: driver.id,
+          status: {
+            [Op.notIn]: ["delivered", "completed", "cancelled"],
+          },
+        },
+      });
+
+      result.push({
+        id: driver.id,
+        name: driver.name,
+        email: driver.email,
+        activeOrderCount,
+        createdAt: driver.createdAt,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      deliveryBoys: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/orders/admin/delivery-boys
+ * Admin creates/registers a new delivery boy account
+ */
+exports.createDeliveryBoy = async (req, res, next) => {
+  try {
+    const { name, email, password } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Name, email, and password are required.",
+      });
+    }
+
+    const existingUser = await User.findOne({ where: { email } });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is already registered.",
+      });
+    }
+
+    const newDriver = await User.create({
+      name,
+      email,
+      password,
+      role: "delivery",
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Delivery boy account created successfully.",
+      deliveryBoy: {
+        id: newDriver.id,
+        name: newDriver.name,
+        email: newDriver.email,
+        role: newDriver.role,
+        createdAt: newDriver.createdAt,
+      },
     });
   } catch (error) {
     next(error);

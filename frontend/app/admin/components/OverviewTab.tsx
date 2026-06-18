@@ -67,7 +67,7 @@ function SalesLineChart({ data }: { data: { date: string; sales: number }[] }) {
           <g key={i}>
             <line x1={padding.left - 4} y1={y} x2={padding.left + chartW} y2={y} stroke="#f3f4f6" strokeWidth="1" />
             <text x={padding.left - 8} y={y + 4} textAnchor="end" fontSize="9" fill="#9ca3af">
-              ${val >= 1000 ? `${(val / 1000).toFixed(1)}k` : val.toFixed(0)}
+              QAR {val >= 1000 ? `${(val / 1000).toFixed(1)}k` : val.toFixed(0)}
             </text>
           </g>
         );
@@ -125,7 +125,7 @@ function CategoryPieChart({ data }: { data: { category: string; sales: number }[
           <path key={i} d={s.d} fill={s.color} className="hover:opacity-80 transition-opacity cursor-pointer" />
         ))}
         <text x="70" y="67" textAnchor="middle" fontSize="10" fontWeight="800" fill="#111827">Total</text>
-        <text x="70" y="78" textAnchor="middle" fontSize="8" fill="#6b7280">${(total / 1000).toFixed(1)}k</text>
+        <text x="70" y="78" textAnchor="middle" fontSize="8" fill="#6b7280">QAR {(total / 1000).toFixed(1)}k</text>
       </svg>
       <div className="space-y-1.5 flex-1 min-w-0">
         {slices.map((s, i) => (
@@ -162,7 +162,7 @@ export default function OverviewTab(props: OverviewTabProps) {
         {[
           {
             label: 'Total Revenue',
-            value: analytics ? `$${analytics.totalSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '—',
+            value: analytics ? `QAR ${analytics.totalSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '—',
             sub: 'All-time sales',
             icon: <DollarSign className="h-5 w-5 text-orange-500" />,
             color: 'from-orange-500/10 to-amber-500/5',
@@ -176,7 +176,7 @@ export default function OverviewTab(props: OverviewTabProps) {
           },
           {
             label: 'Avg Order Value',
-            value: analytics ? `$${analytics.averageOrderValue.toFixed(2)}` : '—',
+            value: analytics ? `QAR ${analytics.averageOrderValue.toFixed(2)}` : '—',
             sub: 'Per transaction',
             icon: <TrendingUp className="h-5 w-5 text-violet-500" />,
             color: 'from-violet-500/10 to-purple-500/5',

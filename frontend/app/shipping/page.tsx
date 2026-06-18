@@ -14,7 +14,7 @@ export default function ShippingPage() {
             <section className="space-y-3">
               <h3 className="font-bold text-gray-900 text-base">Shipping Rates &amp; Delivery Estimates</h3>
               <p>
-                We offer free standard shipping on all orders over $50. For orders under $50, a flat shipping fee of $9.99 applies.
+                We offer free standard shipping on all orders over QAR 50. For orders under QAR 50, a flat shipping fee of QAR 9.99 applies.
               </p>
               <div className="overflow-x-auto pt-2">
                 <table className="min-w-full divide-y divide-gray-200 border text-xs">
@@ -29,12 +29,12 @@ export default function ShippingPage() {
                     <tr>
                       <td className="px-4 py-3 font-semibold text-gray-900">Standard Shipping</td>
                       <td className="px-4 py-3 text-gray-500">3–7 business days</td>
-                      <td className="px-4 py-3 text-green-600 font-semibold">Free (over $50) / $9.99</td>
+                      <td className="px-4 py-3 text-green-600 font-semibold">Free (over QAR 50) / QAR 9.99</td>
                     </tr>
                     <tr>
                       <td className="px-4 py-3 font-semibold text-gray-900">Express Shipping</td>
                       <td className="px-4 py-3 text-gray-500">1–3 business days</td>
-                      <td className="px-4 py-3 text-gray-900">$19.99</td>
+                      <td className="px-4 py-3 text-gray-900">QAR 19.99</td>
                     </tr>
                     <tr>
                       <td className="px-4 py-3 font-semibold text-gray-900">International Shipping</td>
