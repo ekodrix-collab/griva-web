@@ -20,8 +20,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       return;
     }
 
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    const user = typeof window !== "undefined" ? localStorage.getItem("user") : null;
+    const token = typeof window !== "undefined" ? localStorage.getItem("griva_admin_token") : null;
+    const user = typeof window !== "undefined" ? localStorage.getItem("griva_admin_user") : null;
 
     if (!token || !user) {
       router.replace("/admin/auth/login");
@@ -32,8 +32,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       const parsedUser = JSON.parse(user);
       if (!parsedUser || parsedUser.role !== "admin") {
         // Clear any invalid or non-admin credentials and redirect away
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
+        localStorage.removeItem("griva_admin_token");
+        localStorage.removeItem("griva_admin_user");
         setErrorMsg("Access denied. Admin credentials required.");
 
         return;
@@ -41,8 +41,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
       setLoading(false);
     } catch (e) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
+      localStorage.removeItem("griva_admin_token");
+      localStorage.removeItem("griva_admin_user");
       router.replace("/admin/auth/login");
     }
   }, [router, pathname]);

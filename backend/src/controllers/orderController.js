@@ -29,7 +29,47 @@
  * item at the exact same millisecond).
  */
 
+const { Op } = require("sequelize");
+const { sequelize } = require("../config/db");
+const Order = require("../models/Order");
+const OrderItem = require("../models/OrderItem");
+const Product = require("../models/Product");
+const Category = require("../models/Category");
+const User = require("../models/User");
+const Cart = require("../models/Cart");
+const CartItem = require("../models/CartItem");
 const SiteSetting = require("../models/SiteSetting");
+
+/**
+ * Generate a production-safe order number: GRV-YYYYMMDD-XXXX
+ * Runs inside a transaction to prevent duplicates under concurrency.
+ */
+async function generateOrderNumber(transaction) {
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, "0");
+  const dd = String(today.getDate()).padStart(2, "0");
+  const dateStr = `${yyyy}${mm}${dd}`;
+  const prefix = `GRV-${dateStr}-`;
+
+  // Find the highest order number for today
+  const lastOrder = await Order.findOne({
+    where: {
+      order_number: { [Op.like]: `${prefix}%` },
+    },
+    order: [["order_number", "DESC"]],
+    transaction,
+    lock: transaction.LOCK.UPDATE,
+  });
+
+  let nextSeq = 1;
+  if (lastOrder && lastOrder.order_number) {
+    const lastSeq = parseInt(lastOrder.order_number.split("-").pop(), 10);
+    if (!isNaN(lastSeq)) nextSeq = lastSeq + 1;
+  }
+
+  return `${prefix}${String(nextSeq).padStart(4, "0")}`;
+}
 
 exports.createOrder = async (req, res, next) => {
   const transaction = await sequelize.transaction();
@@ -113,7 +153,11 @@ exports.createOrder = async (req, res, next) => {
       orderSummaryLines.push(`▪ ${product.title} x${item.quantity} — QAR ${unitPrice}`);
     }
 
+    // Generate production-safe order number: GRV-YYYYMMDD-XXXX
+    const orderNumber = await generateOrderNumber(transaction);
+
     const order = await Order.create({
+      order_number: orderNumber,
       user_id: userId,
       total_price: calculatedTotal,
       shipping_address: resolvedAddress,
@@ -133,37 +177,28 @@ exports.createOrder = async (req, res, next) => {
     }));
 
     await OrderItem.bulkCreate(finalizedItems, { transaction });
+
+    // Clear the user's database cart after successful order placement
+    if (userId) {
+      const userCart = await Cart.findOne({ where: { user_id: userId }, transaction });
+      if (userCart) {
+        await CartItem.destroy({ where: { cart_id: userCart.id }, transaction });
+      }
+    }
+
     await transaction.commit();
-
-    // --- Build WhatsApp redirect URL ---
-    const settings = await SiteSetting.findOne();
-    const waNumber = (settings?.whatsappNumber || "+97455551234").replace(/\D/g, "");
-    const waMessage = [
-      `🛒 *New GriVA Order #${order.id}*`,
-      ``,
-      `👤 *Customer:* ${resolvedName || "Guest"}`,
-      `📞 *Phone:* ${resolvedPhone || "Not provided"}`,
-      `📧 *Email:* ${resolvedEmail || "Not provided"}`,
-      `🏙️ *City:* ${resolvedCity || ""}`,
-      `📍 *Address:* ${resolvedAddress}`,
-      ``,
-      `📦 *Items:*`,
-      ...orderSummaryLines,
-      ``,
-      `💰 *Total:* QAR ${calculatedTotal.toFixed(2)}`,
-      `💳 *Payment:* ${resolvedMethod}`,
-      resolvedNotes ? `📝 *Notes:* ${resolvedNotes}` : null,
-    ]
-      .filter(Boolean)
-      .join("\n");
-
-    const whatsapp_url = `https://wa.me/${waNumber}?text=${encodeURIComponent(waMessage)}`;
 
     res.status(201).json({
       success: true,
       message: "Order placed successfully.",
-      order,
-      whatsapp_url,
+      order: {
+        id: order.id,
+        order_number: order.order_number,
+        status: order.status,
+        total_price: order.total_price,
+        payment_method: order.payment_method,
+        createdAt: order.createdAt,
+      },
     });
   } catch (error) {
     await transaction.rollback();

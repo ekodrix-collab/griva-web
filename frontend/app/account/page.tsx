@@ -5,11 +5,20 @@ import { useRouter } from "next/navigation";
 import {
   User as UserIcon, MapPin, Package, LogOut,
   Edit, Trash2, Plus, Loader2, Star, Home, Briefcase,
+  Clock, Truck, CheckCircle, XCircle, ChevronDown,
 } from "lucide-react";
 import { authService } from "@/app/services/auth.service";
 import { addressService } from "@/app/services/address.service";
+import { orderService, MyOrder } from "@/app/services/order.service";
 import { useUser } from "@/app/context/UserContext";
 import { Address, AddressRequest } from "@/app/types/types";
+
+const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
+  pending:   { label: "Pending",   color: "text-amber-600",  bg: "bg-amber-50 border-amber-200",    icon: <Clock className="h-3 w-3" /> },
+  shipped:   { label: "Shipped",   color: "text-blue-600",   bg: "bg-blue-50 border-blue-200",      icon: <Truck className="h-3 w-3" /> },
+  completed: { label: "Completed", color: "text-green-600",  bg: "bg-green-50 border-green-200",    icon: <CheckCircle className="h-3 w-3" /> },
+  cancelled: { label: "Cancelled", color: "text-red-500",    bg: "bg-red-50 border-red-200",        icon: <XCircle className="h-3 w-3" /> },
+};
 
 interface ProfileData {
   id: number;
@@ -52,6 +61,14 @@ export default function AccountPage() {
   const { logout } = useUser();
   const [activeTab, setActiveTab] = useState("profile");
 
+  // Redirect to login if no token is found
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      router.push("/auth/login");
+    }
+  }, [router]);
+
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState("");
@@ -64,6 +81,12 @@ export default function AccountPage() {
   const [formData, setFormData] = useState<AddressRequest>(emptyForm);
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState("");
+
+  // Orders state
+  const [orders, setOrders] = useState<MyOrder[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState("");
+  const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
 
   // Fetch profile
   useEffect(() => {
@@ -96,6 +119,25 @@ export default function AccountPage() {
   useEffect(() => {
     if (activeTab === "addresses") {
       fetchAddresses();
+    }
+  }, [activeTab]);
+
+  // Fetch orders when tab is active
+  useEffect(() => {
+    if (activeTab === "orders") {
+      const fetchOrders = async () => {
+        setOrdersLoading(true);
+        setOrdersError("");
+        try {
+          const data = await orderService.getMyOrders();
+          setOrders(data.orders || []);
+        } catch {
+          setOrdersError("Unable to load orders.");
+        } finally {
+          setOrdersLoading(false);
+        }
+      };
+      fetchOrders();
     }
   }, [activeTab]);
 
@@ -556,13 +598,103 @@ export default function AccountPage() {
                     <h3 className="text-lg font-bold text-gray-900">Order History</h3>
                     <p className="text-xs text-gray-400 mt-0.5">Track and review your past orders</p>
                   </div>
-                  <div className="text-center py-16">
-                    <div className="h-16 w-16 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center mx-auto mb-4">
-                      <Package className="h-8 w-8 text-gray-300" />
+
+                  {ordersError && (
+                    <div className="text-red-500 text-sm text-center bg-red-50 border border-red-100 p-3 rounded-xl">
+                      {ordersError}
                     </div>
-                    <p className="text-gray-500 font-medium text-sm">No orders yet</p>
-                    <p className="text-gray-400 text-xs mt-1">Your completed orders will appear here</p>
-                  </div>
+                  )}
+
+                  {ordersLoading ? (
+                    <div className="flex items-center justify-center py-16">
+                      <Loader2 className="h-8 w-8 text-orange-500 animate-spin" />
+                    </div>
+                  ) : orders.length === 0 ? (
+                    <div className="text-center py-16">
+                      <div className="h-16 w-16 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center mx-auto mb-4">
+                        <Package className="h-8 w-8 text-gray-300" />
+                      </div>
+                      <p className="text-gray-500 font-medium text-sm">No orders yet</p>
+                      <p className="text-gray-400 text-xs mt-1">Your completed orders will appear here</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {orders.map((order) => {
+                        const cfg = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending;
+                        const isExpanded = expandedOrderId === order.id;
+                        return (
+                          <div key={order.id} className="border border-gray-200 rounded-2xl overflow-hidden hover:border-orange-300 transition-all">
+                            {/* Order Header */}
+                            <div
+                              className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-5 cursor-pointer hover:bg-gray-50/50 transition"
+                              onClick={() => setExpandedOrderId(isExpanded ? null : order.id)}
+                            >
+                              <div className="flex items-center gap-4">
+                                <div className="h-10 w-10 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
+                                  <Package className="h-5 w-5 text-orange-500" />
+                                </div>
+                                <div>
+                                  <p className="text-sm font-black text-gray-900">{order.order_number || `ORD-${String(order.id).padStart(4, "0")}`}</p>
+                                  <p className="text-[10px] text-gray-400 font-semibold mt-0.5">
+                                    {new Date(order.createdAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg border ${cfg.bg} ${cfg.color}`}>
+                                  {cfg.icon}
+                                  {cfg.label}
+                                </span>
+                                <span className="text-sm font-black text-gray-900">{order.total_price}</span>
+                                <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                              </div>
+                            </div>
+
+                            {/* Expanded Details */}
+                            {isExpanded && (
+                              <div className="border-t border-gray-100 bg-gray-50/50 p-5">
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Order Items</p>
+                                <div className="space-y-3">
+                                  {(order.items || []).map((item) => (
+                                    <div key={item.id} className="flex items-center gap-3 bg-white border border-gray-100 rounded-xl p-3">
+                                      <div className="h-12 w-12 rounded-lg overflow-hidden bg-gray-100 shrink-0">
+                                        {item.product?.main_image_url && (
+                                          <img
+                                            src={item.product.main_image_url}
+                                            alt={item.product?.title || "Product"}
+                                            className="h-full w-full object-cover"
+                                          />
+                                        )}
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                        <p className="text-xs font-bold text-gray-800 truncate">{item.product?.title || `Product #${item.product_id}`}</p>
+                                        <div className="flex items-center gap-2 mt-0.5">
+                                          <p className="text-[10px] text-gray-400">Qty: {item.quantity}</p>
+                                          {item.selected_color && <p className="text-[10px] text-gray-400">• {item.selected_color}</p>}
+                                          {item.selected_storage && <p className="text-[10px] text-gray-400">• {item.selected_storage}</p>}
+                                        </div>
+                                      </div>
+                                      <span className="text-xs font-black text-gray-800 shrink-0">
+                                        ${(Number(String(item.price_at_purchase).replace(/[$,]/g, "")) * item.quantity).toFixed(2)}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                                <div className="mt-4 pt-3 border-t border-gray-200 flex items-center justify-between">
+                                  <span className="text-xs text-gray-400 font-semibold">
+                                    Payment: {order.payment_method || "COD"}
+                                  </span>
+                                  <span className="text-sm font-black text-gray-900">
+                                    Total: {order.total_price}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
 

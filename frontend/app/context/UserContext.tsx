@@ -77,7 +77,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       const storedOrders = localStorage.getItem("griva_orders");
 
       // Also check admin user stored by admin login
-      const adminUser = localStorage.getItem("user");
+      const adminUser = localStorage.getItem("griva_admin_user");
       let resolvedRole = storedRole;
       let resolvedUser = storedUser ? JSON.parse(storedUser) : null;
       if (!resolvedRole && adminUser) {
@@ -138,7 +138,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("token");
     localStorage.removeItem("griva_user");
     localStorage.removeItem("griva_role");
-    localStorage.removeItem("user");
+    localStorage.removeItem("griva_admin_token");
+    localStorage.removeItem("griva_admin_user");
   };
 
   const addAddress = (address: Address) => {
