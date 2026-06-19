@@ -8,6 +8,7 @@ import { uploadService } from '@/app/services/upload.service';
 export default function SubCategoriesTab() {
   const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [activeCategories, setActiveCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   
@@ -35,14 +36,17 @@ export default function SubCategoriesTab() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [subRes, catRes] = await Promise.all([
+      const [subRes, catRes, activeCatRes] = await Promise.all([
         subCategoryService.getSubCategories(),
-        categoryService.getCategories()
+        categoryService.getCategories(),
+        categoryService.getAllActiveCategories()
       ]);
       const subData = subRes?.data || subRes;
       const catData = catRes?.data || catRes;
+      const activeCatData = activeCatRes?.data || activeCatRes;
       setSubCategories(Array.isArray(subData) ? subData : []);
       setCategories(Array.isArray(catData) ? catData : []);
+      setActiveCategories(Array.isArray(activeCatData) ? activeCatData : []);
     } catch (err) {
       console.error("Failed to load data", err);
     }
@@ -52,7 +56,7 @@ export default function SubCategoriesTab() {
   const handleOpenAdd = () => {
     setEditingSubCategory(null);
     setFormData({ 
-      category_id: categories.length > 0 ? categories[0].id : 0, 
+      category_id: activeCategories.length > 0 ? activeCategories[0].id : 0, 
       title: '', 
       slug: '', 
       href: '', 
@@ -303,7 +307,7 @@ export default function SubCategoriesTab() {
                     className="w-full text-sm p-2.5 border border-gray-200 focus:border-orange-500 outline-none rounded-xl bg-white"
                   >
                     <option value={0} disabled>Select a category</option>
-                    {categories.map(cat => (
+                    {activeCategories.map(cat => (
                       <option key={cat.id} value={cat.id}>{cat.title}</option>
                     ))}
                   </select>
