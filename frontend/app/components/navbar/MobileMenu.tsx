@@ -1,10 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { User, ShoppingCart, Heart, ChevronDown, ChevronRight, X, Phone, Globe } from "lucide-react";
+import { User, ShoppingCart, ChevronDown, ChevronRight, X, Globe } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "@/app/context/CartContext";
-import { useWishlist } from "@/app/context/WishlistContext";
 import { useState } from "react";
 import { categoriesTree } from "@/app/data/data";
 
@@ -16,6 +15,7 @@ interface MobileMenuProps {
 const navLinks = [
   { label: "Home", href: "/" },
   { label: "Shop", href: "/shop" },
+  { label: "Track Order", href: "/track-order" },
   { label: "About", href: "/about" },
   { label: "Contact", href: "/contact" },
   { label: "FAQ", href: "/faq" },
@@ -23,7 +23,6 @@ const navLinks = [
 
 export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
   const { state: cartState, openDrawer } = useCart();
-  const { items: wishlistItems } = useWishlist();
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
@@ -145,14 +144,6 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
         {/* Footer info & quick buttons */}
         <div className="mt-auto border-t pt-6 space-y-4">
           <div className="flex flex-col gap-2">
-            <Link
-              href="/wishlist"
-              onClick={onClose}
-              className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-50 transition"
-            >
-              <Heart className="h-4 w-4 text-orange-500" />
-              Wishlist ({wishlistItems.length})
-            </Link>
             <button
               onClick={() => {
                 onClose();
@@ -166,10 +157,6 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
           </div>
 
           <div className="space-y-2.5 text-xs text-gray-500 pl-2">
-            <div className="flex items-center gap-2">
-              <Phone className="h-4 w-4 text-orange-500" />
-              <span>+08 9229 8228</span>
-            </div>
             <div className="flex items-center gap-2">
               <Globe className="h-4 w-4 text-orange-500" />
               <span>English / USD</span>

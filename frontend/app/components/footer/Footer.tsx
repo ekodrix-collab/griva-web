@@ -34,6 +34,7 @@ const footerLinks: FooterLinkGroup[] = [
   {
     title: "Customer Policies",
     links: [
+      { label: "Track Order", href: "/track-order" },
       { label: "Terms of Service", href: "/terms" },
       { label: "Privacy Policy", href: "/privacy" },
       { label: "Return Policy", href: "/returns" },

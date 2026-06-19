@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import { Sparkles, X, Upload, Link as LinkIcon, ImageIcon, Loader2 } from "lucide-react";
+import { Sparkles, X, Upload, Link as LinkIcon, ImageIcon, Loader2, ChevronDown } from "lucide-react";
 import { ProductRequest, Category, SubCategory } from "@/app/types/types";
 import { productService } from "@/app/services/product.service";
 import { uploadService } from "@/app/services/upload.service";
@@ -52,6 +52,7 @@ export default function AddProductModal({ isOpen, onClose, onSuccess, productToE
   const [isUploadingMain, setIsUploadingMain] = useState(false);
   const [isUploadingGallery, setIsUploadingGallery] = useState(false);
   const [error, setError] = useState("");
+  const [openSubCategorySelect, setOpenSubCategorySelect] = useState(false);
 
   const mainImageFileRef = useRef<HTMLInputElement>(null);
   const galleryFileRef = useRef<HTMLInputElement>(null);
@@ -266,18 +267,66 @@ export default function AddProductModal({ isOpen, onClose, onSuccess, productToE
                 </div>
                 <div>
                   <label className="text-[11px] font-bold text-gray-700 block mb-1">Sub Category *</label>
-                  <select
-                    required
-                    value={formData.subcategory_id}
-                    onChange={handleSubCategoryChange}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:border-orange-500 outline-none bg-white"
-                  >
-                    <option value={0} disabled>Select Sub Category</option>
-                    {subCategories.map(s => {
-                      const parentCat = categories.find(c => c.id === s.category_id);
-                      return <option key={s.id} value={s.id}>{parentCat ? `${parentCat.title} > ` : ''}{s.title}</option>
-                    })}
-                  </select>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setOpenSubCategorySelect(!openSubCategorySelect)}
+                      className="w-full flex items-center justify-between border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:border-orange-500 outline-none bg-white hover:border-gray-300 transition-colors text-left"
+                    >
+                      <span className={formData.subcategory_id === 0 ? "text-gray-400" : "text-gray-900 font-semibold"}>
+                        {formData.subcategory_id === 0
+                          ? "Select Sub Category"
+                          : (() => {
+                              const s = subCategories.find(sub => sub.id === formData.subcategory_id);
+                              if (!s) return "Select Sub Category";
+                              const parentCat = categories.find(c => c.id === s.category_id);
+                              return parentCat ? `${parentCat.title} > ${s.title}` : s.title;
+                            })()}
+                      </span>
+                      <ChevronDown size={16} className={`text-gray-400 shrink-0 transition-transform ${openSubCategorySelect ? "rotate-180 text-orange-500" : ""}`} />
+                    </button>
+
+                    {openSubCategorySelect && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-40 bg-transparent cursor-default"
+                          onClick={() => setOpenSubCategorySelect(false)}
+                        />
+                        <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-100 rounded-xl shadow-xl z-50 py-1 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 max-h-48 overflow-y-auto">
+                          <button
+                            type="button"
+                            disabled
+                            className="w-full text-left px-3 py-2 text-sm font-semibold text-gray-300 bg-gray-50/50 cursor-not-allowed"
+                          >
+                            Select Sub Category
+                          </button>
+                          {subCategories.map((s) => {
+                            const parentCat = categories.find(c => c.id === s.category_id);
+                            return (
+                              <button
+                                key={s.id}
+                                type="button"
+                                onClick={() => {
+                                  const subId = s.id;
+                                  let newSku = formData.sku;
+                                  const prefix = s.title.substring(0, 3).toUpperCase();
+                                  const randomDigits = Math.floor(10000 + Math.random() * 90000);
+                                  newSku = `${prefix}${randomDigits}`;
+                                  setFormData(prev => ({ ...prev, subcategory_id: subId, sku: newSku }));
+                                  setOpenSubCategorySelect(false);
+                                }}
+                                className={`w-full text-left px-3 py-2 text-sm font-semibold transition-colors ${
+                                  formData.subcategory_id === s.id ? "text-orange-500 bg-orange-50/50 font-bold" : "text-gray-700 hover:bg-orange-50 hover:text-orange-500"
+                                }`}
+                              >
+                                {parentCat ? `${parentCat.title} > ` : ''}{s.title}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <label className="text-[11px] font-bold text-gray-700 block mb-1">Brand</label>

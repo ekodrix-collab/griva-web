@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Search, Plus, Trash2, Edit, Check, X
+  Search, Plus, Trash2, Edit, Check, X, ChevronDown
 } from 'lucide-react';
 import { ProductRequest, Category, SubCategory } from '@/app/types/types';
 import { productService } from '@/app/services/product.service';
@@ -16,6 +16,7 @@ export default function ProductsTab() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
+  const [openCategoryFilter, setOpenCategoryFilter] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
@@ -143,16 +144,58 @@ export default function ProductsTab() {
             />
           </div>
 
-          <select
-            value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
-            className="bg-white border border-orange-500/30 rounded-xl px-3 py-2 text-xs text-gray-400 focus:outline-none focus:border-orange-500 cursor-pointer"
-          >
-            <option value="all">All Categories</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id.toString()}>{cat.title}</option>
-            ))}
-          </select>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setOpenCategoryFilter(!openCategoryFilter)}
+              className="bg-white border border-orange-500/30 rounded-xl px-3 py-2 text-xs font-semibold text-gray-700 hover:border-orange-500/50 transition-all cursor-pointer flex items-center justify-between gap-1.5 outline-none h-[34px] min-w-[130px]"
+            >
+              <span>
+                {filterCategory === "all"
+                  ? "All Categories"
+                  : categories.find(c => c.id.toString() === filterCategory)?.title || "All Categories"}
+              </span>
+              <ChevronDown size={14} className={`text-gray-400 shrink-0 transition-transform ${openCategoryFilter ? "rotate-180 text-orange-500" : ""}`} />
+            </button>
+
+            {openCategoryFilter && (
+              <>
+                <div
+                  className="fixed inset-0 z-40 bg-transparent cursor-default"
+                  onClick={() => setOpenCategoryFilter(false)}
+                />
+                <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-100 rounded-xl shadow-xl z-50 py-1 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 max-h-48 overflow-y-auto min-w-[150px]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilterCategory("all");
+                      setOpenCategoryFilter(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 text-xs font-semibold transition-colors ${
+                      filterCategory === "all" ? "text-orange-500 bg-orange-50/50 font-bold" : "text-gray-700 hover:bg-orange-50 hover:text-orange-500"
+                    }`}
+                  >
+                    All Categories
+                  </button>
+                  {categories.map((cat) => (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => {
+                        setFilterCategory(cat.id.toString());
+                        setOpenCategoryFilter(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-xs font-semibold transition-colors ${
+                        filterCategory === cat.id.toString() ? "text-orange-500 bg-orange-50/50 font-bold" : "text-gray-700 hover:bg-orange-50 hover:text-orange-500"
+                      }`}
+                    >
+                      {cat.title}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         <button

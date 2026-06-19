@@ -31,7 +31,7 @@ const STATUS_FLOW: Record<string, string[]> = {
   processing:       ['shipped', 'cancelled'],
   assigned:         ['out_for_delivery', 'cancelled'],
   out_for_delivery: ['delivered', 'cancelled'],
-  shipped:          ['completed', 'cancelled'],
+  shipped:          ['delivered', 'cancelled'],
   delivered:        [],
   completed:        [],
   cancelled:        [],
@@ -56,6 +56,8 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
   const [deliveryBoys, setDeliveryBoys] = useState<DeliveryBoy[]>([]);
   const [selectedDriverId, setSelectedDriverId] = useState<Record<number, number>>({});
   const [assigningId, setAssigningId] = useState<number | null>(null);
+  const [openDriverSelectId, setOpenDriverSelectId] = useState<number | null>(null);
+  const [openReassignSelectId, setOpenReassignSelectId] = useState<number | null>(null);
 
   // FEATURE: Delivery Attempt Management — needs attention state
   interface NeedsAttentionOrder {
@@ -190,7 +192,10 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
 
   const filteredOrders = filterStatus === 'all'
     ? ordersList
-    : ordersList.filter(o => o.status === filterStatus);
+    : ordersList.filter(o => {
+        const displayStatus = o.status === 'completed' ? 'delivered' : o.status;
+        return displayStatus === filterStatus;
+      });
 
   const counts: Record<string, number> = {
     all: ordersList.length,
@@ -199,8 +204,7 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
     assigned: ordersList.filter(o => o.status === 'assigned').length,
     out_for_delivery: ordersList.filter(o => o.status === 'out_for_delivery').length,
     shipped: ordersList.filter(o => o.status === 'shipped').length,
-    delivered: ordersList.filter(o => o.status === 'delivered').length,
-    completed: ordersList.filter(o => o.status === 'completed').length,
+    delivered: ordersList.filter(o => o.status === 'delivered' || o.status === 'completed').length,
     cancelled: ordersList.filter(o => o.status === 'cancelled').length,
   };
 
@@ -306,34 +310,79 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
                   )}
 
                   {(order.status === 'rescheduled') && (
-                    <div className="relative">
-                      <select
-                        onChange={(e) => {
-                          const driverId = Number(e.target.value);
-                          if (driverId) {
-                            setSelectedDriverId(prev => ({ ...prev, [order.id]: driverId }));
-                            // Directly invoke assign driver
-                            setAssigningId(order.id);
-                            fetch(`${API_BASE}/orders/${order.id}/assign`, {
-                              method: 'PATCH',
-                              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('griva_admin_token') || ''}` },
-                              body: JSON.stringify({ deliveryBoyId: driverId }),
-                            }).then(res => {
-                              if (res.ok) {
-                                setOrdersList(prev => prev.map(o => o.id === order.id ? { ...o, status: 'assigned', delivery_boy_id: driverId } : o));
-                                fetchNeedsAttention();
-                              }
-                              setAssigningId(null);
-                            }).catch(() => setAssigningId(null));
-                          }
+                    <div className="relative z-[45]">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenReassignSelectId(openReassignSelectId === order.id ? null : order.id);
                         }}
-                        className="text-[10px] font-bold border border-gray-200 rounded-lg px-2 py-2 focus:outline-none"
+                        className="text-[10px] font-bold text-gray-700 bg-white border border-orange-500/20 rounded-xl px-3 py-2 flex items-center justify-between gap-1.5 outline-none hover:border-orange-500/40 transition-all cursor-pointer min-w-[150px]"
                       >
-                        <option value="">🔄 Reassign Driver...</option>
-                        {deliveryBoys.map(d => (
-                          <option key={d.id} value={d.id}>{d.name} ({d.activeOrderCount} active)</option>
-                        ))}
-                      </select>
+                        <span className="truncate">
+                          {selectedDriverId[order.id]
+                            ? deliveryBoys.find(d => d.id === selectedDriverId[order.id])?.name
+                            : "🔄 Reassign Driver..."}
+                        </span>
+                        <ChevronDown size={12} className={`text-gray-400 shrink-0 transition-transform ${openReassignSelectId === order.id ? "rotate-180 text-orange-500" : ""}`} />
+                      </button>
+
+                      {openReassignSelectId === order.id && (
+                        <>
+                          {/* Invisible Fullscreen Backdrop to safely catch click-outside */}
+                          <div
+                            className="fixed inset-0 z-40 bg-transparent cursor-default"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenReassignSelectId(null);
+                            }}
+                          />
+                          <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-100 rounded-xl shadow-xl z-50 py-1 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 max-h-48 overflow-y-auto min-w-[180px]">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOpenReassignSelectId(null);
+                              }}
+                              className="w-full text-left px-3 py-2 text-[10px] font-semibold text-gray-400 hover:bg-orange-50 hover:text-orange-500 transition-colors"
+                            >
+                              🔄 Reassign Driver...
+                            </button>
+                            {deliveryBoys.map(d => (
+                              <button
+                                key={d.id}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedDriverId(prev => ({ ...prev, [order.id]: d.id }));
+                                  setOpenReassignSelectId(null);
+                                  // Directly invoke assign driver
+                                  setAssigningId(order.id);
+                                  fetch(`${API_BASE}/orders/${order.id}/assign`, {
+                                    method: 'PATCH',
+                                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('griva_admin_token') || ''}` },
+                                    body: JSON.stringify({ deliveryBoyId: d.id }),
+                                  }).then(res => {
+                                    if (res.ok) {
+                                      setOrdersList(prev => prev.map(o => o.id === order.id ? { ...o, status: 'assigned', delivery_boy_id: d.id } : o));
+                                      fetchNeedsAttention();
+                                    }
+                                    setAssigningId(null);
+                                  }).catch(() => setAssigningId(null));
+                                }}
+                                className={`w-full text-left px-3 py-2 text-[10px] font-semibold transition-colors flex items-center justify-between ${
+                                  selectedDriverId[order.id] === d.id
+                                    ? "text-orange-500 bg-orange-50/50 font-bold"
+                                    : "text-gray-700 hover:bg-orange-50 hover:text-orange-500"
+                                }`}
+                              >
+                                <span>👤 {d.name}</span>
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${d.activeOrderCount > 0 ? "bg-orange-100 text-orange-600" : "bg-gray-100 text-gray-400"}`}>
+                                  {d.activeOrderCount} active
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
 
@@ -356,7 +405,7 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
 
       {/* Filter Tabs */}
       <div className="flex flex-wrap gap-2 bg-white p-3 rounded-xl border border-orange-500/30">
-        {(['all', 'pending', 'processing', 'assigned', 'out_for_delivery', 'shipped', 'delivered', 'completed', 'cancelled']).map((status) => {
+        {(['all', 'pending', 'processing', 'assigned', 'out_for_delivery', 'shipped', 'delivered', 'cancelled']).map((status) => {
           const cfg = status === 'all' ? null : STATUS_CONFIG[status];
           const isActive = filterStatus === status;
           return (
@@ -404,9 +453,10 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
                 </tr>
               ) : (
                 filteredOrders.map((order) => {
-                  const cfg = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending;
+                  const displayStatus = order.status === 'completed' ? 'delivered' : order.status;
+                  const cfg = STATUS_CONFIG[displayStatus] || STATUS_CONFIG.pending;
                   const isExpanded = expandedOrderId === order.id;
-                  const nextStatuses = STATUS_FLOW[order.status] || [];
+                  const nextStatuses = STATUS_FLOW[displayStatus] || [];
 
                   return (
                     <React.Fragment key={order.id}>
@@ -551,36 +601,95 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
                                       </p>
                                     </div>
                                   </div>
-                                </div>
+                                  {/* FEATURE: Delivery Boy System — Assign Driver */}
+                                 <div className="pt-3 border-t border-orange-500/10">
+                                   <p className="text-[10px] text-gray-400 font-bold uppercase mb-2 flex items-center gap-1">
+                                     <span>🚚</span> Assign Delivery Driver
+                                   </p>
+                                   {(order as any).delivery_boy_id ? (
+                                     <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-xl">
+                                       <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
+                                       <p className="text-xs font-bold text-blue-700">
+                                         Assigned to: {deliveryBoys.find(d => d.id === (order as any).delivery_boy_id)?.name || `Driver #${(order as any).delivery_boy_id}`}
+                                       </p>
+                                     </div>
+                                   ) : (
+                                     <div className="flex items-center gap-2 max-w-sm relative">
+                                       {/* Custom Dropdown Trigger */}
+                                       <div className="relative flex-1">
+                                         <button
+                                           type="button"
+                                           onClick={(e) => {
+                                             e.stopPropagation();
+                                             setOpenDriverSelectId(openDriverSelectId === order.id ? null : order.id);
+                                           }}
+                                           className="w-full flex items-center justify-between text-xs font-semibold text-gray-700 bg-white border border-orange-500/20 rounded-xl px-3 py-2.5 outline-none hover:border-orange-500/40 transition-all cursor-pointer text-left h-[38px]"
+                                         >
+                                           <span className="truncate">
+                                             {selectedDriverId[order.id]
+                                               ? deliveryBoys.find(d => d.id === selectedDriverId[order.id])?.name + ` (${deliveryBoys.find(d => d.id === selectedDriverId[order.id])?.activeOrderCount} active)`
+                                               : "Select Driver..."}
+                                           </span>
+                                           <ChevronDown size={14} className={`text-gray-400 shrink-0 transition-transform ${openDriverSelectId === order.id ? "rotate-180 text-orange-500" : ""}`} />
+                                         </button>
 
-                                {/* FEATURE: Delivery Boy System — Assign Driver */}
-                                <div className="pt-3 border-t border-orange-500/10">
-                                  <p className="text-[10px] text-gray-400 font-semibold uppercase mb-1.5">🚚 Assign Delivery Driver</p>
-                                  {(order as any).delivery_boy_id ? (
-                                    <p className="text-xs font-bold text-blue-600">
-                                      ✅ Assigned to: {deliveryBoys.find(d => d.id === (order as any).delivery_boy_id)?.name || `Driver #${(order as any).delivery_boy_id}`}
-                                    </p>
-                                  ) : (
-                                    <div className="flex items-center gap-2">
-                                      <select
-                                        value={selectedDriverId[order.id] || ''}
-                                        onChange={(e) => setSelectedDriverId(prev => ({ ...prev, [order.id]: Number(e.target.value) }))}
-                                        className="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-2 focus:outline-none focus:border-orange-400"
-                                      >
-                                        <option value="">Select Driver...</option>
-                                        {deliveryBoys.map(d => (
-                                          <option key={d.id} value={d.id}>{d.name} ({d.activeOrderCount} active)</option>
-                                        ))}
-                                      </select>
-                                      <button
-                                        disabled={!selectedDriverId[order.id] || assigningId === order.id}
-                                        onClick={(e) => { e.stopPropagation(); handleAssignDriver(order.id); }}
-                                        className="text-[10px] font-bold text-white bg-blue-500 hover:bg-blue-600 disabled:opacity-50 px-3 py-2 rounded-lg cursor-pointer"
-                                      >
-                                        {assigningId === order.id ? '...' : 'Assign'}
-                                      </button>
-                                    </div>
-                                  )}
+                                         {/* Custom Dropdown List */}
+                                         {openDriverSelectId === order.id && (
+                                           <>
+                                             {/* Invisible Fullscreen Backdrop to safely catch click-outside */}
+                                             <div
+                                               className="fixed inset-0 z-40 bg-transparent cursor-default"
+                                               onClick={(e) => {
+                                                 e.stopPropagation();
+                                                 setOpenDriverSelectId(null);
+                                               }}
+                                             />
+                                             <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-100 rounded-xl shadow-xl z-50 py-1 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 max-h-48 overflow-y-auto">
+                                               <button
+                                                 type="button"
+                                                 onClick={() => {
+                                                   setSelectedDriverId(prev => ({ ...prev, [order.id]: 0 }));
+                                                   setOpenDriverSelectId(null);
+                                                 }}
+                                                 className="w-full text-left px-3 py-2 text-xs font-semibold text-gray-400 hover:bg-orange-50 hover:text-orange-500 transition-colors"
+                                               >
+                                                 Select Driver...
+                                               </button>
+                                               {deliveryBoys.map(d => (
+                                                 <button
+                                                   key={d.id}
+                                                   type="button"
+                                                   onClick={() => {
+                                                     setSelectedDriverId(prev => ({ ...prev, [order.id]: d.id }));
+                                                     setOpenDriverSelectId(null);
+                                                   }}
+                                                   className={`w-full text-left px-3 py-2 text-xs font-semibold transition-colors flex items-center justify-between ${
+                                                     selectedDriverId[order.id] === d.id
+                                                       ? "text-orange-500 bg-orange-50/50 font-bold"
+                                                       : "text-gray-700 hover:bg-orange-50 hover:text-orange-500"
+                                                   }`}
+                                                 >
+                                                   <span>👤 {d.name}</span>
+                                                   <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${d.activeOrderCount > 0 ? "bg-orange-100 text-orange-600" : "bg-gray-100 text-gray-400"}`}>
+                                                     {d.activeOrderCount} active
+                                                   </span>
+                                                 </button>
+                                               ))}
+                                             </div>
+                                           </>
+                                         )}
+                                       </div>
+
+                                       <button
+                                         disabled={!selectedDriverId[order.id] || assigningId === order.id}
+                                         onClick={(e) => { e.stopPropagation(); handleAssignDriver(order.id); }}
+                                         className="text-xs font-bold text-white bg-gradient-to-r from-orange-500 to-amber-500 hover:opacity-90 disabled:opacity-50 px-4 py-2.5 rounded-xl cursor-pointer shadow-sm active:scale-[0.98] transition-all shrink-0 h-[38px] flex items-center justify-center"
+                                       >
+                                         {assigningId === order.id ? '...' : 'Assign'}
+                                       </button>
+                                     </div>
+                                   )}
+                                 </div>
                                 </div>
                               </div>
                             </div>

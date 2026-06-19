@@ -425,7 +425,7 @@ exports.getAnalytics = async (req, res, next) => {
     let totalSales = 0;
     let totalOrders = orders.length;
     let uniqueUserIds = new Set();
-    let orderStatusCounts = { pending: 0, shipped: 0, completed: 0, cancelled: 0 };
+    let orderStatusCounts = { pending: 0, shipped: 0, delivered: 0, cancelled: 0 };
     let categorySalesMap = {};
     let dateSalesMap = {};
 
@@ -437,7 +437,8 @@ exports.getAnalytics = async (req, res, next) => {
       totalSales += orderTotal;
       uniqueUserIds.add(order.user_id);
 
-      const status = order.status || "pending";
+      let status = order.status || "pending";
+      if (status === "completed") status = "delivered";
       if (orderStatusCounts[status] !== undefined) {
         orderStatusCounts[status]++;
       }
