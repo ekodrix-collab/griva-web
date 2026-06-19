@@ -152,7 +152,7 @@ export default function OverviewTab(props: OverviewTabProps) {
     setActiveTab, slidesList, categoriesList, offersList
   } = props;
 
-  const statusCounts = analytics?.orderStatusCounts || { pending: 0, shipped: 0, completed: 0, cancelled: 0 };
+  const statusCounts = analytics?.orderStatusCounts || { pending: 0, shipped: 0, delivered: 0, completed: 0, cancelled: 0 };
 
   return (
     <div className="space-y-8 animate-in fade-in-50 duration-300">
@@ -246,21 +246,25 @@ export default function OverviewTab(props: OverviewTabProps) {
         {[
           { key: 'pending',   label: 'Pending',   color: 'text-amber-600',  bg: 'bg-amber-50',  border: 'border-amber-200' },
           { key: 'shipped',   label: 'Shipped',   color: 'text-blue-600',   bg: 'bg-blue-50',   border: 'border-blue-200'  },
-          { key: 'completed', label: 'Completed', color: 'text-green-600',  bg: 'bg-green-50',  border: 'border-green-200' },
+          { key: 'delivered', label: 'Delivered', color: 'text-green-600',  bg: 'bg-green-50',  border: 'border-green-200' },
           { key: 'cancelled', label: 'Cancelled', color: 'text-red-500',    bg: 'bg-red-50',    border: 'border-red-200'   },
-        ].map((s) => (
-          <div
-            key={s.key}
-            className={`${s.bg} border ${s.border} rounded-xl p-4 cursor-pointer hover:opacity-80 transition-opacity`}
-            onClick={() => setActiveTab('orders')}
-          >
-            <div className={`text-2xl font-black ${s.color}`}>
-              {statusCounts[s.key as keyof typeof statusCounts]}
+        ].map((s) => {
+          const count = (statusCounts[s.key as keyof typeof statusCounts] || 0) +
+            (s.key === 'delivered' ? (statusCounts['completed' as keyof typeof statusCounts] || 0) : 0);
+          return (
+            <div
+              key={s.key}
+              className={`${s.bg} border ${s.border} rounded-xl p-4 cursor-pointer hover:opacity-80 transition-opacity`}
+              onClick={() => setActiveTab('orders')}
+            >
+              <div className={`text-2xl font-black ${s.color}`}>
+                {count}
+              </div>
+              <div className={`text-[10px] font-bold uppercase tracking-wider mt-1 ${s.color}`}>{s.label} Orders</div>
+              <ChevronRight className={`h-3 w-3 mt-1 ${s.color}`} />
             </div>
-            <div className={`text-[10px] font-bold uppercase tracking-wider mt-1 ${s.color}`}>{s.label} Orders</div>
-            <ChevronRight className={`h-3 w-3 mt-1 ${s.color}`} />
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* ── Campaign Control Switches ── */}

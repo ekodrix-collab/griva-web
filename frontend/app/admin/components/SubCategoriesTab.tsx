@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Trash2, Edit, Check, X, Loader2 } from 'lucide-react';
+import { Search, Plus, Trash2, Edit, Check, X, Loader2, ChevronDown } from 'lucide-react';
 import { SubCategory, SubCategoryRequest, Category } from '@/app/types/types';
 import { subCategoryService } from '@/app/services/subCategory.service';
 import { categoryService } from '@/app/services/category.service';
@@ -28,6 +28,7 @@ export default function SubCategoriesTab() {
   const [imageUploading, setImageUploading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [openCategorySelect, setOpenCategorySelect] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -293,24 +294,57 @@ export default function SubCategoriesTab() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Parent Category *</label>
-                  <select
-                    required
-                    value={formData.category_id}
-                    onChange={(e) => {
-                      const newCatId = Number(e.target.value);
-                      const cat = categories.find(c => c.id === newCatId);
-                      const catSlug = cat ? cat.slug : '';
-                      const subSlug = formData.slug || '';
-                      const newHref = catSlug && subSlug ? `/category/${catSlug}?sub=${subSlug}` : formData.href;
-                      setFormData({...formData, category_id: newCatId, href: newHref});
-                    }}
-                    className="w-full text-sm p-2.5 border border-gray-200 focus:border-orange-500 outline-none rounded-xl bg-white"
-                  >
-                    <option value={0} disabled>Select a category</option>
-                    {activeCategories.map(cat => (
-                      <option key={cat.id} value={cat.id}>{cat.title}</option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setOpenCategorySelect(!openCategorySelect)}
+                      className="w-full flex items-center justify-between text-sm p-2.5 border border-gray-200 focus:border-orange-500 outline-none rounded-xl bg-white hover:border-gray-300 transition-colors text-left"
+                    >
+                      <span className={formData.category_id === 0 ? "text-gray-400" : "text-gray-900 font-semibold"}>
+                        {formData.category_id === 0
+                          ? "Select a category"
+                          : categories.find(c => c.id === formData.category_id)?.title || "Select a category"}
+                      </span>
+                      <ChevronDown size={16} className={`text-gray-400 shrink-0 transition-transform ${openCategorySelect ? "rotate-180 text-orange-500" : ""}`} />
+                    </button>
+
+                    {openCategorySelect && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-40 bg-transparent cursor-default"
+                          onClick={() => setOpenCategorySelect(false)}
+                        />
+                        <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-100 rounded-xl shadow-xl z-50 py-1 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 max-h-48 overflow-y-auto">
+                          <button
+                            type="button"
+                            disabled
+                            className="w-full text-left px-3 py-2 text-sm font-semibold text-gray-300 bg-gray-50/50 cursor-not-allowed"
+                          >
+                            Select a category
+                          </button>
+                          {activeCategories.map((cat) => (
+                            <button
+                              key={cat.id}
+                              type="button"
+                              onClick={() => {
+                                const newCatId = cat.id;
+                                const catSlug = cat.slug || '';
+                                const subSlug = formData.slug || '';
+                                const newHref = catSlug && subSlug ? `/category/${catSlug}?sub=${subSlug}` : formData.href;
+                                setFormData({...formData, category_id: newCatId, href: newHref});
+                                setOpenCategorySelect(false);
+                              }}
+                              className={`w-full text-left px-3 py-2 text-sm font-semibold transition-colors ${
+                                formData.category_id === cat.id ? "text-orange-500 bg-orange-50/50 font-bold" : "text-gray-700 hover:bg-orange-50 hover:text-orange-500"
+                              }`}
+                            >
+                              {cat.title}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 <div>

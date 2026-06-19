@@ -331,8 +331,24 @@ export default function CheckoutPage() {
             order_number: response.order.order_number,
             phone: customerPhone,
             total: response.order.total_price,
+            date: new Date().toISOString(),
           };
           localStorage.setItem("griva-last-order", JSON.stringify(guestRef));
+
+          if (!isLoggedIn) {
+            const existingOrdersStr = localStorage.getItem("griva-guest-orders");
+            let guestOrders = [];
+            if (existingOrdersStr) {
+              try {
+                guestOrders = JSON.parse(existingOrdersStr);
+                if (!Array.isArray(guestOrders)) guestOrders = [];
+              } catch {}
+            }
+            guestOrders = [guestRef, ...guestOrders].filter((item: any, index: number, self: any[]) =>
+              self.findIndex(t => t.order_number === item.order_number) === index
+            ).slice(0, 10);
+            localStorage.setItem("griva-guest-orders", JSON.stringify(guestOrders));
+          }
         } catch {}
 
         // Clear frontend cart state

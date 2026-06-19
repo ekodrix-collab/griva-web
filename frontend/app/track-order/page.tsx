@@ -34,6 +34,16 @@ function TrackOrderContent() {
   const [error, setError] = useState("");
   const [order, setOrder] = useState<TrackedOrder | null>(null);
   const [whatsappNumber, setWhatsappNumber] = useState("+97455551234");
+  const [guestOrders, setGuestOrders] = useState<Array<{ order_number: string; phone: string; total: string; date?: string }>>([]);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("griva-guest-orders");
+      if (stored) {
+        setGuestOrders(JSON.parse(stored));
+      }
+    } catch {}
+  }, []);
 
   // Fetch settings for WhatsApp contact on mount
   useEffect(() => {
@@ -179,6 +189,57 @@ function TrackOrderContent() {
             </div>
           )}
         </div>
+
+        {/* Recent Guest Orders List */}
+        {!order && guestOrders.length > 0 && (
+          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 sm:p-8 mt-6">
+            <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <Package className="h-4.5 w-4.5 text-orange-500" />
+              Recent Guest Orders
+            </h3>
+            <div className="grid grid-cols-1 gap-3">
+              {guestOrders.map((gOrder) => (
+                <div
+                  key={gOrder.order_number}
+                  onClick={() => {
+                    setOrderNumber(gOrder.order_number);
+                    setPhone(gOrder.phone);
+                    handleSearch(gOrder.order_number, gOrder.phone);
+                  }}
+                  className="group flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border border-gray-100 bg-gray-50/50 hover:bg-orange-50/30 hover:border-orange-200 transition-all cursor-pointer"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="h-9 w-9 rounded-xl bg-orange-100/60 border border-orange-200/50 flex items-center justify-center text-orange-600 shrink-0">
+                      <ShoppingBag className="h-4.5 w-4.5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-gray-800 group-hover:text-orange-500 transition-colors">
+                        {gOrder.order_number}
+                      </p>
+                      <p className="text-[10px] text-gray-400 font-semibold mt-0.5">
+                        {gOrder.date
+                          ? new Date(gOrder.date).toLocaleDateString("en-US", {
+                              dateStyle: "medium",
+                            })
+                          : "Recently placed"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between sm:justify-end gap-4 mt-3 sm:mt-0">
+                    <div className="sm:text-right">
+                      <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Total Amount</p>
+                      <p className="text-xs font-bold text-gray-800">{gOrder.total}</p>
+                    </div>
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-orange-500 group-hover:translate-x-0.5 transition-transform">
+                      Track Now <ArrowRight className="h-3 w-3" />
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Order Details Display */}
         {order && (
