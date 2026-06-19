@@ -10,20 +10,23 @@ if (process.env.NODE_ENV === "production") {
   process.exit(1);
 }
 
-const { sequelize } = require("./db");
-const Category = require("../models/Category");
-const SubCategory = require("../models/SubCategory");
-const Product = require("../models/Product");
-const User = require("../models/User");
-const Subscriber = require("../models/Subscriber");
-const ProductImage = require("../models/ProductImage");
-const FlashSale = require("../models/FlashSale");
-const FlashSaleProduct = require("../models/FlashSaleProduct");
-const Review = require("../models/Review");
-const Banner = require("../models/Banner");
-const SiteSetting = require("../models/SiteSetting");
-const Order = require("../models/Order");
-const OrderItem = require("../models/OrderItem");
+const db = require("../models");
+const {
+  sequelize,
+  Category,
+  SubCategory,
+  Product,
+  User,
+  Subscriber,
+  ProductImage,
+  FlashSale,
+  FlashSaleProduct,
+  Review,
+  Banner,
+  SiteSetting,
+  Order,
+  OrderItem
+} = db;
 
 const SEED_CATEGORIES_TREE = [
   {
@@ -442,255 +445,330 @@ const slugify = (text) => {
 
 const seedDatabase = async () => {
   try {
-    console.log("🚀 [SEED]: Starting database seeding process...");
+    console.log("🚀 [SEED]: Starting safe database seeding process...");
 
-    // Force Sync (Drops tables and recreates them clean)
-    await sequelize.sync({ force: true });
-    console.log("➕ [SEED]: Schemas re-created successfully.");
+    // Safe Sync (Creates/alters tables without dropping any tables or existing data)
+    await sequelize.sync({ alter: true });
+    console.log("➕ [SEED]: Schemas synchronized safely.");
 
-    // 1. Seed Admin User
-    const admin = await User.create({
-      name: "Admin",
-      email: "admin@griva.qa",
-      password: "AdminPassword123!", // Will be hashed automatically by user model hooks
-      role: "admin",
+    // 1. Seed Admin User (using findOrCreate to avoid unique constraint error and data loss)
+    const [admin, adminCreated] = await User.findOrCreate({
+      where: { email: "admin@griva.qa" },
+      defaults: {
+        name: "Admin",
+        password: "AdminPassword123!", // Will be hashed automatically by user model hooks
+        role: "admin",
+      }
     });
-    console.log("➕ [SEED]: Default Admin account generated: admin@griva.qa / AdminPassword123!");
+    if (adminCreated) {
+      console.log("➕ [SEED]: Default Admin account generated: admin@griva.qa / AdminPassword123!");
+    } else {
+      console.log("ℹ️ [SEED]: Admin account already exists. Skipping.");
+    }
 
     // 2. Seed Customer Users
-    const customer1 = await User.create({ name: "Jassim Al-Thani", email: "jassim.althani@gmail.com", password: "Customer123!", role: "customer" });
-    const customer2 = await User.create({ name: "Fatima Al-Mansouri", email: "fatima.almansouri@yahoo.com", password: "Customer123!", role: "customer" });
-    const customer3 = await User.create({ name: "John Doe", email: "john.doe@verizon.com", password: "Customer123!", role: "customer" });
-    const customer4 = await User.create({ name: "Sara Al-Khanji", email: "sara.alkhanji@hotmail.com", password: "Customer123!", role: "customer" });
-    console.log("➕ [SEED]: Customer accounts generated.");
+    const customerCount = await User.count({ where: { role: "customer" } });
+    let customer1, customer2, customer3, customer4;
+    if (customerCount === 0) {
+      customer1 = await User.create({ name: "Jassim Al-Thani", email: "jassim.althani@gmail.com", password: "Customer123!", role: "customer" });
+      customer2 = await User.create({ name: "Fatima Al-Mansouri", email: "fatima.almansouri@yahoo.com", password: "Customer123!", role: "customer" });
+      customer3 = await User.create({ name: "John Doe", email: "john.doe@verizon.com", password: "Customer123!", role: "customer" });
+      customer4 = await User.create({ name: "Sara Al-Khanji", email: "sara.alkhanji@hotmail.com", password: "Customer123!", role: "customer" });
+      console.log("➕ [SEED]: Customer accounts generated.");
+    } else {
+      console.log("ℹ️ [SEED]: Customer accounts already exist. Skipping.");
+      // Load them for mapping references if we need to seed reviews/orders
+      customer1 = await User.findOne({ where: { email: "jassim.althani@gmail.com" } });
+      customer2 = await User.findOne({ where: { email: "fatima.almansouri@yahoo.com" } });
+      customer3 = await User.findOne({ where: { email: "john.doe@verizon.com" } });
+      customer4 = await User.findOne({ where: { email: "sara.alkhanji@hotmail.com" } });
+    }
 
     // 3. Seed Site Settings
-    await SiteSetting.create({
-      announcementBarEnabled: true,
-      announcementBarText: "Free shipping across Doha for orders over $150!",
-      fridaySaleEnabled: true,
-      midnightSaleEnabled: false,
-      whatsappNumber: "+97455551234",
-      supportEmail: "support@griva.qa",
-      shippingFee: 15.00,
-    });
-    console.log("➕ [SEED]: Site setting configurations seed added.");
+    const siteSettingCount = await SiteSetting.count();
+    if (siteSettingCount === 0) {
+      await SiteSetting.create({
+        announcementBarEnabled: true,
+        announcementBarText: "Free shipping across Doha for orders over $150!",
+        fridaySaleEnabled: true,
+        midnightSaleEnabled: false,
+        whatsappNumber: "+97455551234",
+        supportEmail: "support@griva.qa",
+        shippingFee: 15.00,
+      });
+      console.log("➕ [SEED]: Site setting configurations seed added.");
+    } else {
+      console.log("ℹ️ [SEED]: Site settings already exist. Skipping.");
+    }
 
     // 4. Seed Categories & Subcategories
     const categoryMap = {};
-    for (const mainCat of SEED_CATEGORIES_TREE) {
-      const parentSlug = mainCat.title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-      const parentHref = `/category/${parentSlug}`;
-      const dbParent = await Category.create({
-        title: mainCat.title,
-        slug: parentSlug,
-        href: parentHref,
-        image_url: mainCat.image_url,
-        is_active: true,
-      });
-
-      for (const subTitle of mainCat.subcategories) {
-        const subSlug = subTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-        const subHref = `${parentHref}?sub=${subSlug}`;
-        const dbSub = await SubCategory.create({
-          category_id: dbParent.id,
-          title: subTitle,
-          slug: subSlug,
-          href: subHref,
+    const categoryCount = await Category.count();
+    if (categoryCount === 0) {
+      for (const mainCat of SEED_CATEGORIES_TREE) {
+        const parentSlug = mainCat.title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+        const parentHref = `/category/${parentSlug}`;
+        const dbParent = await Category.create({
+          title: mainCat.title,
+          slug: parentSlug,
+          href: parentHref,
           image_url: mainCat.image_url,
           is_active: true,
         });
-        categoryMap[subTitle] = dbSub.id;
+
+        for (const subTitle of mainCat.subcategories) {
+          const subSlug = subTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+          const subHref = `${parentHref}?sub=${subSlug}`;
+          const dbSub = await SubCategory.create({
+            category_id: dbParent.id,
+            title: subTitle,
+            slug: subSlug,
+            href: subHref,
+            image_url: mainCat.image_url,
+            is_active: true,
+          });
+          categoryMap[subTitle] = dbSub.id;
+        }
+      }
+      console.log("➕ [SEED]: Product category taxonomy with parent-child subcategories generated.");
+    } else {
+      console.log("ℹ️ [SEED]: Categories already exist. Skipping.");
+      // Build map from existing database subcategories so products can map to them
+      const subCats = await SubCategory.findAll();
+      for (const sub of subCats) {
+        categoryMap[sub.title] = sub.id;
       }
     }
-    console.log("➕ [SEED]: Product category taxonomy with parent-child subcategories generated.");
 
     // 5. Seed Products
     const productMap = {};
-    for (const prod of SEED_PRODUCTS) {
-      const subCatId = categoryMap[prod.categoryName];
-      if (subCatId) {
-        const dbProd = await Product.create({
-          subcategory_id: subCatId,
-          title: prod.title,
-          slug: slugify(prod.title),
-          sku: prod.sku,
-          brand: prod.brand,
-          rating: prod.rating,
-          review_count: prod.review_count,
-          badge_color: prod.badge_color,
-          button_text: prod.button_text,
-          is_featured: prod.is_featured,
-          is_best_seller: prod.is_best_seller,
-          is_trending: prod.is_trending,
-          discount_percentage: prod.discount_percentage,
-          price: prod.price,
-          old_price: prod.old_price,
-          badge: prod.badge,
-          description: prod.description,
-          stock: prod.stock,
-          specifications: prod.specifications || [],
-          variants: prod.variants || [],
-          gallery_images: prod.gallery_images || [],
-          main_image_url: prod.main_image_url,
-        });
-
-        // Seed Product Secondary Images
-        for (const imgUrl of (prod.gallery_images || [])) {
-          await ProductImage.create({
-            product_id: dbProd.id,
-            image_url: imgUrl,
+    const productCount = await Product.count();
+    if (productCount === 0) {
+      for (const prod of SEED_PRODUCTS) {
+        const subCatId = categoryMap[prod.categoryName];
+        if (subCatId) {
+          const dbProd = await Product.create({
+            subcategory_id: subCatId,
+            title: prod.title,
+            slug: slugify(prod.title),
+            sku: prod.sku,
+            brand: prod.brand,
+            rating: prod.rating,
+            review_count: prod.review_count,
+            badge_color: prod.badge_color,
+            button_text: prod.button_text,
+            is_featured: prod.is_featured,
+            is_best_seller: prod.is_best_seller,
+            is_trending: prod.is_trending,
+            discount_percentage: prod.discount_percentage,
+            price: prod.price,
+            old_price: prod.old_price,
+            badge: prod.badge,
+            description: prod.description,
+            stock: prod.stock,
+            specifications: prod.specifications || [],
+            variants: prod.variants || [],
+            gallery_images: prod.gallery_images || [],
+            main_image_url: prod.main_image_url,
           });
-        }
 
-        productMap[prod.title] = { id: dbProd.id, price: parseFloat(prod.price) };
+          // Seed Product Secondary Images
+          for (const imgUrl of (prod.gallery_images || [])) {
+            await ProductImage.create({
+              product_id: dbProd.id,
+              image_url: imgUrl,
+            });
+          }
+
+          productMap[prod.title] = { id: dbProd.id, price: parseFloat(prod.price) };
+        }
+      }
+      console.log("➕ [SEED]: Premium products seed successfully mapped and added.");
+    } else {
+      console.log("ℹ️ [SEED]: Products already exist. Skipping.");
+      // Build productMap from existing products so flash sales/orders can map to them
+      const dbProds = await Product.findAll();
+      for (const p of dbProds) {
+        productMap[p.title] = { id: p.id, price: parseFloat(p.price) };
       }
     }
-    console.log("➕ [SEED]: Premium products seed successfully mapped and added.");
 
     // 6. Seed Flash Sales
-    const startTime = new Date();
-    const endTime = new Date();
-    endTime.setDate(endTime.getDate() + 3); // 3 days campaign
-    const flashSale = await FlashSale.create({
-      title: "Super Flash Sale June",
-      start_time: startTime,
-      end_time: endTime,
-      is_active: true,
-    });
-
-    // Link some products to the flash sale
-    const firstProduct = Object.values(productMap)[0];
-    const secondProduct = Object.values(productMap)[1];
-    if (firstProduct) {
-      await FlashSaleProduct.create({
-        flash_sale_id: flashSale.id,
-        product_id: firstProduct.id,
-        flash_price: (firstProduct.price * 0.8).toFixed(2), // 20% off additional
-        flash_stock: 5,
+    const flashSaleCount = await FlashSale.count();
+    if (flashSaleCount === 0) {
+      const startTime = new Date();
+      const endTime = new Date();
+      endTime.setDate(endTime.getDate() + 3); // 3 days campaign
+      const flashSale = await FlashSale.create({
+        title: "Super Flash Sale June",
+        start_time: startTime,
+        end_time: endTime,
+        is_active: true,
       });
-    }
-    if (secondProduct) {
-      await FlashSaleProduct.create({
-        flash_sale_id: flashSale.id,
-        product_id: secondProduct.id,
-        flash_price: (secondProduct.price * 0.85).toFixed(2),
-        flash_stock: 10,
-      });
-    }
-    console.log("➕ [SEED]: Flash sale campaigns created.");
 
-    // 7. Seed Reviews
-    const dbProducts = await Product.findAll();
-    for (const p of dbProducts) {
-      await Review.create({
-        product_id: p.id,
-        user_id: customer1.id,
-        rating: 5,
-        title: "Incredible quality",
-        body: "I am extremely pleased with this purchase. Outstanding service and fast delivery inside Doha!",
-        verified: true,
-      });
-      await Review.create({
-        product_id: p.id,
-        user_id: customer2.id,
-        rating: 4,
-        title: "Good value",
-        body: "Reliable specs and solid build quality. Highly recommended product.",
-        verified: true,
-      });
-    }
-    console.log("➕ [SEED]: Mock product reviews populated.");
-
-    // 8. Seed Banners
-    await Banner.create({
-      type: "slide",
-      badge: "LIMITED DEALS",
-      title: "Next-Gen VR Experience",
-      subtitle: "Unbelievable Mixed Reality Immersion",
-      price: "$499.00",
-      image: "https://images.unsplash.com/photo-1622979135225-d2ba269cf1ac?q=80&w=800",
-      bg: "bg-gradient-to-r from-orange-600/90 to-amber-500/90",
-      href: "/products/meta-quest-3-128gb-vr-headset-mixed-reality",
-      isActive: true,
-    });
-    await Banner.create({
-      type: "offer",
-      badge: "EXCLUSIVE",
-      title: "Audio Perfection",
-      subtitle: "Sony Noise Cancelling Series",
-      price: "$348.00",
-      image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=800",
-      bg: "bg-blue-600",
-      href: "/category/gadgets-electronics?sub=earphones",
-      isActive: true,
-    });
-    console.log("➕ [SEED]: Store Banners and Slides populated.");
-
-    // 9. Seed Subscribers
-    await Subscriber.bulkCreate(SEED_SUBSCRIBERS);
-    console.log("➕ [SEED]: Newsletter subscriber list populated.");
-
-    // 10. Seed Mock Orders with Customer Info for Analytics
-    const productIds = Object.values(productMap);
-    const customers = [customer1, customer2, customer3, customer4];
-    const statuses = ["completed", "completed", "completed", "shipped", "pending", "cancelled"];
-    const addresses = [
-      "Al Sadd District, Doha, Qatar",
-      "West Bay Tower 12, Doha, Qatar",
-      "Al Wakra City Center, Al Wakra, Qatar",
-      "The Pearl - Qatar, Porto Arabia, Doha",
-    ];
-
-    const mockOrderDefs = [
-      { dayOffset: 0, customerId: 0, productIdx: 0, qty: 1, status: "pending" },
-      { dayOffset: 1, customerId: 1, productIdx: 1, qty: 1, status: "shipped" },
-      { dayOffset: 1, customerId: 2, productIdx: 5, qty: 1, status: "completed" },
-      { dayOffset: 2, customerId: 3, productIdx: 3, qty: 2, status: "completed" },
-      { dayOffset: 3, customerId: 0, productIdx: 6, qty: 1, status: "completed" },
-      { dayOffset: 4, customerId: 1, productIdx: 2, qty: 1, status: "shipped" },
-      { dayOffset: 4, customerId: 2, productIdx: 7, qty: 1, status: "completed" },
-      { dayOffset: 5, customerId: 3, productIdx: 4, qty: 1, status: "completed" },
-      { dayOffset: 6, customerId: 0, productIdx: 1, qty: 1, status: "cancelled" },
-      { dayOffset: 6, customerId: 1, productIdx: 5, qty: 2, status: "completed" },
-      { dayOffset: 7, customerId: 2, productIdx: 0, qty: 1, status: "completed" },
-      { dayOffset: 8, customerId: 3, productIdx: 2, qty: 1, status: "shipped" },
-    ];
-
-    for (const def of mockOrderDefs) {
-      if (productIds[def.productIdx]) {
-        const prod = productIds[def.productIdx];
-        const orderTotal = prod.price * def.qty;
-        const orderDate = new Date();
-        orderDate.setDate(orderDate.getDate() - (10 - def.dayOffset));
-
-        const order = await Order.create({
-          user_id: customers[def.customerId].id,
-          total_price: orderTotal,
-          shipping_address: addresses[def.customerId],
-          status: def.status,
-          customer_name: `Customer Name ${def.customerId + 1}`,
-          customer_phone: `+974777${def.customerId}123`,
-          customer_email: customers[def.customerId].email,
-          payment_method: "COD",
-          payment_status: def.status === "completed" ? "paid" : "unpaid",
-          delivery_notes: "Leave package at reception desk.",
-          city: "Doha",
-          createdAt: orderDate,
-          updatedAt: orderDate,
-        });
-
-        await OrderItem.create({
-          order_id: order.id,
-          product_id: prod.id,
-          quantity: def.qty,
-          price_at_purchase: prod.price,
-          selected_color: "Arctic Gray",
-          selected_storage: "256GB",
+      // Link some products to the flash sale
+      const firstProduct = Object.values(productMap)[0];
+      const secondProduct = Object.values(productMap)[1];
+      if (firstProduct) {
+        await FlashSaleProduct.create({
+          flash_sale_id: flashSale.id,
+          product_id: firstProduct.id,
+          flash_price: (firstProduct.price * 0.8).toFixed(2), // 20% off additional
+          flash_stock: 5,
         });
       }
+      if (secondProduct) {
+        await FlashSaleProduct.create({
+          flash_sale_id: flashSale.id,
+          product_id: secondProduct.id,
+          flash_price: (secondProduct.price * 0.85).toFixed(2),
+          flash_stock: 10,
+        });
+      }
+      console.log("➕ [SEED]: Flash sale campaigns created.");
+    } else {
+      console.log("ℹ️ [SEED]: Flash sales already exist. Skipping.");
     }
-    console.log("➕ [SEED]: Mock order transactions generated for analytics charts.");
+
+    // 7. Seed Reviews
+    const reviewCount = await Review.count();
+    if (reviewCount === 0) {
+      const dbProducts = await Product.findAll();
+      for (const p of dbProducts) {
+        if (customer1) {
+          await Review.create({
+            product_id: p.id,
+            user_id: customer1.id,
+            rating: 5,
+            title: "Incredible quality",
+            body: "I am extremely pleased with this purchase. Outstanding service and fast delivery inside Doha!",
+            verified: true,
+          });
+        }
+        if (customer2) {
+          await Review.create({
+            product_id: p.id,
+            user_id: customer2.id,
+            rating: 4,
+            title: "Good value",
+            body: "Reliable specs and solid build quality. Highly recommended product.",
+            verified: true,
+          });
+        }
+      }
+      console.log("➕ [SEED]: Mock product reviews populated.");
+    } else {
+      console.log("ℹ️ [SEED]: Reviews already exist. Skipping.");
+    }
+
+    // 8. Seed Banners
+    const bannerCount = await Banner.count();
+    if (bannerCount === 0) {
+      await Banner.create({
+        type: "slide",
+        badge: "LIMITED DEALS",
+        title: "Next-Gen VR Experience",
+        subtitle: "Unbelievable Mixed Reality Immersion",
+        price: "$499.00",
+        image: "https://images.unsplash.com/photo-1622979135225-d2ba269cf1ac?q=80&w=800",
+        bg: "bg-gradient-to-r from-orange-600/90 to-amber-500/90",
+        href: "/products/meta-quest-3-128gb-vr-headset-mixed-reality",
+        isActive: true,
+      });
+      await Banner.create({
+        type: "offer",
+        badge: "EXCLUSIVE",
+        title: "Audio Perfection",
+        subtitle: "Sony Noise Cancelling Series",
+        price: "$348.00",
+        image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=800",
+        bg: "bg-blue-600",
+        href: "/category/gadgets-electronics?sub=earphones",
+        isActive: true,
+      });
+      console.log("➕ [SEED]: Store Banners and Slides populated.");
+    } else {
+      console.log("ℹ️ [SEED]: Banners already exist. Skipping.");
+    }
+
+    // 9. Seed Subscribers
+    const subscriberCount = await Subscriber.count();
+    if (subscriberCount === 0) {
+      await Subscriber.bulkCreate(SEED_SUBSCRIBERS);
+      console.log("➕ [SEED]: Newsletter subscriber list populated.");
+    } else {
+      console.log("ℹ️ [SEED]: Subscribers already exist. Skipping.");
+    }
+
+    // 10. Seed Mock Orders with Customer Info for Analytics
+    const orderCount = await Order.count();
+    if (orderCount === 0) {
+      const productIds = Object.values(productMap);
+      const customers = [customer1, customer2, customer3, customer4].filter(Boolean);
+      
+      if (customers.length > 0 && productIds.length > 0) {
+        const statuses = ["completed", "completed", "completed", "shipped", "pending", "cancelled"];
+        const addresses = [
+          "Al Sadd District, Doha, Qatar",
+          "West Bay Tower 12, Doha, Qatar",
+          "Al Wakra City Center, Al Wakra, Qatar",
+          "The Pearl - Qatar, Porto Arabia, Doha",
+        ];
+
+        const mockOrderDefs = [
+          { dayOffset: 0, customerId: 0, productIdx: 0, qty: 1, status: "pending" },
+          { dayOffset: 1, customerId: 1, productIdx: 1, qty: 1, status: "shipped" },
+          { dayOffset: 1, customerId: 2, productIdx: 5, qty: 1, status: "completed" },
+          { dayOffset: 2, customerId: 3, productIdx: 3, qty: 2, status: "completed" },
+          { dayOffset: 3, customerId: 0, productIdx: 6, qty: 1, status: "completed" },
+          { dayOffset: 4, customerId: 1, productIdx: 2, qty: 1, status: "shipped" },
+          { dayOffset: 4, customerId: 2, productIdx: 7, qty: 1, status: "completed" },
+          { dayOffset: 5, customerId: 3, productIdx: 4, qty: 1, status: "completed" },
+          { dayOffset: 6, customerId: 0, productIdx: 1, qty: 1, status: "cancelled" },
+          { dayOffset: 6, customerId: 1, productIdx: 5, qty: 2, status: "completed" },
+          { dayOffset: 7, customerId: 2, productIdx: 0, qty: 1, status: "completed" },
+          { dayOffset: 8, customerId: 3, productIdx: 2, qty: 1, status: "shipped" },
+        ];
+
+        for (const def of mockOrderDefs) {
+          const mappedCust = customers[def.customerId % customers.length];
+          if (productIds[def.productIdx] && mappedCust) {
+            const prod = productIds[def.productIdx];
+            const orderTotal = prod.price * def.qty;
+            const orderDate = new Date();
+            orderDate.setDate(orderDate.getDate() - (10 - def.dayOffset));
+
+            const order = await Order.create({
+              user_id: mappedCust.id,
+              total_price: orderTotal,
+              shipping_address: addresses[def.customerId % addresses.length],
+              status: def.status,
+              customer_name: mappedCust.name || `Customer Name ${def.customerId + 1}`,
+              customer_phone: `+974777${def.customerId}123`,
+              customer_email: mappedCust.email,
+              payment_method: "COD",
+              payment_status: def.status === "completed" ? "paid" : "unpaid",
+              delivery_notes: "Leave package at reception desk.",
+              city: "Doha",
+              createdAt: orderDate,
+              updatedAt: orderDate,
+            });
+
+            await OrderItem.create({
+              order_id: order.id,
+              product_id: prod.id,
+              quantity: def.qty,
+              price_at_purchase: prod.price,
+              selected_color: "Arctic Gray",
+              selected_storage: "256GB",
+            });
+          }
+        }
+        console.log("➕ [SEED]: Mock order transactions generated for analytics charts.");
+      }
+    } else {
+      console.log("ℹ️ [SEED]: Orders already exist. Skipping.");
+    }
 
     console.log("🟢 [SEED]: Seeding complete! Database is production-ready.");
     process.exit(0);
