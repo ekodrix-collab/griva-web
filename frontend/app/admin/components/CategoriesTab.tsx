@@ -54,7 +54,7 @@ export default function CategoriesTab() {
     setFormData({
       title: cat.title,
       slug: cat.slug,
-      href: cat.href,
+      href: `/shop/${cat.slug}`,
       image_url: cat.image_url || '',
       is_active: cat.is_active
     });
@@ -76,8 +76,8 @@ export default function CategoriesTab() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.title || !formData.slug || !formData.href) {
-      setError("Title, Slug, and Href are required.");
+    if (!formData.title || !formData.slug) {
+      setError("Title is required.");
       return;
     }
 
@@ -268,7 +268,8 @@ export default function CategoriesTab() {
                     onChange={(e) => {
                       const newTitle = e.target.value;
                       const newSlug = newTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
-                      setFormData({...formData, title: newTitle, slug: newSlug});
+                      const newHref = `/shop/${newSlug}`;
+                      setFormData({...formData, title: newTitle, slug: newSlug, href: newHref});
                     }}
                     className="w-full text-sm p-2.5 border border-gray-200 focus:border-orange-500 outline-none rounded-xl"
                     placeholder="e.g. Electronics"
@@ -289,14 +290,13 @@ export default function CategoriesTab() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Href *</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Href</label>
                   <input
                     type="text"
-                    required
+                    disabled
                     value={formData.href}
-                    onChange={(e) => setFormData({...formData, href: e.target.value})}
-                    className="w-full text-sm p-2.5 border border-gray-200 focus:border-orange-500 outline-none rounded-xl"
-                    placeholder="e.g. /shop/electronics"
+                    className="w-full text-sm p-2.5 border border-gray-200 bg-gray-50 text-gray-500 cursor-not-allowed outline-none rounded-xl"
+                    placeholder="Auto-generated from slug"
                   />
                 </div>
 

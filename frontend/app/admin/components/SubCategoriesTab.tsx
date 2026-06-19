@@ -66,11 +66,15 @@ export default function SubCategoriesTab() {
 
   const handleOpenEdit = (subCat: SubCategory) => {
     setEditingSubCategory(subCat);
+    const cat = categories.find(c => c.id === subCat.category_id);
+    const catSlug = cat ? cat.slug : '';
+    const subSlug = subCat.slug || '';
+    const computedHref = catSlug && subSlug ? `/category/${catSlug}?sub=${subSlug}` : subCat.href || '';
     setFormData({
       category_id: subCat.category_id,
       title: subCat.title,
       slug: subCat.slug,
-      href: subCat.href,
+      href: computedHref,
       image_url: subCat.image_url || '',
       is_active: subCat.is_active
     });
@@ -92,8 +96,8 @@ export default function SubCategoriesTab() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.title || !formData.slug || !formData.href || !formData.category_id) {
-      setError("Category, Title, Slug, and Href are required.");
+    if (!formData.title || !formData.slug || !formData.category_id) {
+      setError("Category and Title are required.");
       return;
     }
 
@@ -288,7 +292,14 @@ export default function SubCategoriesTab() {
                   <select
                     required
                     value={formData.category_id}
-                    onChange={(e) => setFormData({...formData, category_id: Number(e.target.value)})}
+                    onChange={(e) => {
+                      const newCatId = Number(e.target.value);
+                      const cat = categories.find(c => c.id === newCatId);
+                      const catSlug = cat ? cat.slug : '';
+                      const subSlug = formData.slug || '';
+                      const newHref = catSlug && subSlug ? `/category/${catSlug}?sub=${subSlug}` : formData.href;
+                      setFormData({...formData, category_id: newCatId, href: newHref});
+                    }}
                     className="w-full text-sm p-2.5 border border-gray-200 focus:border-orange-500 outline-none rounded-xl bg-white"
                   >
                     <option value={0} disabled>Select a category</option>
@@ -307,7 +318,10 @@ export default function SubCategoriesTab() {
                     onChange={(e) => {
                       const newTitle = e.target.value;
                       const newSlug = newTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
-                      setFormData({...formData, title: newTitle, slug: newSlug});
+                      const cat = categories.find(c => c.id === formData.category_id);
+                      const catSlug = cat ? cat.slug : '';
+                      const newHref = catSlug ? `/category/${catSlug}?sub=${newSlug}` : `/category/${newSlug}`;
+                      setFormData({...formData, title: newTitle, slug: newSlug, href: newHref});
                     }}
                     className="w-full text-sm p-2.5 border border-gray-200 focus:border-orange-500 outline-none rounded-xl"
                     placeholder="e.g. Laptops"
@@ -328,14 +342,13 @@ export default function SubCategoriesTab() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Href *</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Href</label>
                   <input
                     type="text"
-                    required
+                    disabled
                     value={formData.href}
-                    onChange={(e) => setFormData({...formData, href: e.target.value})}
-                    className="w-full text-sm p-2.5 border border-gray-200 focus:border-orange-500 outline-none rounded-xl"
-                    placeholder="e.g. /shop/electronics/laptops"
+                    className="w-full text-sm p-2.5 border border-gray-200 bg-gray-50 text-gray-500 cursor-not-allowed outline-none rounded-xl"
+                    placeholder="Auto-generated from category & slug"
                   />
                 </div>
 
