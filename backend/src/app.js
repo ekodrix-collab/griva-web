@@ -53,7 +53,6 @@ const orderRoutes = require("./routes/orderRoutes");
 const settingRoutes = require("./routes/settingRoutes");
 const subscriberRoutes = require("./routes/subscriberRoutes");
 const flashSaleRoutes = require("./routes/flashSaleRoutes");
-const uploadRoutes = require("./routes/uploadRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
 const bannerRoutes = require("./routes/bannerRoutes");
 const addressRoutes = require("./routes/addressRoutes");
@@ -61,6 +60,8 @@ const categoryRoutes = require("./routes/categoryRoutes");
 const subCategoryRoutes = require("./routes/subCategoryRoutes");
 const cartRoutes = require("./routes/cartRoutes");
 const deliveryRoutes = require("./routes/deliveryRoutes"); // FEATURE: Delivery Boy System
+const uploadRoutes = require("./routes/uploadRoutes"); //IMAGE UPLOAD
+
 
 // Mount API Routers
 app.use("/api/auth", authRoutes);
@@ -69,7 +70,6 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/settings", settingRoutes);
 app.use("/api/subscribers", subscriberRoutes);
 app.use("/api/flash-sales", flashSaleRoutes);
-app.use("/api/uploads", uploadRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/banners", bannerRoutes);
 app.use("/api/addresses", addressRoutes);
@@ -77,6 +77,7 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/subcategories", subCategoryRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/delivery", deliveryRoutes); // FEATURE: Delivery Boy System
+app.use("/api/uploads", uploadRoutes); //IMAGE UPLOAD
 
 // Global Error Handler Middleware
 app.use((err, req, res, next) => {
