@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Trash2, Edit, Check, X } from 'lucide-react';
+import { Search, Plus, Trash2, Edit, Check, X, Loader2 } from 'lucide-react';
 import { Category, CategoryRequest } from '@/app/types/types';
 import { categoryService } from '@/app/services/category.service';
+import { uploadService } from '@/app/services/upload.service';
 
 export default function CategoriesTab() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -20,6 +21,7 @@ export default function CategoriesTab() {
   });
   
   const [formLoading, setFormLoading] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -100,6 +102,25 @@ export default function CategoriesTab() {
       setError(err?.response?.data?.message || "Something went wrong.");
     }
     setFormLoading(false);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImageUploading(true);
+    setError('');
+    try {
+      const data = await uploadService.uploadImage(file);
+      if (data && data.imageUrl) {
+        setFormData(prev => ({ ...prev, image_url: data.imageUrl }));
+      } else {
+        setError('Failed to upload image. No URL returned.');
+      }
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Failed to upload image');
+    }
+    setImageUploading(false);
   };
 
   const filteredCategories = categories.filter((c) =>
@@ -281,13 +302,45 @@ export default function CategoriesTab() {
 
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Image URL</label>
-                  <input
-                    type="text"
-                    value={formData.image_url || ''}
-                    onChange={(e) => setFormData({...formData, image_url: e.target.value})}
-                    className="w-full text-sm p-2.5 border border-gray-200 focus:border-orange-500 outline-none rounded-xl"
-                    placeholder="https://..."
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={formData.image_url || ''}
+                      onChange={(e) => setFormData({...formData, image_url: e.target.value})}
+                      className="flex-1 text-sm p-2.5 border border-gray-200 focus:border-orange-500 outline-none rounded-xl"
+                      placeholder="https://..."
+                    />
+                    <div className="relative">
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={handleImageUpload} 
+                        disabled={imageUploading}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                      />
+                      <button 
+                        type="button" 
+                        disabled={imageUploading}
+                        className="h-full px-4 bg-orange-50 text-orange-600 font-bold rounded-xl text-sm hover:bg-orange-100 transition-colors disabled:opacity-50 flex items-center justify-center pointer-events-none min-w-[80px]"
+                      >
+                        {imageUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Upload'}
+                      </button>
+                    </div>
+                  </div>
+                  {formData.image_url && (
+                    <div className="mt-2 flex flex-col items-start gap-1">
+                      <div className="h-20 w-20 rounded-lg overflow-hidden border border-gray-200">
+                        <img src={formData.image_url} alt="Preview" className="h-full w-full object-cover" />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({...formData, image_url: ''})}
+                        className="text-[10px] text-red-400 hover:text-red-600 font-semibold"
+                      >
+                        Remove image
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2">
