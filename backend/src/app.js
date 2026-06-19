@@ -60,6 +60,8 @@ const categoryRoutes = require("./routes/categoryRoutes");
 const subCategoryRoutes = require("./routes/subCategoryRoutes");
 const cartRoutes = require("./routes/cartRoutes");
 const deliveryRoutes = require("./routes/deliveryRoutes"); // FEATURE: Delivery Boy System
+const testEmailRoutes = require("./routes/testEmailRoutes");
+const deliveryAttemptRoutes = require("./routes/deliveryAttemptRoutes");
 const uploadRoutes = require("./routes/uploadRoutes"); //IMAGE UPLOAD
 
 
@@ -77,6 +79,8 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/subcategories", subCategoryRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/delivery", deliveryRoutes); // FEATURE: Delivery Boy System
+app.use("/api/delivery", deliveryAttemptRoutes); // FEATURE: Delivery Attempt Management
+app.use("/api/test-email", testEmailRoutes);
 app.use("/api/uploads", uploadRoutes); //IMAGE UPLOAD
 
 // Global Error Handler Middleware
