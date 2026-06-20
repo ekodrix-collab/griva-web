@@ -197,7 +197,7 @@ export default function DeliveryLoginPage() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="driver@griva.qa"
+                    placeholder="driver@thegriva.com"
                     required
                     className="w-full bg-zinc-950 border border-zinc-900 hover:border-zinc-800 focus:border-[#FF6A00]/80 rounded-2xl pl-11 pr-4 py-3.5 text-sm font-semibold text-white placeholder:text-zinc-600 focus:outline-none transition-all duration-300 shadow-[inset_0_2px_4px_rgba(0,0,0,0.6)]"
                   />
@@ -306,7 +306,7 @@ export default function DeliveryLoginPage() {
                     type="email"
                     value={forgotEmail}
                     onChange={(e) => setForgotEmail(e.target.value)}
-                    placeholder="driver@griva.qa"
+                    placeholder="driver@thegriva.com"
                     required
                     className="w-full bg-zinc-950 border border-zinc-900 hover:border-zinc-800 focus:border-[#FF6A00]/80 rounded-2xl pl-11 pr-4 py-3.5 text-sm font-semibold text-white placeholder:text-zinc-600 focus:outline-none transition-all duration-300 shadow-[inset_0_2px_4px_rgba(0,0,0,0.6)]"
                   />
