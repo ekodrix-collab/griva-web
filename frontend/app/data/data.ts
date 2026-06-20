@@ -567,44 +567,34 @@ const slides: SlideItem[] = [
 // ─────────────────────────────────────────────────────────
 const faqData: FAQItem[] = [
   {
-    question: "How long does shipping take?",
+    question: "What payment methods do you accept?",
     answer:
-      "Standard shipping takes 3–7 business days. Express shipping (1–2 business days) is available at checkout. Free shipping on orders over QAR 50.",
+      "We currently accept Cash on Delivery (COD) only for all orders. We do not support credit cards or online payment options at this time.",
   },
   {
     question: "What is your return policy?",
     answer:
-      "We offer a 30-day hassle-free return policy. Items must be in original condition with all packaging. Initiate a return from your account dashboard.",
+      "We offer a 7-day return policy from the date of delivery. If you return a product within these 7 days, the refund amount will be credited to your GriVA wallet as store credit. You can use this wallet credit for future purchases on our store. Please note that we do not offer cash refunds.",
   },
   {
-    question: "Do you offer international shipping?",
+    question: "What should I do if my product is damaged or defective?",
     answer:
-      "Yes, we ship to 50+ countries worldwide. International shipping times vary from 7–21 business days depending on the destination.",
+      "If you receive a damaged, defective, or incorrect product, you are eligible for an immediate exchange. We will arrange a courier to collect the damaged item and deliver a brand-new replacement of the same product at no extra cost to you. Please report any damaged items to our customer support within 24 hours of delivery.",
   },
   {
-    question: "Are all products covered by warranty?",
+    question: "How long does shipping take and what are the rates?",
     answer:
-      "All electronics come with manufacturer warranty. GriVA also offers an extended warranty program for an additional 1–2 years of coverage.",
+      "We deliver all across Qatar. Standard delivery takes 1–2 business days. Delivery is completely free for orders over QAR 50. For orders below QAR 50, a standard delivery fee of QAR 15 applies.",
   },
   {
     question: "How can I track my order?",
     answer:
-      "Once your order ships, you'll receive a tracking number via email. You can also track orders in real-time through your account dashboard.",
+      "Once your order is processed, you will receive order status notifications via SMS or WhatsApp. You can also view live delivery tracking details directly from your GriVA account dashboard.",
   },
   {
-    question: "What payment methods do you accept?",
+    question: "Can I modify or cancel my order?",
     answer:
-      "We accept Visa, Mastercard, American Express, PayPal, and Bitcoin. All transactions are secured with 256-bit SSL encryption.",
-  },
-  {
-    question: "Can I change or cancel my order?",
-    answer:
-      "Orders can be modified or cancelled within 1 hour of placement. After that, the order enters processing and cannot be changed.",
-  },
-  {
-    question: "Do you price match?",
-    answer:
-      "Yes! If you find a lower price on an identical item at an authorized retailer, contact us and we'll match the price within 7 days of purchase.",
+      "You can cancel or modify your order by contacting our support team via WhatsApp within 1 hour of placing it. Once an order is handed over to our dispatch/delivery team, it cannot be modified or cancelled.",
   },
 ];
 
