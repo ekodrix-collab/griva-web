@@ -122,13 +122,13 @@ export default function DesktopHeroBanner() {
                                     className="order-2 lg:order-1 flex w-full flex-col items-center lg:items-start justify-center px-6 py-8 sm:px-10 lg:w-1/2 lg:px-20 lg:py-10 text-center lg:text-left"
                                 >
                                     {/* BADGE */}
-                                    <div className="mb-3 inline-flex rounded-full bg-red-700 px-4 py-1.5">
+                                    <div className="mb-3 inline-flex rounded-[5px] bg-red-700 px-4 py-1">
                                         <span className="text-[10px] font-bold uppercase tracking-[2px] text-white">
                                             {currentSlide.badge}
                                         </span>
                                     </div>
 
-                                    <h1 className="max-w-xl text-2xl font-black text-white sm:text-3xl lg:text-4xl">
+                                    <h1 className="max-w-xl text-2xl font-black text-white sm:text-2xl lg:text-3xl tracking-wide">
                                         {currentSlide.title}
                                     </h1>
                                     <p className="max-w-lg text-sm text-gray-300 sm:text-sm lg:text-sm mt-2 lg:mt-0 first-letter:uppercase lowercase">
@@ -141,7 +141,7 @@ export default function DesktopHeroBanner() {
                                             animate="shake"
                                             className="inline-block text-2xl font-black text-orange-400 lg:text-4xl"
                                         >
-                                            {currentSlide.price}
+                                            <span className="text-[15px] font-bold">QAR</span> {currentSlide.price}
                                         </motion.span>
                                         {currentSlide.old_price && (
                                             <span className="mb-0.5 text-sm text-gray-400 line-through lg:mb-1 lg:text-lg">
