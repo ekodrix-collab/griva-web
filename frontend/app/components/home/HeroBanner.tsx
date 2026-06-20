@@ -83,9 +83,8 @@ function MobileAdBanner() {
           <button
             key={i}
             onClick={() => setCurrent(i)}
-            className={`h-1.5 rounded-full transition-all duration-300 ${
-              i === current ? "w-5 bg-orange-500" : "w-1.5 bg-gray-300"
-            }`}
+            className={`h-1.5 rounded-full transition-all duration-300 ${i === current ? "w-5 bg-[#FF6A00]" : "w-1.5 bg-gray-300"
+              }`}
           />
         ))}
       </div>
@@ -150,7 +149,7 @@ export default function HeroBanner() {
             {midnightSaleEnabled && (
               <div className="absolute inset-0 z-20 bg-black/40 pointer-events-none rounded-[10px]" />
             )}
-            <div className="absolute -left-20 top-0 h-72 w-72 rounded-full bg-orange-500/10 blur-3xl" />
+            <div className="absolute -left-20 top-0 h-72 w-72 rounded-full bg-[#FF6A00]/10 blur-3xl" />
             <div className="absolute bottom-0 right-0 h-72 w-72 rounded-full bg-indigo-500/10 blur-3xl" />
 
             <div className="relative z-10 flex flex-col lg:flex-row lg:h-[400px]">
@@ -163,7 +162,7 @@ export default function HeroBanner() {
                     animate={{ opacity: 1 }}
                     className="absolute right-6 top-8 lg:left-20 lg:top-10 lg:right-auto z-20"
                   >
-                    <div className="inline-flex rounded-md bg-orange-500 px-4 py-1.5">
+                    <div className="inline-flex rounded-md  bg-[#FF6A00] px-4 py-1.5">
                       <span className="text-[10px] font-bold uppercase tracking-[2px] text-white">
                         {currentSlide.badge}
                       </span>
@@ -179,7 +178,7 @@ export default function HeroBanner() {
                     transition={{ duration: 0.5 }}
                     className="order-1 lg:order-2 relative flex flex-1 items-center justify-center pt-20 pb-6 lg:py-0"
                   >
-                    <div className="absolute h-52 w-52 lg:h-72 lg:w-72 rounded-full bg-orange-500/20 blur-3xl" />
+                    <div className="absolute h-52 w-52 lg:h-72 lg:w-72 rounded-full  bg-[#FF6A00]/20 blur-3xl" />
                     <div className="relative h-[220px] w-[220px] sm:h-[280px] sm:w-[280px] lg:h-[380px] lg:w-[380px] flex-shrink-0">
                       <Image
                         src={currentSlide.image}
@@ -212,7 +211,7 @@ export default function HeroBanner() {
                       <motion.span
                         variants={priceShake}
                         animate="shake"
-                        className="inline-block text-2xl font-black text-orange-400 lg:text-4xl"
+                        className="inline-block text-2xl font-black text-[#FF6A00] lg:text-4xl"
                       >
                         {currentSlide.price}
                       </motion.span>
@@ -221,7 +220,7 @@ export default function HeroBanner() {
                     <div className="mt-8 w-full lg:w-fit">
                       <Link
                         href="/shop"
-                        className="flex h-12 w-full lg:w-fit items-center justify-center gap-2 rounded-xl bg-orange-500 px-7 text-[12px] font-bold uppercase tracking-wide text-white transition-all duration-300 hover:bg-orange-600"
+                        className="flex h-12 w-full lg:w-fit items-center justify-center gap-2 rounded-xl bg-[#FF6A00] px-7 text-[12px] font-bold uppercase tracking-wide text-white transition-all duration-300 hover:bg-[#E85F00]"
                       >
                         Shop Now
                         <ArrowRight size={16} />
@@ -236,21 +235,21 @@ export default function HeroBanner() {
             {/* Extra Info — Desktop only */}
             <div className="relative z-10 hidden lg:grid grid-cols-3 place-items-center gap-5 border-t border-white/10 px-6 pb-8 pt-6 sm:px-10 lg:px-20">
               <div className="flex items-center gap-3">
-                <Truck className="text-orange-400" size={20} />
+                <Truck className="text-[#FF6A00]" size={20} />
                 <div>
                   <h4 className="text-sm font-bold text-white">Free Shipping</h4>
                   <p className="text-xs text-gray-400">On all orders</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <ShieldCheck className="text-orange-400" size={20} />
+                <ShieldCheck className="text-[#FF6A00]" size={20} />
                 <div>
                   <h4 className="text-sm font-bold text-white">Secure Payment</h4>
                   <p className="text-xs text-gray-400">100% protected</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <Star className="text-orange-400" size={20} />
+                <Star className="text-[#FF6A00]" size={20} />
                 <div>
                   <h4 className="text-sm font-bold text-white">Top Rating</h4>
                   <p className="text-xs text-gray-400">Trusted quality</p>
