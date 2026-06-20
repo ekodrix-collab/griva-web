@@ -1,109 +1,153 @@
 "use client";
 
+import React from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
-
-const ease: [number, number, number, number] = [0.22, 1, 0.36, 1];
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 28 },
-  visible: (i: number = 0) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, delay: i * 0.15, ease },
-  }),
-};
-
-const links = [
-  {
-    icon: (
-      <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-        <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
-      </svg>
-    ),
-    label: "Join Telegram Group",
-    href: "https://t.me/yourgroup",
-    bg: "bg-[#229ED9]",
-    hover: "hover:bg-[#1a8bbf]",
-    text: "text-white",
-    shadow: "shadow-[0_4px_18px_rgba(34,158,217,0.4)]",
-  },
-  {
-    icon: (
-      <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z" />
-      </svg>
-    ),
-    label: "Join WhatsApp Group",
-    href: "https://wa.me/yourgroup",
-    bg: "bg-[#25D366]",
-    hover: "hover:bg-[#1dba57]",
-    text: "text-white",
-    shadow: "shadow-[0_4px_18px_rgba(37,211,102,0.4)]",
-  },
-];
+import { Check, ArrowUpRight, MessageSquare, Send } from "lucide-react";
 
 export default function ExclusiveDeals() {
+  const channelLinks = [
+    {
+      name: "Telegram Channel",
+      tagline: "Direct Flash Alerts",
+      description: "Get real-time notifications for secret drops, limited-quantity inventory updates, and premium category launches.",
+      features: [
+        "Immediate flash-drop alerts",
+        "Exclusive single-use promo codes",
+        "Direct link to VIP collection pages"
+      ],
+      actionText: "Join Telegram Channel",
+      href: "https://t.me/griva_qa",
+      colorClass: "bg-[#229ED9] hover:bg-[#1a8bbf]",
+      icon: <Send size={22} className="text-[#229ED9]" />,
+      iconBg: "bg-[#229ED9]/5",
+      patternOpacity: "opacity-[0.03] group-hover:opacity-[0.06]"
+    },
+    {
+      name: "WhatsApp Community",
+      tagline: "Priority Direct Access",
+      description: "Interact directly with our concierge team, preview restocks before they launch, and request personalized shopping support.",
+      features: [
+        "Priority restock announcements",
+        "Direct-to-concierge chat support",
+        "Early access to seasonal sales"
+      ],
+      actionText: "Join WhatsApp Community",
+      href: "https://wa.me/9747770123",
+      colorClass: "bg-[#25D366] hover:bg-[#1dba57]",
+      icon: <MessageSquare size={22} className="text-[#25D366]" />,
+      iconBg: "bg-[#25D366]/5",
+      patternOpacity: "opacity-[0.03] group-hover:opacity-[0.06]"
+    }
+  ];
+
   return (
-    <section className="w-full py-16 md:py-24 bg-white">
-      <div className="mx-auto max-w-4xl px-4 text-center">
+    <div className="relative min-h-screen bg-[#FDFDFD] overflow-hidden pt-2 pb-16 px-4 md:pt-4 md:pb-24">
+      {/* Background Brand Pattern and Subtle Orange Lighting */}
+      <div className="absolute inset-0 z-0 opacity-[0.03] pointer-events-none">
+        <Image 
+          src="/images/logo-kit/brand-pattern-white-transparent.png" 
+          alt="Brand Pattern" 
+          fill
+          priority
+          className="object-cover" 
+        />
+      </div>
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[400px] bg-[radial-gradient(circle_at_top,rgba(255,106,0,0.06),transparent_60%)] pointer-events-none z-0" />
 
-        {/* Headline */}
-        <motion.h2
-          variants={fadeUp}
-          custom={0}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.5 }}
-          className="text-[52px] sm:text-[72px] md:text-[96px] font-black leading-none tracking-tighter text-black"
-        >
-          Exclusive <span className="text-orange-500">Deals</span>
-        </motion.h2>
-
-        {/* Subtext */}
-        <motion.p
-          variants={fadeUp}
-          custom={1}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.5 }}
-          className="mt-6 text-sm sm:text-base leading-relaxed text-gray-400 max-w-md mx-auto"
-        >
-          Join our community groups for flash drops, secret deals, and early access before anyone else.
-        </motion.p>
-
-        {/* CTA Links */}
+      <div className="relative z-10 w-full max-w-4xl mx-auto flex flex-col items-center">
+        {/* GRIVA Logo First */}
         <motion.div
-          variants={fadeUp}
-          custom={2}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.5 }}
-          className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-12"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="flex justify-center mb-1"
         >
-          {links.map((link) => (
-            <motion.a
-              key={link.label}
-              href={link.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              whileHover={{ scale: 1.04, y: -2 }}
-              whileTap={{ scale: 0.97 }}
-              transition={{ type: "spring", stiffness: 300, damping: 20 }}
-              className={[
-                "flex items-center gap-3 px-7 py-3.5 rounded-[5px] text-[14px] font-bold transition-colors duration-200",
-                link.bg,
-                link.hover,
-                link.text,
-                link.shadow,
-              ].join(" ")}
-            >
-              {link.icon}
-              {link.label}
-            </motion.a>
-          ))}
+          <Image 
+            src="/images/logo-dark.png" 
+            alt="GRIVA" 
+            width={140} 
+            height={36} 
+            className="h-8 w-auto object-contain" 
+            priority
+          />
         </motion.div>
 
+        {/* Title */}
+        <div className="text-center space-y-3 max-w-2xl">
+          <motion.h1
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="text-3xl sm:text-5xl font-black text-gray-900 tracking-tight leading-none"
+          >
+            Exclusive <span className="text-[#FF6A00]">Deals</span>
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="text-sm sm:text-base text-gray-500 max-w-lg mx-auto leading-relaxed"
+          >
+            Connect directly with our community networks to receive confidential flash codes, pre-launch drop invitations, and order assistance.
+          </motion.p>
+        </div>
+
+        {/* Channels Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full mt-12">
+          {channelLinks.map((channel, idx) => (
+            <motion.div
+              key={channel.name}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 + idx * 0.1 }}
+              className="group relative bg-white border border-gray-100/90 rounded-3xl p-8 flex flex-col justify-between shadow-[0_8px_30px_-10px_rgba(0,0,0,0.02)] hover:shadow-[0_24px_50px_-12px_rgba(0,0,0,0.06)] hover:border-gray-200 transition-all duration-300 overflow-hidden"
+            >
+              {/* Corner Watermark Pattern */}
+              <div 
+                className={`absolute right-0 bottom-0 w-36 h-36 pointer-events-none bg-[url('/images/logo-kit/brand-pattern-white-transparent.png')] bg-contain bg-no-repeat bg-right-bottom transition-all duration-500 ${channel.patternOpacity}`} 
+              />
+
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <div className={`w-12 h-12 ${channel.iconBg} rounded-2xl flex items-center justify-center shrink-0`}>
+                    {channel.icon}
+                  </div>
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-gray-50 px-2.5 py-1 rounded-md">
+                    {channel.tagline}
+                  </span>
+                </div>
+
+                <h3 className="text-lg font-bold text-gray-900 mb-2">{channel.name}</h3>
+                <p className="text-xs text-gray-500 leading-relaxed mb-6">{channel.description}</p>
+
+                {/* Features List */}
+                <ul className="space-y-2.5">
+                  {channel.features.map((feat) => (
+                    <li key={feat} className="flex items-start gap-2.5 text-xs text-gray-600">
+                      <div className="mt-0.5 w-4 h-4 rounded-full bg-[#FF6A00]/5 flex items-center justify-center text-[#FF6A00] shrink-0">
+                        <Check size={10} strokeWidth={3} />
+                      </div>
+                      <span>{feat}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <a
+                href={channel.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`w-full mt-8 py-3.5 rounded-xl text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all duration-200 shadow-sm ${channel.colorClass} active:scale-[0.995]`}
+              >
+                <span>{channel.actionText}</span>
+                <ArrowUpRight size={14} />
+              </a>
+            </motion.div>
+          ))}
+        </div>
       </div>
-    </section>
+    </div>
   );
 }
