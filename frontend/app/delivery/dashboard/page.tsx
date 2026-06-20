@@ -91,7 +91,7 @@ export default function DeliveryDashboard() {
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [driverName, setDriverName] = useState("Griva Driver");
-  const [driverEmail, setDriverEmail] = useState("driver@griva.qa");
+  const [driverEmail, setDriverEmail] = useState("driver@thegriva.com");
   const [activeTab, setActiveTab] = useState<'deliveries' | 'scan' | 'profile'>('deliveries');
 
   // FEATURE: Delivery Attempt Management state

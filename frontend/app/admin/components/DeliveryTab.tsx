@@ -187,7 +187,7 @@ export default function DeliveryTab() {
                 </span>
                 <input
                   type="email"
-                  placeholder="driver@griva.qa"
+                  placeholder="driver@thegriva.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full bg-white border border-orange-500/30 rounded-xl pl-9 pr-4 py-2.5 text-xs text-gray-800 focus:outline-none"

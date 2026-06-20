@@ -453,7 +453,7 @@ const seedDatabase = async () => {
 
     // 1. Seed Admin User (using findOrCreate to avoid unique constraint error and data loss)
     const [admin, adminCreated] = await User.findOrCreate({
-      where: { email: "admin@example.com" },
+      where: { email: "admin@thegriva.com" },
       defaults: {
         name: "Admin",
         password: "admin123", // Will be hashed automatically by user model hooks
@@ -461,7 +461,7 @@ const seedDatabase = async () => {
       }
     });
     if (adminCreated) {
-      console.log("➕ [SEED]: Default Admin account generated: admin@griva.qa / AdminPassword123!");
+      console.log("➕ [SEED]: Default Admin account generated: admin@thegriva.com / AdminPassword123!");
     } else {
       console.log("ℹ️ [SEED]: Admin account already exists. Skipping.");
     }
@@ -493,7 +493,7 @@ const seedDatabase = async () => {
         fridaySaleEnabled: true,
         midnightSaleEnabled: false,
         whatsappNumber: "+97455551234",
-        supportEmail: "support@griva.qa",
+        supportEmail: "support@thegriva.com",
         shippingFee: 15.00,
       });
       console.log("➕ [SEED]: Site setting configurations seed added.");

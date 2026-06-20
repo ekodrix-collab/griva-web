@@ -14,6 +14,8 @@ const allowedOrigins = [
   "http://localhost:8080",       // Backend self (Postman/Thunder)
   "https://griva.qa",            // Production domain
   "https://www.griva.qa",        // Production with www
+  "https://thegriva.com",        // New Production domain
+  "https://www.thegriva.com",    // New Production domain with www
   "https://griva-web.vercel.app", // Vercel preview URL
 ];
 app.use(cors({
