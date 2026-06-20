@@ -3,6 +3,23 @@ const SubCategory = require("../models/SubCategory");
 const { Op } = require("sequelize");
 
 /**
+ * Helper to extract Cloudinary public ID from its URL
+ */
+const getPublicIdFromUrl = (url) => {
+  if (!url || !url.includes("cloudinary.com")) return null;
+  try {
+    const splitUrl = url.split("/upload/");
+    if (splitUrl.length < 2) return null;
+    const pathAfterUpload = splitUrl[1];
+    const pathWithoutVersion = pathAfterUpload.replace(/^v\d+\//, "");
+    return pathWithoutVersion.substring(0, pathWithoutVersion.lastIndexOf("."));
+  } catch (error) {
+    console.error("Error parsing Cloudinary URL:", error);
+    return null;
+  }
+};
+
+/**
  * Create Product
  */
 exports.createProduct = async (req, res) => {
@@ -234,6 +251,17 @@ exports.updateProduct = async (req, res) => {
       });
     }
 
+    // If main_image_url is being updated, delete the old one from Cloudinary to free space
+    if (req.body.main_image_url && product.main_image_url && req.body.main_image_url !== product.main_image_url) {
+      const oldPublicId = getPublicIdFromUrl(product.main_image_url);
+      if (oldPublicId) {
+        const cloudinary = require("../config/cloudinary");
+        await cloudinary.uploader.destroy(oldPublicId).catch(err => {
+          console.error("Failed to delete old image from Cloudinary:", err);
+        });
+      }
+    }
+
     await product.update(req.body);
 
     res.status(200).json({
@@ -298,6 +326,17 @@ exports.deleteProduct = async (req, res) => {
         success: false,
         message: "Product not found",
       });
+    }
+
+    // Delete image from Cloudinary if it exists
+    if (product.main_image_url) {
+      const publicId = getPublicIdFromUrl(product.main_image_url);
+      if (publicId) {
+        const cloudinary = require("../config/cloudinary");
+        await cloudinary.uploader.destroy(publicId).catch(err => {
+          console.error("Failed to delete product image from Cloudinary:", err);
+        });
+      }
     }
 
     await product.destroy();

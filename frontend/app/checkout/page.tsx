@@ -6,7 +6,7 @@ import { useUser } from "@/app/context/UserContext";
 import { useCart } from "@/app/context/CartContext";
 import { addressService } from "@/app/services/address.service";
 import { orderService } from "@/app/services/order.service";
-import { Address } from "@/app/types/types";
+import { Address, CartState } from "@/app/types/types";
 import SectionHeading from "@/app/components/common/SectionHeading";
 import {
   Loader2,
@@ -74,6 +74,10 @@ export default function CheckoutPage() {
   const [orderError, setOrderError] = useState("");
   const [stockErrors, setStockErrors] = useState<Record<number, { title: string; availableStock: number }>>({});
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof CheckoutForm, string>>>({});
+
+  // Frozen cart state to prevent UI reset during order placement transitions
+  const [frozenCart, setFrozenCart] = useState<CartState | null>(null);
+  const activeCart = frozenCart || cartState;
 
   // Form state
   const [form, setForm] = useState<CheckoutForm>(INITIAL_FORM);
@@ -173,10 +177,10 @@ export default function CheckoutPage() {
 
   // Calculate totals
   const shippingCost =
-    cartState.totalPrice >= shippingConfig.freeShippingThreshold || cartState.totalPrice === 0
+    activeCart.totalPrice >= shippingConfig.freeShippingThreshold || activeCart.totalPrice === 0
       ? 0
       : shippingConfig.shippingFee;
-  const orderTotal = cartState.totalPrice + shippingCost;
+  const orderTotal = activeCart.totalPrice + shippingCost;
 
   // Selected saved address
   const selectedAddress = addresses.find((a) => a.id === selectedAddressId);
@@ -191,7 +195,7 @@ export default function CheckoutPage() {
 
   // Stock error helpers
   const activeStockErrors = Object.keys(stockErrors).filter((id) =>
-    cartState.items.some((item) => item.productId === Number(id))
+    activeCart.items.some((item) => item.productId === Number(id))
   );
   const hasStockErrors = activeStockErrors.length > 0;
 
@@ -207,7 +211,7 @@ export default function CheckoutPage() {
     });
     // Clear top error message if there are no more active stock errors
     const remaining = Object.keys(stockErrors).filter(
-      (id) => Number(id) !== productId && cartState.items.some((item) => item.productId === Number(id))
+      (id) => Number(id) !== productId && activeCart.items.some((item) => item.productId === Number(id))
     );
     if (remaining.length === 0) {
       setOrderError("");
@@ -226,7 +230,7 @@ export default function CheckoutPage() {
     });
     // Clear top error message if there are no more active stock errors
     const remaining = Object.keys(stockErrors).filter(
-      (id) => Number(id) !== productId && cartState.items.some((item) => item.productId === Number(id))
+      (id) => Number(id) !== productId && activeCart.items.some((item) => item.productId === Number(id))
     );
     if (remaining.length === 0) {
       setOrderError("");
@@ -291,6 +295,7 @@ export default function CheckoutPage() {
       return;
     }
 
+    setFrozenCart(cartState);
     setIsPlacingOrder(true);
     setOrderError("");
 
@@ -361,6 +366,7 @@ export default function CheckoutPage() {
       } else {
         setOrderError(response.message || "Failed to place order. Please try again.");
         setIsPlacingOrder(false);
+        setFrozenCart(null);
       }
     } catch (error: any) {
       const errMsg =
@@ -398,6 +404,7 @@ export default function CheckoutPage() {
 
       setOrderError(errMsg);
       setIsPlacingOrder(false);
+      setFrozenCart(null);
     }
   };
 
@@ -818,13 +825,13 @@ export default function CheckoutPage() {
                 <ShoppingBag className="h-4 w-4 text-orange-500" />
                 <h3 className="text-base font-bold text-gray-900">Order Summary</h3>
                 <span className="ml-auto text-xs font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                  {cartState.totalItems} item{cartState.totalItems !== 1 ? "s" : ""}
+                  {activeCart.totalItems} item{activeCart.totalItems !== 1 ? "s" : ""}
                 </span>
               </div>
 
               {/* Items */}
               <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
-                {cartState.items.map((item) => {
+                {activeCart.items.map((item) => {
                   const stockErr = stockErrors[item.productId];
                   return (
                     <div key={item.id} className="flex items-start gap-3">
@@ -898,7 +905,7 @@ export default function CheckoutPage() {
                 <div className="flex justify-between text-gray-600">
                   <span>Subtotal</span>
                   <span className="font-semibold text-gray-900">
-                    QAR {cartState.totalPrice.toFixed(2)}
+                    QAR {activeCart.totalPrice.toFixed(2)}
                   </span>
                 </div>
                 <div className="flex justify-between text-gray-600">
