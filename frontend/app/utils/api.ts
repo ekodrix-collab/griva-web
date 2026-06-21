@@ -9,7 +9,14 @@ function getAuthHeaders(): HeadersInit {
     const pathname = window.location.pathname;
     let token = null;
     if (pathname.startsWith("/admin")) {
-      token = localStorage.getItem("griva_admin_token");
+      const activeRole = sessionStorage.getItem("griva_active_role");
+      if (activeRole === "staff") {
+        token = localStorage.getItem("griva_staff_token");
+      } else if (activeRole === "admin") {
+        token = localStorage.getItem("griva_admin_token");
+      } else {
+        token = localStorage.getItem("griva_admin_token") || localStorage.getItem("griva_staff_token");
+      }
     } else if (pathname.startsWith("/delivery")) {
       token = localStorage.getItem("griva_delivery_token");
     } else {
@@ -416,8 +423,14 @@ export interface AdminOrder {
   total_price: string;
   shipping_address: string;
   createdAt: string;
+  reviewed_at?: string;
   user?: { id: number; email: string };
   items?: OrderItem[];
+  customer_name?: string;
+  customer_phone?: string;
+  customer_email?: string;
+  delivery_notes?: string;
+  delivery_slot_id?: number;
 }
 
 const MOCK_ORDERS: AdminOrder[] = [

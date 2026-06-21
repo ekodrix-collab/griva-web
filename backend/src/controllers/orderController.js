@@ -390,10 +390,35 @@ exports.updateOrderStatus = async (req, res, next) => {
     }
 
     order.status = status;
+    if (!order.reviewed_at) {
+      order.reviewed_at = new Date();
+    }
     await order.save();
 
     res.status(200).json({
       message: "Order status updated successfully.",
+      order,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Admin / Staff Action: Mark order as reviewed
+ */
+exports.reviewOrder = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const order = await Order.findByPk(id);
+    if (!order) {
+      return res.status(404).json({ error: "Order not found." });
+    }
+    order.reviewed_at = new Date();
+    await order.save();
+    res.status(200).json({
+      success: true,
+      message: "Order marked as reviewed.",
       order,
     });
   } catch (error) {
