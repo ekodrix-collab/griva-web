@@ -1,11 +1,11 @@
 const express = require("express");
 const router = express.Router();
 const customerController = require("../controllers/customerController");
-const { authenticateJWT, isAdmin } = require("../middleware/auth");
+const { authenticateJWT, isAdminOrStaff } = require("../middleware/auth");
 
-// Secure all customer directory endpoints under admin authentication check
+// Secure all customer directory endpoints under admin / staff authentication check
 router.use(authenticateJWT);
-router.use(isAdmin);
+router.use(isAdminOrStaff);
 
 router.get("/", customerController.getCustomers);
 router.get("/analytics", customerController.getCustomerAnalytics);

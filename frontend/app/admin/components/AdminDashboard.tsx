@@ -2,12 +2,14 @@
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAdminSettings } from "@/app/context/AdminContext";
+import { useUser } from "@/app/context/UserContext";
 import { CategoryItem, OfferCard, Product, SlideData } from "@/app/types/types";
 import { addSubscriberApi, AdminOrder, AnalyticsData, broadcastNewsletterApi, getAllOrdersApi, getAnalyticsApi, getSettingsApi, getSubscribersApi, SubscriberInfo, updateSettingsApi } from "@/app/utils/api";
 import { products as initialProducts, slide as initialSlides, offers as initialOffers, categories as initialCategories } from "@/app/data/data";
 import AdminSidebar from "./AdminSidebar";
 import AdminHeader from "./AdminHeader";
 import OverviewTab from "./OverviewTab";
+import OperationsTab from "./OperationsTab";
 import ProductsTab from "./ProductsTab";
 import OrdersTab from "./OrdersTab";
 import BannersTab from "./BannersTab";
@@ -17,8 +19,9 @@ import SubCategoriesTab from "./SubCategoriesTab";
 import AddProductModal from "./AddProductModal";
 import DeliveryTab from "./DeliveryTab";
 import CustomersTab from "./CustomersTab";
+import StaffTab from "./StaffTab";
 
-export type TabType = "overview" | "products" | "banners" | "subscribers" | "orders" | "categories" | "subcategories" | "delivery" | "customers";
+export type TabType = "overview" | "operations" | "products" | "banners" | "subscribers" | "orders" | "categories" | "subcategories" | "delivery" | "customers" | "staff";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -37,9 +40,11 @@ export default function AdminDashboard() {
 
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get("tab") as TabType | null;
+  const { role } = useUser();
 
-  const validTabs: TabType[] = ["overview", "products", "banners", "subscribers", "orders", "categories", "subcategories", "delivery", "customers"];
-  const activeTab = tabParam && validTabs.includes(tabParam) ? tabParam : "overview";
+  const validTabs: TabType[] = ["overview", "operations", "products", "banners", "subscribers", "orders", "categories", "subcategories", "delivery", "customers", "staff"];
+  const defaultTab = role === "staff" ? "operations" : "overview";
+  const activeTab = tabParam && validTabs.includes(tabParam) ? tabParam : defaultTab;
 
   const handleSetActiveTab = (tab: TabType) => {
     router.push(`/admin?tab=${tab}`);
@@ -132,11 +137,13 @@ export default function AdminDashboard() {
 
 
   // ── Render ─────────────────────────────────────────────────────────────────
+  const unreviewedCount = ordersList.filter(o => o.status === "pending" && !(o as any).reviewed_at).length;
+
   return (
     <div className="min-h-screen bg-white text-gray-900 flex font-sans antialiased selection:bg-orange-500 selection:text-white">
 
       {/* ── Sidebar ── */}
-      <AdminSidebar activeTab={activeTab} setActiveTab={handleSetActiveTab} />
+      <AdminSidebar activeTab={activeTab} setActiveTab={handleSetActiveTab} unreviewedCount={unreviewedCount} />
 
       {/* ── Main ── */}
       <main className="flex-1 min-w-0 flex flex-col h-screen overflow-y-auto">
@@ -146,6 +153,12 @@ export default function AdminDashboard() {
 
         {/* ── Tab Content ── */}
         <div className="p-6 max-w-7xl w-full mx-auto flex-1">
+          {activeTab === "operations" && (
+            <OperationsTab ordersList={ordersList} setOrdersList={setOrdersList} setActiveTab={handleSetActiveTab} />
+          )}
+          {activeTab === "staff" && (
+            <StaffTab />
+          )}
           {activeTab === "overview" && (
             <OverviewTab
               analytics={analytics} analyticsLoading={analyticsLoading}

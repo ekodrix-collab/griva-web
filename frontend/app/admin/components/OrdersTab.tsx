@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   ShoppingCart, CheckCircle, Truck, XCircle, Clock, UserCheck,
   ChevronDown, Package, MapPin, Mail, Hash, AlertTriangle, RefreshCw, PhoneCall
@@ -13,6 +14,7 @@ interface OrdersTabProps {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
+  new:              { label: 'New/Unseen',       color: 'text-red-600',    bg: 'bg-red-50 border-red-200',        icon: <Clock className="h-3 w-3 text-red-500 animate-pulse" /> },
   pending:          { label: 'Pending',          color: 'text-amber-600',  bg: 'bg-amber-50 border-amber-200',    icon: <Clock className="h-3 w-3" /> },
   processing:       { label: 'Processing',       color: 'text-indigo-600', bg: 'bg-indigo-50 border-indigo-200',  icon: <Package className="h-3 w-3" /> },
   assigned:         { label: 'Assigned',         color: 'text-blue-600',   bg: 'bg-blue-50 border-blue-200',      icon: <UserCheck className="h-3 w-3" /> },
@@ -48,11 +50,21 @@ interface DeliveryBoy {
 }
 
 export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps) {
+  const searchParams = useSearchParams();
+  const statusParam = searchParams?.get('status');
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
-  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>(statusParam || 'all');
   const [deliverySlots, setDeliverySlots] = useState<any[]>([]);
   const [filterSlot, setFilterSlot] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterDateRange, setFilterDateRange] = useState('all');
+
+  useEffect(() => {
+    if (statusParam) {
+      setFilterStatus(statusParam);
+    }
+  }, [statusParam]);
 
   // FEATURE: Delivery Boy System — assign driver state
   const [deliveryBoys, setDeliveryBoys] = useState<DeliveryBoy[]>([]);
@@ -91,7 +103,7 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
   useEffect(() => {
     const fetchDeliveryBoys = async () => {
       try {
-        const token = localStorage.getItem('griva_admin_token') || '';
+        const token = localStorage.getItem('griva_admin_token') || localStorage.getItem('griva_staff_token') || '';
         const res = await fetch(`${API_BASE}/orders/admin/delivery-boys`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -107,7 +119,7 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
   // FEATURE: Delivery Attempt Management — fetch needs attention
   const fetchNeedsAttention = async () => {
     try {
-      const token = localStorage.getItem('griva_admin_token') || '';
+      const token = localStorage.getItem('griva_admin_token') || localStorage.getItem('griva_staff_token') || '';
       const res = await fetch(`${API_BASE}/orders/needs-attention`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -140,7 +152,7 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
     if (!driverId) return;
     setAssigningId(orderId);
     try {
-      const token = localStorage.getItem('griva_admin_token') || '';
+      const token = localStorage.getItem('griva_admin_token') || localStorage.getItem('griva_staff_token') || '';
       const res = await fetch(`${API_BASE}/orders/${orderId}/assign`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -159,7 +171,7 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
   const handleStatusChange = async (orderId: number, newStatus: string) => {
     setUpdatingId(orderId);
     setOrdersList(prev =>
-      prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o)
+      prev.map(o => o.id === orderId ? { ...o, status: newStatus, reviewed_at: o.reviewed_at || new Date().toISOString() } : o)
     );
     await updateOrderStatusApi(orderId, newStatus);
     setUpdatingId(null);
@@ -171,7 +183,7 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
     setReopenLoading(true);
     setReopenError('');
     try {
-      const token = localStorage.getItem('griva_admin_token') || '';
+      const token = localStorage.getItem('griva_admin_token') || localStorage.getItem('griva_staff_token') || '';
       const res = await fetch(`${API_BASE}/orders/${reopenModal.orderId}/reopen`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -206,14 +218,55 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
   };
 
   const filteredOrders = ordersList.filter(o => {
-    const displayStatus = o.status === 'completed' ? 'delivered' : o.status;
-    const matchesStatus = filterStatus === 'all' || displayStatus === filterStatus;
+    // 1. Status Filter
+    let matchesStatus = false;
+    if (filterStatus === 'all') {
+      matchesStatus = true;
+    } else if (filterStatus === 'new') {
+      matchesStatus = o.status === 'pending' && !(o as any).reviewed_at;
+    } else {
+      const displayStatus = o.status === 'completed' ? 'delivered' : o.status;
+      matchesStatus = displayStatus === filterStatus;
+    }
+
+    // 2. Slot Filter
     const matchesSlot = filterSlot === 'all' || String((o as any).delivery_slot_id) === filterSlot;
-    return matchesStatus && matchesSlot;
+
+    // 3. Date Range Filter
+    let matchesDate = true;
+    if (filterDateRange !== 'all') {
+      const orderDate = new Date(o.createdAt);
+      const today = new Date();
+      
+      if (filterDateRange === 'today') {
+        matchesDate = orderDate.toDateString() === today.toDateString();
+      } else if (filterDateRange === 'yesterday') {
+        const yesterday = new Date();
+        yesterday.setDate(today.getDate() - 1);
+        matchesDate = orderDate.toDateString() === yesterday.toDateString();
+      } else if (filterDateRange === 'week') {
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(today.getDate() - 7);
+        matchesDate = orderDate >= sevenDaysAgo;
+      }
+    }
+
+    // 4. Unified Search (Order Number, Customer Name, Phone Number)
+    let matchesSearch = true;
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      const orderNo = (o.order_number || `ORD-${String(o.id).padStart(4, '0')}`).toLowerCase();
+      const customerName = (o.customer_name || o.user?.email || '').toLowerCase();
+      const customerPhone = (o.customer_phone || '').toLowerCase();
+      matchesSearch = orderNo.includes(query) || customerName.includes(query) || customerPhone.includes(query);
+    }
+
+    return matchesStatus && matchesSlot && matchesDate && matchesSearch;
   });
 
   const counts: Record<string, number> = {
     all: ordersList.length,
+    new: ordersList.filter(o => o.status === 'pending' && !(o as any).reviewed_at).length,
     pending: ordersList.filter(o => o.status === 'pending').length,
     processing: ordersList.filter(o => o.status === 'processing').length,
     assigned: ordersList.filter(o => o.status === 'assigned').length,
@@ -373,7 +426,7 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
                                   setAssigningId(order.id);
                                   fetch(`${API_BASE}/orders/${order.id}/assign`, {
                                     method: 'PATCH',
-                                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('griva_admin_token') || ''}` },
+                                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('griva_admin_token') || localStorage.getItem('griva_staff_token') || ''}` },
                                     body: JSON.stringify({ deliveryBoyId: d.id }),
                                   }).then(res => {
                                     if (res.ok) {
@@ -418,9 +471,43 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
         </div>
       )}
 
+      {/* Search and Filters Section */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-4 rounded-2xl border border-orange-500/30 shadow-xs">
+        {/* Unified Search Input */}
+        <div className="md:col-span-2 relative">
+          <input
+            type="text"
+            placeholder="Search by Order Number, Customer Name, Phone Number..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full text-xs font-semibold pl-4 pr-10 py-2.5 bg-gray-50 border border-orange-500/10 hover:border-orange-500/30 focus:border-orange-500 focus:bg-white rounded-xl outline-none transition-all shadow-xs"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-orange-500 hover:text-orange-600 transition-colors"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+
+        {/* Date Range Dropdown */}
+        <select
+          value={filterDateRange}
+          onChange={(e) => setFilterDateRange(e.target.value)}
+          className="text-xs font-bold text-gray-750 bg-gray-50 border border-orange-500/10 hover:border-orange-500/30 rounded-xl px-3 py-2.5 outline-none cursor-pointer focus:bg-white transition-all shadow-xs"
+        >
+          <option value="all">📅 All Time</option>
+          <option value="today">📅 Today</option>
+          <option value="yesterday">📅 Yesterday</option>
+          <option value="week">📅 Last 7 Days</option>
+        </select>
+      </div>
+
       {/* Filter Tabs */}
       <div className="flex flex-wrap gap-2 bg-white p-3 rounded-xl border border-orange-500/30">
-        {(['all', 'pending', 'processing', 'assigned', 'out_for_delivery', 'shipped', 'delivered', 'cancelled']).map((status) => {
+        {(['all', 'new', 'pending', 'processing', 'assigned', 'out_for_delivery', 'shipped', 'delivered', 'cancelled']).map((status) => {
           const cfg = status === 'all' ? null : STATUS_CONFIG[status];
           const isActive = filterStatus === status;
           return (
@@ -434,7 +521,7 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
               }`}
             >
               {cfg?.icon}
-              <span className="capitalize">{status}</span>
+              <span className="capitalize">{status === 'new' ? 'New' : status}</span>
               <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${isActive ? 'bg-white/20' : 'bg-gray-100'}`}>
                 {counts[status]}
               </span>
@@ -466,6 +553,7 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
                 <th className="p-4">Delivery Slot</th>
                 <th className="p-4">Total</th>
                 <th className="p-4">Status</th>
+                <th className="p-4">Age</th>
                 <th className="p-4">Date</th>
                 <th className="p-4 text-right">Actions</th>
               </tr>
@@ -473,7 +561,7 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
             <tbody className="divide-y divide-gray-100">
               {filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-10 text-center text-xs text-gray-400">
+                  <td colSpan={9} className="p-10 text-center text-xs text-gray-400">
                     <Package className="h-8 w-8 mx-auto mb-2 text-gray-300" />
                     No orders found for this filter.
                   </td>
@@ -488,14 +576,41 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
                   return (
                     <React.Fragment key={order.id}>
                       <tr
-                        className="hover:bg-orange-500/3 transition-colors cursor-pointer group"
-                        onClick={() => setExpandedOrderId(isExpanded ? null : order.id)}
+                        className={`hover:bg-orange-500/3 transition-colors cursor-pointer group ${
+                          order.status === 'pending' && !(order as any).reviewed_at
+                            ? 'border-l-4 border-l-amber-500 bg-amber-500/5'
+                            : ''
+                        }`}
+                        onClick={() => {
+                          const isUnreviewed = order.status === 'pending' && !(order as any).reviewed_at;
+                          if (!isExpanded && isUnreviewed) {
+                            const token = localStorage.getItem('griva_admin_token') || localStorage.getItem('griva_staff_token') || '';
+                            fetch(`${API_BASE}/orders/${order.id}/review`, {
+                              method: 'PATCH',
+                              headers: { Authorization: `Bearer ${token}` }
+                            }).then(res => {
+                              if (res.ok) {
+                                setOrdersList(prev => prev.map(o => o.id === order.id ? { ...o, reviewed_at: new Date().toISOString() } : o));
+                              }
+                            });
+                          }
+                          setExpandedOrderId(isExpanded ? null : order.id);
+                        }}
                       >
                         {/* Order ID */}
                         <td className="p-4">
-                          <div className="flex items-center gap-2">
-                            <Hash className="h-3 w-3 text-orange-400" />
-                            <span className="text-xs font-black text-gray-800">{order.order_number || `ORD-${String(order.id).padStart(4, '0')}`}</span>
+                          <div className="flex items-center gap-2 flex-wrap max-w-[150px]">
+                            <div className="flex items-center gap-1">
+                              <Hash className="h-3 w-3 text-orange-400" />
+                              <span className="text-xs font-black text-gray-800">
+                                {order.order_number || `ORD-${String(order.id).padStart(4, '0')}`}
+                              </span>
+                            </div>
+                            {order.status === 'pending' && !(order as any).reviewed_at && (
+                              <span className="inline-flex items-center text-[9px] font-black uppercase bg-red-500 text-white px-1.5 py-0.5 rounded-sm animate-pulse">
+                                NEW
+                              </span>
+                            )}
                           </div>
                         </td>
 
@@ -503,11 +618,11 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
                         <td className="p-4">
                           <div className="flex items-center gap-2">
                             <div className="h-7 w-7 rounded-full bg-gradient-to-tr from-orange-400 to-amber-500 flex items-center justify-center text-[10px] font-black text-white shrink-0">
-                              {(order.user?.email || 'U').charAt(0).toUpperCase()}
+                              {(order.customer_name || order.user?.email || 'U').charAt(0).toUpperCase()}
                             </div>
                             <div>
-                              <span className="text-xs font-bold text-gray-800 block truncate max-w-[140px]">
-                                {order.user?.email || `Customer #${order.user_id}`}
+                              <span className="text-xs font-bold text-gray-800 block truncate max-w-[145px]" title={order.customer_name || order.user?.email}>
+                                {order.customer_name || order.user?.email || `Customer #${order.user_id}`}
                               </span>
                             </div>
                           </div>
@@ -539,6 +654,13 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
                           <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg border ${cfg.bg} ${cfg.color}`}>
                             {cfg.icon}
                             {cfg.label}
+                          </span>
+                        </td>
+
+                        {/* Age */}
+                        <td className="p-4">
+                          <span className="text-xs text-gray-500 font-semibold block">
+                            {timeSince(order.createdAt)}
                           </span>
                         </td>
 
@@ -581,7 +703,7 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
                       {/* Expanded Order Details */}
                       {isExpanded && (
                         <tr className="bg-orange-500/3">
-                          <td colSpan={7} className="px-4 pb-4">
+                          <td colSpan={9} className="px-4 pb-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                               {/* Items */}
                               <div className="space-y-2">

@@ -150,6 +150,10 @@ const Order = sequelize.define(
       defaultValue: 0,
       allowNull: false,
     },
+    reviewed_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
     delivery_slot_id: {
       type: DataTypes.INTEGER,
       allowNull: true,

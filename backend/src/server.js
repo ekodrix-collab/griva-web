@@ -11,6 +11,14 @@ const startServer = async () => {
 
   if (process.env.DB_SYNC === "true") {
     try {
+      // Safely alter the ENUM role type in PostgreSQL if it exists
+      try {
+        await sequelize.query("ALTER TYPE \"enum_Users_role\" ADD VALUE IF NOT EXISTS 'staff'");
+        console.log("🟢 [DATABASE]: Altered role ENUM type if PostgreSQL to support 'staff'");
+      } catch (enumErr) {
+        console.log("ℹ️ [DATABASE]: Skipping raw ENUM alteration (type may not exist or not PostgreSQL):", enumErr.message);
+      }
+
       console.log("[DATABASE]: Syncing schemas...");
       await sequelize.sync({ alter: true });
       console.log("🟢 [DATABASE]: Schemas synced successfully.");

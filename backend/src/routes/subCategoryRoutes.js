@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 const subCategoryController = require("../controllers/subCategoryController");
-const { authenticateJWT, isAdmin } = require("../middleware/auth");
+const { authenticateJWT, isAdminOrStaff } = require("../middleware/auth");
 
 /**
  * Public Routes
@@ -13,26 +13,26 @@ router.get("/:id", subCategoryController.getSubCategoryById);
 router.get("/category/:categoryId",subCategoryController.getSubCategoriesByCategory);
 
 /**
- * Admin Routes
+ * Admin / Staff Routes
  */
 router.post(
   "/",
   authenticateJWT,
-  isAdmin,
+  isAdminOrStaff,
   subCategoryController.createSubCategory
 );
 
 router.put(
   "/:id",
   authenticateJWT,
-  isAdmin,
+  isAdminOrStaff,
   subCategoryController.updateSubCategory
 );
 
 router.delete(
   "/:id",
   authenticateJWT,
-  isAdmin,
+  isAdminOrStaff,
   subCategoryController.deleteSubCategory
 );
 
