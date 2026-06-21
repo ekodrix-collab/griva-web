@@ -110,28 +110,45 @@ export default function ProductCard({ product }: { product?: ApiProduct }) {
 
           {product.discount_percentage && product.discount_percentage > 0 ? (
             <div
-              className="absolute left-2 top-2 max-w-[70%] truncate rounded-full px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider text-white sm:left-4 sm:top-4 sm:px-3 sm:text-[10px]"
+              className="absolute left-2 top-1.5 z-20 max-w-[70%] truncate rounded-full px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider text-white sm:left-4 sm:top-3 sm:px-3 sm:text-[10px]"
               style={{ backgroundColor: ORANGE, boxShadow: "0 6px 14px rgba(255,106,0,0.28)" }}
             >
               -{product.discount_percentage}%
             </div>
-          ) : (
+          ) : product.brand && product.brand.trim() !== "" ? (
             <div
-              className="absolute left-2 top-2 max-w-[60%] truncate rounded-full border bg-white/90 px-2 py-0.5 text-[8px] font-semibold uppercase tracking-wider sm:left-4 sm:top-4 sm:max-w-none sm:px-3 sm:text-[10px]"
+              className="absolute left-2 top-1.5 z-20 max-w-[60%] truncate rounded-full border bg-white/90 px-2 py-0.5 text-[8px] font-semibold uppercase tracking-wider sm:left-4 sm:top-3 sm:max-w-none sm:px-3 sm:text-[10px]"
               style={{ borderColor: "#ECECEC", color: INK }}
             >
-              {product.brand || "Product"}
+              {product.brand}
             </div>
-          )}
+          ) : null}
 
-          <Image
-            src={product.main_image_url}
-            alt={product.title}
-            width={160}
-            height={160}
-            priority
-            className="relative z-10 h-auto max-h-[100px] w-auto object-contain sm:group-hover:scale-110 transition-transform duration-500 sm:max-h-[160px]"
-          />
+          <div className="relative w-full h-full flex items-center justify-center">
+            {/* Main Image */}
+            <Image
+              src={product.main_image_url}
+              alt={product.title}
+              width={160}
+              height={160}
+              priority
+              className={`relative z-10 h-auto max-h-[100px] w-auto object-contain transition-all duration-500 sm:max-h-[160px] ${
+                product.gallery_images && product.gallery_images.length > 0
+                  ? "group-hover:opacity-0 group-hover:scale-95 group-hover:pointer-events-none"
+                  : "group-hover:scale-110"
+              }`}
+            />
+            {/* Hover Image (Second Image) */}
+            {product.gallery_images && product.gallery_images.length > 0 && (
+              <Image
+                src={product.gallery_images[0]}
+                alt={`${product.title} Alternate`}
+                width={160}
+                height={160}
+                className="absolute inset-0 z-10 m-auto h-auto max-h-[100px] w-auto object-contain opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-110 transition-all duration-500 sm:max-h-[160px] pointer-events-none"
+              />
+            )}
+          </div>
         </div>
 
         {/* Content */}
