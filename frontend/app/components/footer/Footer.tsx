@@ -210,21 +210,10 @@ export default function Footer() {
         </div>
 
         {/* Bottom copyright section */}
-        <div className="border-t border-zinc-800 py-6 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="border-t border-zinc-800 py-6 flex flex-col md:flex-row items-center justify-center gap-4">
           <p className="text-[11px] text-zinc-500 font-medium">
             © {new Date().getFullYear()} GriVA Store. All Rights Reserved.
           </p>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {["MasterCard", "PayPal", "American Express", "Bitcoin", "Visa"].map((card) => (
-              <div
-                key={card}
-                className="rounded border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-[9px] font-semibold text-zinc-400"
-              >
-                {card}
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     </footer>
