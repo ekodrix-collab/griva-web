@@ -7,9 +7,11 @@ import { ShoppingBag, ArrowLeft, Trash2, Plus, Minus } from "lucide-react";
 import { useCart } from "@/app/context/CartContext";
 import SectionHeading from "@/app/components/common/SectionHeading";
 import { motion, AnimatePresence } from "framer-motion";
+import { useToast } from "@/app/context/ToastContext";
 
 export default function CartPage() {
   const { state, dispatch } = useCart();
+  const { confirm, toast } = useToast();
 
   const handleIncrement = (id: number, currentQty: number) => {
     dispatch({
@@ -33,9 +35,14 @@ export default function CartPage() {
     dispatch({ type: "REMOVE", payload: { id } });
   };
 
-  const handleClear = () => {
-    if (confirm("Are you sure you want to clear your cart?")) {
+  const handleClear = async () => {
+    const isConfirmed = await confirm(
+      "Are you sure you want to remove all items from your cart?",
+      "Clear Cart"
+    );
+    if (isConfirmed) {
       dispatch({ type: "CLEAR" });
+      toast.success("Cart cleared successfully.");
     }
   };
 
@@ -43,6 +50,46 @@ export default function CartPage() {
     shippingFee: 15,
     freeShippingThreshold: 150,
   });
+
+  const [stockStatus, setStockStatus] = useState<Record<number, { available: number; ok: boolean; active: boolean; title: string }>>({});
+  const [checkingStock, setCheckingStock] = useState(false);
+
+  useEffect(() => {
+    const checkStock = async () => {
+      if (state.items.length === 0) return;
+      setCheckingStock(true);
+      const statusMap: typeof stockStatus = {};
+      for (const item of state.items) {
+        try {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/${item.productId}`);
+          if (res.ok) {
+            const data = await res.json();
+            const product = data.data;
+            if (product) {
+              statusMap[item.id] = {
+                available: product.stock,
+                ok: item.quantity <= product.stock && product.is_active,
+                active: product.is_active,
+                title: product.title,
+              };
+            } else {
+              statusMap[item.id] = { available: 0, ok: false, active: false, title: item.title };
+            }
+          } else {
+            statusMap[item.id] = { available: 0, ok: false, active: false, title: item.title };
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }
+      setStockStatus(statusMap);
+      setCheckingStock(false);
+    };
+
+    checkStock();
+  }, [state.items]);
+
+  const hasCartErrors = Object.values(stockStatus).some((s) => !s.ok);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -185,6 +232,16 @@ export default function CartPage() {
                             </span>
                           )}
                         </div>
+                        {/* HIGH-9: Stock error warning notice */}
+                        {stockStatus[item.id] && !stockStatus[item.id].ok && (
+                          <div className="mt-1.5 text-xs text-red-500 font-bold bg-red-50 border border-red-100 rounded-lg px-2.5 py-1 inline-block animate-fadeIn">
+                            {!stockStatus[item.id].active ? (
+                              "⚠️ This product is currently inactive / unavailable."
+                            ) : (
+                              `⚠️ Requested quantity exceeds stock. Only ${stockStatus[item.id].available} available.`
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       {/* Qty Controls */}
@@ -221,7 +278,8 @@ export default function CartPage() {
                         onClick={() => handleRemove(item.id)}
                         className="rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors cursor-pointer"
                       >
-                        <Trash2 className="h-4. w-4." />
+                        {/* MED-8: Fix invalid Tailwind CSS class */}
+                        <Trash2 className="h-4 w-4" />
                       </button>
                     </motion.div>
                   ))}
@@ -259,12 +317,22 @@ export default function CartPage() {
                   </div>
                 </div>
 
-                <Link
-                  href="/checkout"
-                  className="w-full flex items-center justify-center rounded-xl bg-orange-500 py-3.5 text-sm font-semibold text-white hover:bg-orange-600 transition-colors shadow-lg shadow-orange-500/10 cursor-pointer"
-                >
-                  Proceed to Checkout
-                </Link>
+                {/* HIGH-9: Disable Proceed to Checkout if stock errors exist */}
+                {hasCartErrors ? (
+                  <button
+                    disabled
+                    className="w-full flex items-center justify-center rounded-xl bg-gray-300 py-3.5 text-sm font-bold text-gray-500 cursor-not-allowed shadow-none"
+                  >
+                    Resolve Stock Issues to Checkout
+                  </button>
+                ) : (
+                  <Link
+                    href="/checkout"
+                    className="w-full flex items-center justify-center rounded-xl bg-orange-500 py-3.5 text-sm font-semibold text-white hover:bg-orange-600 transition-colors shadow-lg shadow-orange-500/10 cursor-pointer"
+                  >
+                    Proceed to Checkout
+                  </Link>
+                )}
 
                 <div className="pt-2 text-center text-xs text-gray-400">
                   Secured by 256-bit SSL connection

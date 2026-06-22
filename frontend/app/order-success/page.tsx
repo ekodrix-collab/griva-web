@@ -8,22 +8,86 @@ import { useUser } from "@/app/context/UserContext";
 
 function OrderSuccessContent() {
   const searchParams = useSearchParams();
-  const orderNumber = searchParams.get("order");
-  const urlTotal = searchParams.get("total");
-  const slotName = searchParams.get("slot");
+  const orderNumber = searchParams.get("order") || "";
 
   const { isAuthenticated } = useUser();
+  const [loading, setLoading] = useState(true);
+  const [orderExists, setOrderExists] = useState(false);
+  const [orderData, setOrderData] = useState<any>(null);
   const [lastOrderInfo, setLastOrderInfo] = useState<{ phone?: string; total?: string } | null>(null);
 
   useEffect(() => {
-    // Read from localStorage
+    let phoneVal = "";
+    // Read from localStorage to match the order details securely
     try {
       const stored = localStorage.getItem("griva-last-order");
       if (stored) {
-        setLastOrderInfo(JSON.parse(stored));
+        const parsed = JSON.parse(stored);
+        setLastOrderInfo(parsed);
+        if (parsed.order_number === orderNumber) {
+          phoneVal = parsed.phone || "";
+        }
       }
     } catch {}
-  }, []);
+
+    const verifyOrder = async () => {
+      if (!orderNumber) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/orders/track?order_number=${encodeURIComponent(orderNumber)}&phone=${encodeURIComponent(phoneVal)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.order) {
+            setOrderExists(true);
+            setOrderData(data.order);
+          }
+        }
+      } catch (err) {
+        console.error("Order verification failed:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    verifyOrder();
+  }, [orderNumber]);
+
+  if (loading) {
+    return (
+      <div className="bg-gray-50/50 min-h-[85vh] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Verifying Order Details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!orderExists || !orderData) {
+    return (
+      <div className="bg-gray-50/50 min-h-[85vh] flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white p-8 rounded-3xl shadow-sm border border-gray-100 text-center">
+          <div className="text-red-500 text-4xl mb-4">⚠️</div>
+          <h3 className="text-lg font-bold text-gray-900 mb-2">Access Denied</h3>
+          <p className="text-sm text-gray-500 mb-6">
+            We couldn't verify this order. Direct access to the order success page is restricted.
+          </p>
+          <Link
+            href="/shop"
+            className="inline-flex items-center justify-center rounded-xl bg-orange-500 px-6 py-3 text-sm font-bold text-white hover:bg-orange-600 transition shadow-md shadow-orange-500/10 cursor-pointer"
+          >
+            Continue Shopping
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Retrieve details dynamically from the verified order object
+  const slotName = orderData.deliverySlot ? orderData.deliverySlot.name : "";
+  const totalAmount = orderData.total_price;
 
   return (
     <div className="bg-gray-50/50 min-h-[85vh] flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -38,17 +102,23 @@ function OrderSuccessContent() {
           Order Placed Successfully!
         </h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 mb-6 bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4 mb-6 bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
           {orderNumber && (
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Order Number</p>
-              <p className="text-lg font-black text-orange-500 tracking-wide">{orderNumber}</p>
+              <p className="text-sm font-black text-orange-500 tracking-wide">{orderNumber}</p>
+            </div>
+          )}
+          {totalAmount && (
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Total Price</p>
+              <p className="text-sm font-black text-gray-800 tracking-wide">{totalAmount}</p>
             </div>
           )}
           {slotName && (
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Preferred Delivery Slot</p>
-              <p className="text-sm font-bold text-gray-800 tracking-wide">{slotName}</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Delivery Slot</p>
+              <p className="text-sm font-black text-gray-800 tracking-wide">{slotName}</p>
             </div>
           )}
         </div>

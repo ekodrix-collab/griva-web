@@ -6,19 +6,23 @@ import { WishlistProvider } from "./WishlistContext";
 import { SearchProvider } from "./SearchContext";
 import { UserProvider } from "./UserContext";
 import { AdminProvider } from "./AdminContext";
+import { ToastProvider } from "./ToastContext";
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
-    <AdminProvider>
-      <UserProvider>
-        <CartProvider>
-          <WishlistProvider>
-            <SearchProvider>
-              {children}
-            </SearchProvider>
-          </WishlistProvider>
-        </CartProvider>
-      </UserProvider>
-    </AdminProvider>
+    <ToastProvider>
+      <AdminProvider>
+        <UserProvider>
+          <CartProvider>
+            <WishlistProvider>
+              <SearchProvider>
+                {children}
+              </SearchProvider>
+            </WishlistProvider>
+          </CartProvider>
+        </UserProvider>
+      </AdminProvider>
+    </ToastProvider>
   );
 }
+

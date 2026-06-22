@@ -23,7 +23,8 @@ const startServer = async () => {
       try {
         await sequelize.query("ALTER TABLE \"Orders\" ADD COLUMN IF NOT EXISTS is_printed BOOLEAN DEFAULT false;");
         await sequelize.query("ALTER TABLE \"Orders\" ADD COLUMN IF NOT EXISTS printed_at TIMESTAMP WITH TIME ZONE;");
-        console.log("🟢 [DATABASE]: Added is_printed and printed_at columns to Orders table");
+        await sequelize.query("ALTER TABLE \"Orders\" ADD COLUMN IF NOT EXISTS checkout_token VARCHAR(255);");
+        console.log("🟢 [DATABASE]: Added is_printed, printed_at and checkout_token columns to Orders table");
       } catch (printColErr) {
         console.log("ℹ️ [DATABASE]: Skipping raw Orders column addition:", printColErr.message);
       }

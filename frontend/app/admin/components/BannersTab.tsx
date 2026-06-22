@@ -6,6 +6,7 @@ import ProductBannersSection from './ProductBannersSection';
 import { productService } from '@/app/services/product.service';
 import { uploadService } from '@/app/services/upload.service';
 import { ApiProduct } from '@/app/types/types';
+import { useToast } from '@/app/context/ToastContext';
 
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
@@ -211,6 +212,7 @@ function MobileBannersSection() {
 }
 
 export default function BannersTab(props: BannersTabProps) {
+  const { toast } = useToast();
   const { slidesList, categoriesList, offersList, handleToggleSlide, handleToggleOffer, mobileBannersList, setMobileBannersList } = props;
 
   // State for per-category banner management
@@ -269,7 +271,7 @@ export default function BannersTab(props: BannersTabProps) {
                       </div>
                       <span className="text-xs font-bold text-gray-800 mt-3 block">{cat.title}</span>
                       <button
-                        onClick={() => alert("Updating Category: " + cat.title + " cover images...")}
+                        onClick={() => toast.info("Cover update function for " + cat.title + " will be integrated soon.")}
                         className="mt-3 text-[9px] font-bold text-orange-500 hover:underline flex items-center gap-1 cursor-pointer"
                       >
                         <Edit className="h-3 w-3" /> Change Cover
@@ -323,10 +325,10 @@ export default function BannersTab(props: BannersTabProps) {
                               </div>
                             )}
                           </button>
-                          <button
-                            onClick={() => alert("Updating offer content...")}
-                            className="text-[9px] font-bold text-orange-500 hover:underline"
-                          >
+                           <button
+                             onClick={() => toast.info("Offer content configuration editor will be integrated soon.")}
+                             className="text-[9px] font-bold text-orange-500 hover:underline"
+                           >
                             Edit
                           </button>
                         </div>

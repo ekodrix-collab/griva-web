@@ -4,11 +4,13 @@ import {
 } from 'lucide-react';
 import { ProductRequest, Category, SubCategory } from '@/app/types/types';
 import { productService } from '@/app/services/product.service';
+import { useToast } from '@/app/context/ToastContext';
 import { categoryService } from '@/app/services/category.service';
 import { subCategoryService } from '@/app/services/subCategory.service';
 import AddProductModal from './AddProductModal';
 
 export default function ProductsTab() {
+  const { toast, confirm } = useToast();
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
@@ -59,8 +61,9 @@ export default function ProductsTab() {
     setProducts((prev) => prev.map((x) => x.id === id ? { ...x, stock: next } : x));
     try {
       await productService.updateProductStock(id, next);
+      toast.success("Stock updated successfully");
     } catch (err) {
-      alert("Failed to update stock");
+      toast.error("Failed to update stock");
       loadData(); // Revert on failure
     }
   };
@@ -69,19 +72,25 @@ export default function ProductsTab() {
     setProducts((prev) => prev.map((p) => p.id === id ? { ...p, stock: val } : p));
     try {
       await productService.updateProductStock(id, val);
+      toast.success("Stock updated successfully");
     } catch (err) {
-      alert("Failed to update stock");
+      toast.error("Failed to update stock");
       loadData();
     }
   };
 
   const handleDeleteProduct = async (id: number) => {
-    if (confirm("Are you sure you want to delete this product?")) {
+    const isConfirmed = await confirm(
+      "Are you sure you want to delete this product? This will permanently remove the product from the catalog.",
+      "Delete Product"
+    );
+    if (isConfirmed) {
       try {
         await productService.deleteProduct(id);
         setProducts(prev => prev.filter(c => c.id !== id));
+        toast.success("Product deleted successfully");
       } catch (err) {
-        alert("Failed to delete product");
+        toast.error("Failed to delete product");
       }
     }
   };

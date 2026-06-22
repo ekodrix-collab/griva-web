@@ -5,6 +5,7 @@ import {
   ChevronDown, Package, MapPin, Mail, Hash, AlertTriangle, RefreshCw, PhoneCall,
   Printer, Download
 } from 'lucide-react';
+import { useToast } from '@/app/context/ToastContext';
 import { AdminOrder, updateOrderStatusApi, downloadOrdersExportApi, bulkPrintOrdersApi } from '../../utils/api';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
@@ -51,6 +52,7 @@ interface DeliveryBoy {
 }
 
 export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps) {
+  const { toast } = useToast();
   const searchParams = useSearchParams();
   const statusParam = searchParams?.get('status');
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
@@ -229,7 +231,7 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
-      alert("Please allow popups to print orders.");
+      toast.warning("Please allow popups in your browser to print orders.");
       return;
     }
 
@@ -359,7 +361,7 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
-      alert("Please allow popups to print orders.");
+      toast.warning("Please allow popups in your browser to print orders.");
       return;
     }
 

@@ -4,6 +4,7 @@ import {
   ToggleLeft, ToggleRight, CheckCircle, EyeOff,
   ChevronRight, Package, Sliders
 } from 'lucide-react';
+import { useToast } from '@/app/context/ToastContext';
 import {
   AnalyticsData,
   DeliverySlot,
@@ -181,6 +182,7 @@ function CategoryPieChart({ data }: { data: { category: string; sales: number }[
 }
 
 export default function OverviewTab(props: OverviewTabProps) {
+  const { toast, confirm } = useToast();
   const {
     analytics, analyticsLoading,
     announcementBarEnabled, setAnnouncementBarEnabled,
@@ -275,10 +277,17 @@ export default function OverviewTab(props: OverviewTabProps) {
   };
 
   const handleDeleteSlot = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this delivery slot?")) return;
+    const isConfirmed = await confirm(
+      "Are you sure you want to delete this delivery slot? Existing orders assigned to this slot will remain unaffected.",
+      "Delete Delivery Slot"
+    );
+    if (!isConfirmed) return;
     const deleted = await deleteDeliverySlotApi(id);
     if (deleted) {
       setSlots(prev => prev.filter(s => s.id !== id));
+      toast.success("Delivery slot deleted successfully.");
+    } else {
+      toast.error("Failed to delete delivery slot.");
     }
   };
 
@@ -524,9 +533,9 @@ export default function OverviewTab(props: OverviewTabProps) {
               setIsSavingRules(true);
               try {
                 await onSaveShippingConfig(feeInput, thresholdInput);
-                alert("Shipping rules saved successfully.");
+                toast.success("Shipping rules saved successfully.");
               } catch {
-                alert("Failed to save shipping rules.");
+                toast.error("Failed to save shipping rules.");
               }
               setIsSavingRules(false);
             }} className="space-y-4">

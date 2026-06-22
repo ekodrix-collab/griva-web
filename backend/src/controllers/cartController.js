@@ -96,10 +96,11 @@ exports.addItem = async (req, res) => {
     const { product_id, selected_color, selected_storage, quantity } = req.body;
     const qty = parseInt(quantity) || 1;
 
-    if (!product_id || qty <= 0) {
+    // MED-1: Limit per-item quantity to 10
+    if (!product_id || qty <= 0 || qty > 10) {
       return res.status(400).json({
         success: false,
-        message: "Invalid product_id or quantity.",
+        message: "Invalid product_id or quantity (must be between 1 and 10).",
       });
     }
 
@@ -108,6 +109,14 @@ exports.addItem = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Product not found.",
+      });
+    }
+
+    // HIGH-7: Check product activity
+    if (!product.is_active) {
+      return res.status(400).json({
+        success: false,
+        message: "This product is currently inactive and cannot be added to cart.",
       });
     }
 
@@ -127,6 +136,14 @@ exports.addItem = async (req, res) => {
     });
 
     const newQty = item ? item.quantity + qty : qty;
+
+    // MED-1: Enforce maximum cap of 10
+    if (newQty > 10) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot add more items. A maximum of 10 units per product variant is allowed.",
+      });
+    }
 
     // Validate inventory stock level
     if (newQty > product.stock) {
@@ -175,10 +192,11 @@ exports.updateItemQty = async (req, res) => {
     const { quantity } = req.body;
     const qty = parseInt(quantity);
 
-    if (isNaN(qty) || qty <= 0) {
+    // MED-1: limit updated qty to 10
+    if (isNaN(qty) || qty <= 0 || qty > 10) {
       return res.status(400).json({
         success: false,
-        message: "Quantity must be a positive integer greater than 0.",
+        message: "Quantity must be a positive integer between 1 and 10.",
       });
     }
 
