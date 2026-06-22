@@ -417,3 +417,62 @@ exports.getBannerActiveProducts = async (req, res) => {
     });
   }
 };
+
+//deal of the day
+exports.updateDealOfDay = async (req, res) => {
+  try {
+    const product = await Product.findByPk(req.params.id);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    const { deal_of_day} = req.body;
+
+    await product.update({
+      deal_of_day
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "deal of the day updated successfully",
+      data: product,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+//get deal of the day products
+exports.getDealOfDayProducts = async (req, res) => {
+  try {
+    const products = await Product.findAll({
+      where: {
+        deal_of_day: true,
+        is_active: true,
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      count: products.length,
+      data: products,
+    });
+  } catch (error) {
+    console.log(error);
+
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+

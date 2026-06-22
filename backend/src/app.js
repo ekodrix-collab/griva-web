@@ -68,6 +68,7 @@ const testEmailRoutes = require("./routes/testEmailRoutes");
 const deliveryAttemptRoutes = require("./routes/deliveryAttemptRoutes");
 const uploadRoutes = require("./routes/uploadRoutes"); //IMAGE UPLOAD
 const deliverySlotRoutes = require("./routes/deliverySlotRoutes");
+const dealOfDayRoutes = require("./routes/dealOfDayRoutes");
 
 // Mount API Routers
 app.use("/api/auth", authRoutes);
@@ -89,6 +90,7 @@ app.use("/api/delivery", deliveryAttemptRoutes); // FEATURE: Delivery Attempt Ma
 app.use("/api/test-email", testEmailRoutes);
 app.use("/api/uploads", uploadRoutes); //IMAGE UPLOAD
 app.use("/api/delivery-slots", deliverySlotRoutes);
+app.use("/api/deal-of-day", dealOfDayRoutes);
 
 // Global Error Handler Middleware
 app.use((err, req, res, next) => {
