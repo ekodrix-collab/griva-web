@@ -271,17 +271,6 @@ export default function CategoryPage() {
             style={{ background: `linear-gradient(to right, ${meta.accentColor}, transparent)` }}
           />
           <div className="relative p-8 md:p-12 max-w-2xl space-y-4">
-            <div className="flex items-center gap-2.5">
-              <div
-                className="p-2.5 rounded-xl border border-white/20 backdrop-blur-md"
-                style={{ background: "rgba(255,255,255,0.08)" }}
-              >
-                {meta.icon}
-              </div>
-              <span className="text-[10px] font-black tracking-[3px] uppercase text-white/60">
-                Category Catalog
-              </span>
-            </div>
             <h1 className="text-3xl md:text-5xl font-black tracking-tight leading-tight">
               {meta.title.includes("&") ? (
                 <>

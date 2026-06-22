@@ -225,7 +225,6 @@ export default function AddProductModal({ isOpen, onClose, onSuccess, productToE
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100 shrink-0">
           <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-orange-500" />
             <h4 className="text-lg font-bold text-gray-900 tracking-tight">
               {productToEdit ? "Edit Product" : "Add New Product"}
             </h4>
