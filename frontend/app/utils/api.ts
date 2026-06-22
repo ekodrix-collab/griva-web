@@ -187,12 +187,17 @@ export interface GlobalSettings {
   midnightSaleEnabled: boolean;
   shippingFee?: number;
   freeShippingThreshold?: number;
+  whatsappNumber?: string;
+  supportEmail?: string;
 }
 
 export async function getSettingsApi(): Promise<GlobalSettings> {
   const res = await safeFetch<{ settings: GlobalSettings }>(
     "/settings",
-    { method: "GET" },
+    { 
+      method: "GET",
+      cache: "no-store"
+    },
     {
       settings: {
         announcementBarEnabled: true,
