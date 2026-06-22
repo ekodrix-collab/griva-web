@@ -20,7 +20,7 @@ const startServer = async () => {
       }
 
       console.log("[DATABASE]: Syncing schemas...");
-      await sequelize.sync({ alter: true });
+      await sequelize.sync();
       console.log("🟢 [DATABASE]: Schemas synced successfully.");
     } catch (err) {
       console.error(
