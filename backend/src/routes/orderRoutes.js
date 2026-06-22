@@ -55,6 +55,12 @@ router.get("/analytics", authenticateJWT, isAdmin, orderController.getAnalytics)
 // FEATURE: Delivery Attempt Management — needs-attention must be before :id routes
 router.get("/needs-attention", authenticateJWT, isAdminOrStaff, getNeedsAttention);
 
+// Bulk Print: Mark orders as printed
+router.patch("/bulk-print", authenticateJWT, isAdminOrStaff, orderController.bulkPrintOrders);
+
+// Export orders as Excel/CSV
+router.get("/export", authenticateJWT, isAdminOrStaff, orderController.exportOrders);
+
 // Maps to: PATCH /api/orders/:id/status (e.g. /api/orders/12/status)
 router.patch("/:id/status", authenticateJWT, isAdminOrStaff, orderController.updateOrderStatus);
 

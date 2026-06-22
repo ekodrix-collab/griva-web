@@ -154,6 +154,15 @@ const Order = sequelize.define(
       type: DataTypes.DATE,
       allowNull: true,
     },
+    is_printed: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false,
+    },
+    printed_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
     delivery_slot_id: {
       type: DataTypes.INTEGER,
       allowNull: true,

@@ -9,6 +9,7 @@ router.use(isAdminOrStaff);
 
 router.get("/", customerController.getCustomers);
 router.get("/analytics", customerController.getCustomerAnalytics);
+router.get("/export", customerController.exportCustomers);
 router.get("/:id", customerController.getCustomerById);
 router.get("/:id/orders", customerController.getCustomerOrders);
 router.patch("/:id/status", customerController.updateCustomerStatus);

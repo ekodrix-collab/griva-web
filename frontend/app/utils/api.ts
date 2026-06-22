@@ -431,6 +431,8 @@ export interface AdminOrder {
   customer_email?: string;
   delivery_notes?: string;
   delivery_slot_id?: number;
+  is_printed?: boolean;
+  printed_at?: string;
 }
 
 const MOCK_ORDERS: AdminOrder[] = [
@@ -611,4 +613,123 @@ export async function updateCustomerStatusApi(id: number, status: "ACTIVE" | "BL
 }
 
 //authentication
+
+export async function downloadOrdersExportApi(params: {
+  startDate?: string;
+  endDate?: string;
+  status?: string;
+  printStatus?: string;
+  format: "csv" | "xlsx";
+}): Promise<void> {
+  const query = new URLSearchParams();
+  if (params.startDate) query.append("startDate", params.startDate);
+  if (params.endDate) query.append("endDate", params.endDate);
+  if (params.status) query.append("status", params.status);
+  if (params.printStatus) query.append("printStatus", params.printStatus);
+  query.append("format", params.format);
+
+  const pathname = window.location.pathname;
+  let token = null;
+  if (pathname.startsWith("/admin")) {
+    const activeRole = sessionStorage.getItem("griva_active_role");
+    if (activeRole === "staff") {
+      token = localStorage.getItem("griva_staff_token");
+    } else if (activeRole === "admin") {
+      token = localStorage.getItem("griva_admin_token");
+    } else {
+      token = localStorage.getItem("griva_admin_token") || localStorage.getItem("griva_staff_token");
+    }
+  } else {
+    token = localStorage.getItem("griva_user_token");
+  }
+
+  const headers: HeadersInit = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${API_BASE_URL}/orders/export?${query.toString()}`, {
+    method: "GET",
+    headers,
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to export orders");
+  }
+
+  const blob = await res.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `orders_export_${Date.now()}.${params.format}`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+}
+
+export async function downloadCustomersExportApi(params: {
+  segment?: string;
+  startDate?: string;
+  endDate?: string;
+  format: "csv" | "xlsx";
+}): Promise<void> {
+  const query = new URLSearchParams();
+  if (params.segment) query.append("segment", params.segment);
+  if (params.startDate) query.append("startDate", params.startDate);
+  if (params.endDate) query.append("endDate", params.endDate);
+  query.append("format", params.format);
+
+  const pathname = window.location.pathname;
+  let token = null;
+  if (pathname.startsWith("/admin")) {
+    const activeRole = sessionStorage.getItem("griva_active_role");
+    if (activeRole === "staff") {
+      token = localStorage.getItem("griva_staff_token");
+    } else if (activeRole === "admin") {
+      token = localStorage.getItem("griva_admin_token");
+    } else {
+      token = localStorage.getItem("griva_admin_token") || localStorage.getItem("griva_staff_token");
+    }
+  } else {
+    token = localStorage.getItem("griva_user_token");
+  }
+
+  const headers: HeadersInit = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${API_BASE_URL}/admin/customers/export?${query.toString()}`, {
+    method: "GET",
+    headers,
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to export customers");
+  }
+
+  const blob = await res.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `customers_export_${Date.now()}.${params.format}`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+}
+
+export async function bulkPrintOrdersApi(orderIds: number[]): Promise<boolean> {
+  const res = await safeFetch<any>(
+    "/orders/bulk-print",
+    {
+      method: "PATCH",
+      body: JSON.stringify({ orderIds }),
+    },
+    { success: true }
+  );
+  return !!res;
+}
+
 

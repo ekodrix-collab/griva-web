@@ -23,7 +23,8 @@ import {
   RefreshCw,
   CheckCircle,
   Clock,
-  Sparkles
+  Sparkles,
+  Download
 } from "lucide-react";
 import {
   getCustomersApi,
@@ -32,7 +33,8 @@ import {
   updateCustomerStatusApi,
   CustomerInfo,
   CustomerDetailInfo,
-  CustomerAnalyticsData
+  CustomerAnalyticsData,
+  downloadCustomersExportApi
 } from "@/app/utils/api";
 
 const FILTER_OPTIONS = [
@@ -85,6 +87,35 @@ export default function CustomersTab() {
 
   // Notification Banner
   const [alert, setAlert] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
+  // Customer Export States
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [exportSegment, setExportSegment] = useState('all');
+  const [exportStartDate, setExportStartDate] = useState('');
+  const [exportEndDate, setExportEndDate] = useState('');
+  const [exportFormat, setExportFormat] = useState<'csv' | 'xlsx'>('xlsx');
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState('');
+
+  const handleExportCustomers = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setExporting(true);
+    setExportError('');
+    try {
+      await downloadCustomersExportApi({
+        segment: exportSegment === 'all' ? undefined : exportSegment,
+        startDate: exportStartDate || undefined,
+        endDate: exportEndDate || undefined,
+        format: exportFormat,
+      });
+      setIsExportModalOpen(false);
+      triggerAlert("success", "Customers exported successfully!");
+    } catch (err: any) {
+      setExportError(err.message || 'Failed to export customer records.');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   // Fetch Core Customers List
   const fetchCustomers = async () => {
@@ -219,13 +250,29 @@ export default function CustomersTab() {
             Monitor client accounts, segment performance, order conversion, and secure status management.
           </p>
         </div>
-        <button
-          onClick={() => { fetchCustomers(); fetchAnalytics(); }}
-          className="flex items-center justify-center gap-2 self-start px-4 py-2 border border-orange-500/30 hover:bg-orange-500/5 text-gray-600 hover:text-gray-900 rounded-xl transition-all text-xs font-bold cursor-pointer"
-        >
-          <RefreshCw className="h-3.5 w-3.5" />
-          Sync Records
-        </button>
+        <div className="flex flex-wrap items-center gap-2 self-start">
+          <button
+            onClick={() => {
+              setExportSegment('all');
+              setExportStartDate('');
+              setExportEndDate('');
+              setExportFormat('xlsx');
+              setExportError('');
+              setIsExportModalOpen(true);
+            }}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:opacity-90 active:scale-95 text-white rounded-xl shadow-xs transition-all text-xs font-bold cursor-pointer h-[34px]"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Export Customers
+          </button>
+          <button
+            onClick={() => { fetchCustomers(); fetchAnalytics(); }}
+            className="flex items-center justify-center gap-2 px-4 py-2 border border-orange-500/30 hover:bg-orange-500/5 text-gray-600 hover:text-gray-900 rounded-xl transition-all text-xs font-bold cursor-pointer h-[34px]"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Sync Records
+          </button>
+        </div>
       </div>
 
       {/* Analytics Summaries Banner */}
@@ -894,6 +941,88 @@ export default function CustomersTab() {
                 Cancel
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Export Customers Modal */}
+      {isExportModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setIsExportModalOpen(false)}>
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-xs" />
+          <div className="relative bg-white rounded-2xl w-full max-w-md p-6 space-y-4 shadow-xl z-10" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-sm font-black text-gray-900 uppercase tracking-wider flex items-center gap-1.5 border-b border-orange-500/10 pb-2">
+              <Download className="h-4.5 w-4.5 text-orange-500" />
+              Export Customers Directory
+            </h3>
+            <form onSubmit={handleExportCustomers} className="space-y-4">
+              <div>
+                <label className="text-[10px] text-gray-400 font-bold uppercase block mb-1">Customer Segment</label>
+                <select
+                  value={exportSegment}
+                  onChange={(e) => setExportSegment(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-orange-500 bg-white font-bold"
+                >
+                  <option value="all">All Customers</option>
+                  <option value="registered">Registered Accounts Only</option>
+                  <option value="guest">Guest Customers Only</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] text-gray-400 font-bold uppercase block mb-1">From Date</label>
+                  <input
+                    type="date"
+                    value={exportStartDate}
+                    onChange={(e) => setExportStartDate(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-orange-500 bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-gray-400 font-bold uppercase block mb-1">To Date</label>
+                  <input
+                    type="date"
+                    value={exportEndDate}
+                    onChange={(e) => setExportEndDate(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-orange-500 bg-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-gray-400 font-bold uppercase block mb-1">Format</label>
+                <select
+                  value={exportFormat}
+                  onChange={(e) => setExportFormat(e.target.value as 'csv' | 'xlsx')}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-orange-500 bg-white font-bold"
+                >
+                  <option value="xlsx">Excel Spreadsheet (.xlsx)</option>
+                  <option value="csv">CSV Document (.csv)</option>
+                </select>
+              </div>
+
+              {exportError && (
+                <p className="text-red-600 text-xs font-bold bg-red-50 border border-red-200 rounded-xl p-2.5">
+                  {exportError}
+                </p>
+              )}
+
+              <div className="flex gap-2 pt-2 border-t border-orange-500/10">
+                <button
+                  type="submit"
+                  disabled={exporting}
+                  className="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-xs font-bold py-2.5 rounded-xl disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5 shadow-sm active:scale-98"
+                >
+                  {exporting ? 'Exporting...' : 'Start Export'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsExportModalOpen(false)}
+                  className="flex-1 bg-gray-150 text-gray-650 text-xs font-bold py-2.5 rounded-xl cursor-pointer hover:bg-gray-200 flex items-center justify-center"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -445,3 +445,136 @@ exports.updateCustomerStatus = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * Export Customer Directory (All/Registered/Guest) as Excel/CSV
+ * GET /api/admin/customers/export
+ */
+exports.exportCustomers = async (req, res, next) => {
+  try {
+    const { segment, startDate, endDate, format } = req.query;
+
+    const exportData = [];
+
+    // Date range logic for filtering
+    let dateFilter = "";
+    const replacements = {};
+    if (startDate) {
+      dateFilter += ` AND "createdAt" >= :startDate`;
+      replacements.startDate = new Date(startDate);
+    }
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      dateFilter += ` AND "createdAt" <= :endDate`;
+      replacements.endDate = end;
+    }
+
+    const includeRegistered = !segment || segment === "all" || segment === "registered";
+    const includeGuest = !segment || segment === "all" || segment === "guest";
+
+    if (includeRegistered) {
+      // Fetch registered customers
+      let userQuery = `
+        SELECT 
+          u.id, 
+          u.name, 
+          u.email, 
+          u."createdAt" AS "registrationDate",
+          COALESCE(u.phone, (SELECT mobile FROM addresses WHERE addresses."userId" = u.id LIMIT 1)) AS phone,
+          (SELECT COUNT(*)::int FROM "Orders" WHERE "Orders".user_id = u.id ${dateFilter.replace(/"createdAt"/g, '"Orders"."createdAt"')}) AS "totalOrders",
+          (SELECT MAX("createdAt") FROM "Orders" WHERE "Orders".user_id = u.id ${dateFilter.replace(/"createdAt"/g, '"Orders"."createdAt"')}) AS "lastOrderDate"
+        FROM "Users" u
+        WHERE u.role = 'customer'
+      `;
+
+      if (startDate) {
+        userQuery += ` AND u."createdAt" >= :startDate`;
+      }
+      if (endDate) {
+        userQuery += ` AND u."createdAt" <= :endDate`;
+      }
+
+      const registeredUsers = await sequelize.query(userQuery, {
+        replacements,
+        type: sequelize.QueryTypes.SELECT
+      });
+
+      registeredUsers.forEach(u => {
+        exportData.push({
+          "Customer Name": u.name,
+          "Phone": u.phone || "N/A",
+          "Email": u.email,
+          "Total Orders": parseInt(u.totalOrders, 10) || 0,
+          "Last Order Date": u.lastOrderDate ? new Date(u.lastOrderDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "N/A",
+          "Registration Date": new Date(u.registrationDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+          "Type": "Registered"
+        });
+      });
+    }
+
+    if (includeGuest) {
+      // Fetch guest customers from Orders table
+      let guestQuery = `
+        SELECT 
+          customer_email AS email,
+          MAX(customer_name) AS name,
+          MAX(customer_phone) AS phone,
+          COUNT(*)::int AS "totalOrders",
+          MAX("createdAt") AS "lastOrderDate",
+          MIN("createdAt") AS "registrationDate"
+        FROM "Orders"
+        WHERE user_id IS NULL
+      `;
+
+      if (startDate) {
+        guestQuery += ` AND "createdAt" >= :startDate`;
+      }
+      if (endDate) {
+        guestQuery += ` AND "createdAt" <= :endDate`;
+      }
+
+      guestQuery += ` GROUP BY customer_email`;
+
+      const guestUsers = await sequelize.query(guestQuery, {
+        replacements,
+        type: sequelize.QueryTypes.SELECT
+      });
+
+      guestUsers.forEach(g => {
+        exportData.push({
+          "Customer Name": g.name || "Guest Customer",
+          "Phone": g.phone || "N/A",
+          "Email": g.email,
+          "Total Orders": parseInt(g.totalOrders, 10) || 0,
+          "Last Order Date": g.lastOrderDate ? new Date(g.lastOrderDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "N/A",
+          "Registration Date": new Date(g.registrationDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+          "Type": "Guest"
+        });
+      });
+    }
+
+    // Sort by registration date descending
+    exportData.sort((a, b) => new Date(b["Registration Date"]).getTime() - new Date(a["Registration Date"]).getTime());
+
+    const XLSX = require("xlsx");
+    if (format === "csv") {
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const csvContent = XLSX.utils.sheet_to_csv(worksheet);
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", `attachment; filename=customers_export_${Date.now()}.csv`);
+      return res.send(csvContent);
+    } else {
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Customers");
+      const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", `attachment; filename=customers_export_${Date.now()}.xlsx`);
+      return res.send(buffer);
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
