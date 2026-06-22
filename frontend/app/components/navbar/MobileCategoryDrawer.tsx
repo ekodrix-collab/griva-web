@@ -5,7 +5,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { X, Sparkles, Smile, Baby, Smartphone, Gamepad2, Utensils } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { categories, products } from "@/app/data/data";
+import { categories } from "@/app/data/data";
+import { useAllProducts } from "@/app/hooks/useProducts";
 
 function getCategoryIcon(title: string) {
   const cls = "w-6 h-6";
@@ -35,11 +36,10 @@ interface Props {
 
 export default function MobileCategoryDrawer({ isOpen, onClose }: Props) {
   const [activeCategory, setActiveCategory] = useState(categories[0]);
+  const { products } = useAllProducts();
 
-  const key = activeCategory.title.toLowerCase().replace(/ & /g, "-").replace(/ /g, "-");
-  const filteredProducts = products.filter((p) =>
-    p.category.toLowerCase() === key
-  );
+  // No direct category slug on ApiProduct — show all products as featured items
+  const filteredProducts = products.slice(0, 6);
 
   return (
     <AnimatePresence>
@@ -84,11 +84,10 @@ export default function MobileCategoryDrawer({ isOpen, onClose }: Props) {
                     <button
                       key={cat.title}
                       onClick={() => setActiveCategory(cat)}
-                      className={`w-full flex flex-col items-center gap-1.5 py-4 px-1 transition-colors border-l-[3px] ${
-                        isActive
+                      className={`w-full flex flex-col items-center gap-1.5 py-4 px-1 transition-colors border-l-[3px] ${isActive
                           ? "border-orange-500 bg-white text-orange-500"
                           : "border-transparent text-gray-600 hover:bg-white"
-                      }`}
+                        }`}
                     >
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isActive ? "bg-orange-50" : "bg-gray-100"}`}>
                         <Image
@@ -140,7 +139,7 @@ export default function MobileCategoryDrawer({ isOpen, onClose }: Props) {
                       >
                         <div className="w-full h-20 relative bg-gray-50 rounded-lg overflow-hidden">
                           <Image
-                            src={product.image}
+                            src={product.main_image_url}
                             alt={product.title}
                             fill
                             className="object-contain p-1"
@@ -149,7 +148,7 @@ export default function MobileCategoryDrawer({ isOpen, onClose }: Props) {
                         <p className="text-[10px] font-semibold text-gray-800 text-center line-clamp-2 leading-tight">
                           {product.title}
                         </p>
-                        <span className="text-[11px] font-bold text-orange-500">{product.price}</span>
+                        <span className="text-[11px] font-bold text-orange-500">QAR {Number(product.price).toFixed(2)}</span>
                       </Link>
                     ))}
                   </div>

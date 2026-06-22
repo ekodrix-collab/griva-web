@@ -1,6 +1,6 @@
 "use client";
 
-import { TrendingProduct } from "@/app/types/types";
+import { ApiProduct } from "@/app/types/types";
 import Image from "next/image";
 import Link from "next/link";
 import Rating from "../rating/Rating";
@@ -11,10 +11,20 @@ import { motion } from "framer-motion";
 export default function TrendingProductCard({
   product,
 }: {
-  product: TrendingProduct;
+  product?: ApiProduct;
 }) {
   const { toggleWishlist, isInWishlist } = useWishlist();
+
+  if (!product) return null;
+
   const isWishlisted = isInWishlist(product.id);
+
+  const formatPrice = (price?: string | number) => {
+    if (!price) return null;
+    const value = typeof price === "string" ? Number(price) : price;
+    if (Number.isNaN(value)) return String(price);
+    return value.toFixed(2);
+  };
 
   const handleWishlistToggle = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -22,11 +32,11 @@ export default function TrendingProductCard({
     toggleWishlist({
       id: product.id,
       title: product.title,
-      image: product.image,
-      price: product.price,
-      oldPrice: product.oldPrice,
+      image: product.main_image_url,
+      price: `QAR ${formatPrice(product.price)}`,
+      oldPrice: product.old_price ? `QAR ${formatPrice(product.old_price)}` : undefined,
       rating: product.rating,
-      category: product.category,
+      category: "Product",
     });
   };
 
@@ -44,13 +54,13 @@ export default function TrendingProductCard({
         className="group relative flex rounded-xl p-4 shadow-sm hover:shadow transition border border-gray-100 hover:border-orange-200"
       >
         {/* Badges */}
-        <div className="absolute left-3 top-3 z-10 flex gap-1">
-          {product.badge && (
+        <div className="absolute left-3 top-2.5 z-20 flex gap-1">
+          {product.discount_percentage && product.discount_percentage > 0 && (
             <span className="rounded bg-orange-500 px-2 py-0.5 text-[9px] font-extrabold text-white uppercase">
-              {product.badge}
+              -{product.discount_percentage}%
             </span>
           )}
-          {product.hot && (
+          {product.is_trending && (
             <span className="rounded bg-red-600 px-2 py-0.5 text-[9px] font-extrabold text-white uppercase animate-pulse">
               HOT
             </span>
@@ -59,15 +69,33 @@ export default function TrendingProductCard({
 
         {/* Product Image */}
         <div className="relative flex h-[130px] w-[130px] shrink-0 items-center justify-center rounded-lg bg-gray-50/50 p-2 mt-2">
-          <Image
-            src={product.image}
-            alt={product.title}
-            width={110}
-            height={110}
-            priority
-            className="object-contain transition-transform duration-300 group-hover:scale-105"
-            style={{ width: "auto", height: "auto" }}
-          />
+          <div className="relative w-full h-full flex items-center justify-center">
+            {/* Main Image */}
+            <Image
+              src={product.main_image_url}
+              alt={product.title}
+              width={110}
+              height={110}
+              priority
+              className={`object-contain transition-all duration-500 ${
+                product.gallery_images && product.gallery_images.length > 0
+                  ? "group-hover:opacity-0 group-hover:scale-95 group-hover:pointer-events-none"
+                  : "group-hover:scale-105"
+              }`}
+              style={{ width: "auto", height: "auto" }}
+            />
+            {/* Hover Image (Second Image) */}
+            {product.gallery_images && product.gallery_images.length > 0 && (
+              <Image
+                src={product.gallery_images[0]}
+                alt={`${product.title} Alternate`}
+                width={110}
+                height={110}
+                className="absolute inset-0 z-10 m-auto object-contain opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500 pointer-events-none"
+                style={{ width: "auto", height: "auto" }}
+              />
+            )}
+          </div>
           {/* Fav Icon */}
           <button
             onClick={handleWishlistToggle}
@@ -86,10 +114,12 @@ export default function TrendingProductCard({
 
         {/* Content */}
         <div className="ml-4 flex flex-1 flex-col justify-center min-w-0">
-          {/* Category */}
-          <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">
-            {product.category}
-          </p>
+          {/* Category/Brand */}
+          {product.brand && product.brand.trim() !== "" && (
+            <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">
+              {product.brand}
+            </p>
+          )}
 
           {/* Title */}
           <h3 className="mt-1 line-clamp-2 text-sm font-semibold leading-[1.4] text-gray-900 transition-colors group-hover:text-orange-500">
@@ -97,18 +127,19 @@ export default function TrendingProductCard({
           </h3>
 
           {/* Rating */}
-          <div className="mt-1">
+          <div className="mt-1 flex items-center gap-1.5">
             <Rating rating={product.rating} />
+            <span className="text-[10px] text-gray-400">({product.review_count})</span>
           </div>
 
           {/* Price */}
           <div className="mt-2.5 flex items-center gap-2">
             <span className="text-base font-bold text-orange-500">
-              {product.price}
+              QAR {formatPrice(product.price)}
             </span>
-            {product.oldPrice && (
+            {product.old_price && (
               <span className="text-xs text-gray-400 line-through">
-                {product.oldPrice}
+                QAR {formatPrice(product.old_price)}
               </span>
             )}
           </div>

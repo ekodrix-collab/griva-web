@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ShoppingBag, ArrowLeft, Trash2, Plus, Minus } from "lucide-react";
@@ -38,9 +39,37 @@ export default function CartPage() {
     }
   };
 
-  const shippingCost = state.totalPrice > 50 || state.totalPrice === 0 ? 0 : 9.99;
-  const estimatedTax = state.totalPrice * 0.08;
-  const orderTotal = state.totalPrice + shippingCost + estimatedTax;
+  const [shippingConfig, setShippingConfig] = useState({
+    shippingFee: 15,
+    freeShippingThreshold: 150,
+  });
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/settings`);
+        if (res.ok) {
+          const data = await res.json();
+          const s = data.settings;
+          if (s) {
+            setShippingConfig({
+              shippingFee: parseFloat(s.shippingFee) || 15,
+              freeShippingThreshold: parseFloat(s.freeShippingThreshold) || 150,
+            });
+          }
+        }
+      } catch {
+        // Use defaults silently
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const shippingCost =
+    state.totalPrice >= shippingConfig.freeShippingThreshold || state.totalPrice === 0
+      ? 0
+      : shippingConfig.shippingFee;
+  const orderTotal = state.totalPrice + shippingCost;
 
   return (
     <div className="bg-gray-50/50 min-h-screen py-8">
@@ -48,7 +77,53 @@ export default function CartPage() {
         <SectionHeading title="Your Shopping Cart" subtitle="Manage items before completing purchase" />
 
         {state.items.length > 0 ? (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="space-y-6">
+            {/* Free Shipping Alert Card */}
+            <div className="bg-white rounded-2xl border border-orange-500/20 shadow-sm p-5 animate-in fade-in duration-300">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-9 w-9 rounded-xl bg-orange-50 flex items-center justify-center shrink-0">
+                    <span className="text-lg">🚚</span>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-gray-900">
+                      {state.totalPrice >= shippingConfig.freeShippingThreshold ? (
+                        <span className="text-green-600 font-extrabold">You qualify for Free Delivery!</span>
+                      ) : (
+                        <span>Free Shipping Above QAR {shippingConfig.freeShippingThreshold.toFixed(0)}</span>
+                      )}
+                    </h4>
+                    <p className="text-[11px] text-gray-500 mt-0.5">
+                      {state.totalPrice >= shippingConfig.freeShippingThreshold ? (
+                        "Your order will be shipped free of charge within Qatar."
+                      ) : (
+                        <>Add <span className="font-bold text-orange-500">QAR {(shippingConfig.freeShippingThreshold - state.totalPrice).toFixed(2)}</span> more to get Free Delivery</>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                {state.totalPrice < shippingConfig.freeShippingThreshold && (
+                  <Link
+                    href="/shop"
+                    className="text-xs font-bold text-orange-500 hover:text-orange-600 transition shrink-0 self-start sm:self-center"
+                  >
+                    + Add More Items
+                  </Link>
+                )}
+              </div>
+
+              {/* Progress Bar */}
+              <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-orange-500 to-amber-500 transition-all duration-500 ease-out rounded-full"
+                  style={{
+                    width: `${Math.min((state.totalPrice / shippingConfig.freeShippingThreshold) * 100, 100)}%`,
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             {/* Left side: Item list */}
             <div className="lg:col-span-8 space-y-4">
               <div className="flex justify-between items-center mb-2">
@@ -134,10 +209,10 @@ export default function CartPage() {
                       {/* Price */}
                       <div className="text-right sm:min-w-[80px]">
                         <span className="text-sm font-bold text-orange-500">
-                          ${(item.priceNumber * item.quantity).toFixed(2)}
+                          QAR {(item.priceNumber * item.quantity).toFixed(2)}
                         </span>
                         <p className="text-[10px] text-gray-400">
-                          ${item.priceNumber.toFixed(2)} each
+                          QAR {item.priceNumber.toFixed(2)} each
                         </p>
                       </div>
 
@@ -164,7 +239,7 @@ export default function CartPage() {
                 <div className="space-y-4 text-sm">
                   <div className="flex justify-between text-gray-600">
                     <span>Subtotal</span>
-                    <span className="font-semibold text-gray-900">${state.totalPrice.toFixed(2)}</span>
+                    <span className="font-semibold text-gray-900">QAR {state.totalPrice.toFixed(2)}</span>
                   </div>
 
                   <div className="flex justify-between text-gray-600">
@@ -173,19 +248,14 @@ export default function CartPage() {
                       {shippingCost === 0 ? (
                         <span className="text-green-600">Free</span>
                       ) : (
-                        `$${shippingCost.toFixed(2)}`
+                        `QAR ${shippingCost.toFixed(2)}`
                       )}
                     </span>
                   </div>
 
-                  <div className="flex justify-between text-gray-600">
-                    <span>Estimated Tax (8%)</span>
-                    <span className="font-semibold text-gray-900">${estimatedTax.toFixed(2)}</span>
-                  </div>
-
                   <div className="border-t pt-4 flex justify-between text-base font-bold text-gray-900">
                     <span>Order Total</span>
-                    <span className="text-orange-500">${orderTotal.toFixed(2)}</span>
+                    <span className="text-orange-500">QAR {orderTotal.toFixed(2)}</span>
                   </div>
                 </div>
 
@@ -201,6 +271,7 @@ export default function CartPage() {
                 </div>
               </div>
             </div>
+          </div>
           </div>
         ) : (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center max-w-lg mx-auto mt-8">

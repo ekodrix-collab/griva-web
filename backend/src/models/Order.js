@@ -33,6 +33,11 @@ const Order = sequelize.define(
       autoIncrement: true,
       primaryKey: true,
     },
+    order_number: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      unique: true,
+    },
     user_id: {
       type: DataTypes.INTEGER,
       allowNull: true,
@@ -45,7 +50,7 @@ const Order = sequelize.define(
       type: DataTypes.STRING,
       defaultValue: "pending",
       validate: {
-        isIn: [["pending", "shipped", "completed", "cancelled"]],
+        isIn: [["pending", "processing", "assigned", "out_for_delivery", "shipped", "delivered", "completed", "cancelled", "attempted", "rescheduled", "failed", "returned"]],
       },
     },
     total_price: {
@@ -53,10 +58,12 @@ const Order = sequelize.define(
       allowNull: false,
       get() {
         const rawValue = this.getDataValue("total_price");
-        return rawValue ? `$${rawValue}` : null;
+        if (!rawValue) return null;
+        const cleaned = typeof rawValue === "string" ? rawValue.replace(/([$]|qar|[\s,])/gi, "") : rawValue;
+        return `QAR ${parseFloat(cleaned).toFixed(2)}`;
       },
       set(val) {
-        const cleanedVal = typeof val === "string" ? parseFloat(val.replace(/[$,]/g, "")) : val;
+        const cleanedVal = typeof val === "string" ? parseFloat(val.replace(/([$]|qar|[\s,])/gi, "")) : val;
         this.setDataValue("total_price", cleanedVal);
       },
     },
@@ -74,7 +81,12 @@ const Order = sequelize.define(
     },
     customer_email: {
       type: DataTypes.STRING,
-      allowNull: true,
+      allowNull: false,
+      validate: {
+        isEmail: {
+          msg: "Must be a valid email address",
+        },
+      },
     },
     payment_method: {
       type: DataTypes.STRING,
@@ -94,6 +106,71 @@ const Order = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    // FEATURE: Delivery Boy System
+    delivery_boy_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: "Users",
+        key: "id",
+      },
+    },
+    assigned_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    // FEATURE: Delivery Attempt Management and Order Reopen System
+    delivery_attempts: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+      allowNull: false,
+    },
+    attempt_notes: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    failed_reason: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    reschedule_time: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    reopened_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    reopened_by: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    reopen_count: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+      allowNull: false,
+    },
+    reviewed_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    is_printed: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false,
+    },
+    printed_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    delivery_slot_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: "delivery_slots",
+        key: "id",
+      },
+    },
   },
   {
     timestamps: true,
@@ -101,7 +178,10 @@ const Order = sequelize.define(
 );
 
 // Mappings
-Order.belongsTo(User, { foreignKey: "user_id", as: "user" });
-User.hasMany(Order, { foreignKey: "user_id", as: "orders" });
+Order.associate = (models) => {
+  Order.belongsTo(models.User, { foreignKey: "user_id", as: "user" });
+  Order.belongsTo(models.User, { foreignKey: "delivery_boy_id", as: "deliveryBoy" });
+  Order.belongsTo(models.DeliverySlot, { foreignKey: "delivery_slot_id", as: "deliverySlot" });
+};
 
 module.exports = Order;

@@ -14,8 +14,9 @@ exports.getSettings = async (req, res, next) => {
         fridaySaleEnabled: true,
         midnightSaleEnabled: false,
         whatsappNumber: "+97455551234",
-        supportEmail: "support@griva.qa",
+        supportEmail: "support@thegriva.com",
         shippingFee: 15.00,
+        freeShippingThreshold: 150.00,
       });
     }
     res.status(200).json({ settings: setting });
@@ -37,6 +38,7 @@ exports.updateSettings = async (req, res, next) => {
       whatsappNumber,
       supportEmail,
       shippingFee,
+      freeShippingThreshold,
     } = req.body;
     
     let setting = await SiteSetting.findOne();
@@ -47,8 +49,9 @@ exports.updateSettings = async (req, res, next) => {
         fridaySaleEnabled: fridaySaleEnabled !== undefined ? fridaySaleEnabled : true,
         midnightSaleEnabled: midnightSaleEnabled !== undefined ? midnightSaleEnabled : false,
         whatsappNumber: whatsappNumber || "+97455551234",
-        supportEmail: supportEmail || "support@griva.qa",
+        supportEmail: supportEmail || "support@thegriva.com",
         shippingFee: shippingFee !== undefined ? shippingFee : 15.00,
+        freeShippingThreshold: freeShippingThreshold !== undefined ? freeShippingThreshold : 150.00,
       });
     } else {
       if (announcementBarEnabled !== undefined) setting.announcementBarEnabled = announcementBarEnabled;
@@ -58,6 +61,7 @@ exports.updateSettings = async (req, res, next) => {
       if (whatsappNumber !== undefined) setting.whatsappNumber = whatsappNumber;
       if (supportEmail !== undefined) setting.supportEmail = supportEmail;
       if (shippingFee !== undefined) setting.shippingFee = shippingFee;
+      if (freeShippingThreshold !== undefined) setting.freeShippingThreshold = freeShippingThreshold;
       await setting.save();
     }
 

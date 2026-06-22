@@ -34,6 +34,7 @@ const footerLinks: FooterLinkGroup[] = [
   {
     title: "Customer Policies",
     links: [
+      { label: "Track Order", href: "/track-order" },
       { label: "Terms of Service", href: "/terms" },
       { label: "Privacy Policy", href: "/privacy" },
       { label: "Return Policy", href: "/returns" },
@@ -69,7 +70,7 @@ export default function Footer() {
   };
 
   const pathname = usePathname();
-  if (pathname.startsWith("/admin")) return null;
+  if (pathname.startsWith("/admin") || pathname.startsWith("/delivery")) return null;
 
   return (
     <footer className="w-full bg-black pt-12 border-t border-zinc-800 text-white">
@@ -78,10 +79,8 @@ export default function Footer() {
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 mb-10">
           {/* Brand and Description (lg:col-span-4) */}
           <div className="lg:col-span-4 space-y-4">
-            <Link href="/" className="flex items-center gap-1">
-              <h2 className="text-xl font-bold tracking-tight text-white">
-                GR<span className="text-orange-500 font-extrabold">i</span>VA
-              </h2>
+            <Link href="/" className="flex items-center gap-1 shrink-0">
+              <img src="/images/logo-light.png" alt="Griva Logo" className="h-7 w-auto object-contain" />
             </Link>
             <p className="max-w-[280px] text-xs leading-relaxed text-zinc-400">
               Your go-to store for authenticated, high-quality flagship electronics, audio gear, and gadgets.
@@ -123,9 +122,8 @@ export default function Footer() {
                     <span>{group.title}</span>
                     <ChevronDown
                       size={14}
-                      className={`text-zinc-500 md:hidden transition-transform duration-200 ${
-                        isOpen ? "rotate-180" : ""
-                      }`}
+                      className={`text-zinc-500 md:hidden transition-transform duration-200 ${isOpen ? "rotate-180" : ""
+                        }`}
                     />
                   </button>
 
@@ -212,21 +210,10 @@ export default function Footer() {
         </div>
 
         {/* Bottom copyright section */}
-        <div className="border-t border-zinc-800 py-6 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="border-t border-zinc-800 py-6 flex flex-col md:flex-row items-center justify-center gap-4">
           <p className="text-[11px] text-zinc-500 font-medium">
             © {new Date().getFullYear()} GriVA Store. All Rights Reserved.
           </p>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {["MasterCard", "PayPal", "American Express", "Bitcoin", "Visa"].map((card) => (
-              <div
-                key={card}
-                className="rounded border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-[9px] font-semibold text-zinc-400"
-              >
-                {card}
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     </footer>

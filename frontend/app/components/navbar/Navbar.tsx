@@ -7,14 +7,12 @@ import {
   Menu,
   ShoppingCart,
   Search,
-  Headphones,
-  Heart,
   User,
   Home,
   LayoutGrid,
+  Package,
 } from "lucide-react";
 import { useCart } from "@/app/context/CartContext";
-import { useWishlist } from "@/app/context/WishlistContext";
 import { useSearch } from "@/app/context/SearchContext";
 import { useUser } from "@/app/context/UserContext";
 import { useScrolled } from "@/app/hooks/useScrolled";
@@ -29,9 +27,11 @@ export default function Navbar() {
   const pathname = usePathname();
 
   const { state: cartState, openDrawer } = useCart();
-  const { items: wishlistItems } = useWishlist();
   const { searchQuery, setSearchQuery, filters, setFilters } = useSearch();
-  const { state: userState } = useUser();
+  const { state: userState, isAuthenticated, isCustomer, logout } = useUser();
+
+  // Only treat user as logged-in on the frontend if they are a customer (not admin)
+  const isCustomerLoggedIn = isAuthenticated && isCustomer;
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [categoryDrawerOpen, setCategoryDrawerOpen] = useState(false);
@@ -61,7 +61,7 @@ export default function Navbar() {
     }));
   };
 
-  if (pathname.startsWith("/admin")) return null;
+  if (pathname.startsWith("/admin") || pathname.startsWith("/delivery")) return null;
 
   return (
     <div>
@@ -75,9 +75,7 @@ export default function Navbar() {
         <div className="hidden sm:flex mx-auto h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8 gap-4 w-full">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 shrink-0">
-            <h1 className="text-2xl tracking-tight text-black font-semibold">
-              GR<span className="text-orange-500 font-extrabold">i</span>VA
-            </h1>
+            <img src="/images/logo-dark.png" alt="Griva Logo" className="h-9 w-auto object-contain" />
           </Link>
 
           {/* Search Bar - Desktop */}
@@ -108,7 +106,7 @@ export default function Navbar() {
               <Link
                 href={`/shop?search=${encodeURIComponent(searchQuery)}`}
                 onClick={() => setSearchFocused(false)}
-                className="bg-orange-500 flex items-center justify-center px-6 text-xs font-bold text-white transition hover:bg-orange-600 uppercase shrink-0"
+                className="bg-[#FF6A00] flex items-center justify-center px-6 text-xs font-bold text-white transition hover:bg-orange-600 uppercase shrink-0"
               >
                 Search
               </Link>
@@ -124,31 +122,6 @@ export default function Navbar() {
 
           {/* Right Actions */}
           <div className="hidden lg:flex items-center gap-6 shrink-0">
-            {/* Help */}
-            <div className="flex items-center gap-2">
-              <Headphones size={18} className="text-black" />
-              <div className="leading-tight">
-                <p className="text-[10px] text-gray-400">Need Help?</p>
-                <p className="text-xs font-bold text-orange-500 hover:underline">+08 9229 8228</p>
-              </div>
-            </div>
-
-            {/* Wishlist */}
-            <Link href="/wishlist" className="relative flex items-center gap-2 group">
-              <div className="relative">
-                <Heart size={18} className="text-black group-hover:text-orange-500 transition-colors" />
-                {wishlistItems.length > 0 && (
-                  <span className="absolute -right-2 -top-2 flex h-4. w-4. items-center justify-center rounded-full bg-orange-500 text-[9px] font-bold text-white px-1">
-                    {wishlistItems.length}
-                  </span>
-                )}
-              </div>
-              <div className="text-left leading-tight">
-                <p className="text-[10px] text-gray-400">Favorites</p>
-                <p className="text-xs font-bold text-black group-hover:text-orange-500 transition-colors">Wishlist</p>
-              </div>
-            </Link>
-
             {/* Cart */}
             <button
               onClick={openDrawer}
@@ -163,28 +136,81 @@ export default function Navbar() {
                 )}
               </div>
               <div className="text-left leading-tight">
-                <p className="text-[10px] text-gray-400">My Cart</p>
                 <p className="text-xs font-bold text-black group-hover:text-orange-500 transition-colors">
-                  ${cartState.totalPrice.toFixed(2)}
+                  My Cart
                 </p>
               </div>
             </button>
 
-            {/* User */}
-            <Link
-              href={userState.isLoggedIn ? "/account" : "/login"}
-              className="relative flex items-center gap-2 group cursor-pointer"
-            >
-              <div className="relative">
-                <User size={18} className="text-black group-hover:text-orange-500 transition-colors" />
+            {/* User with Dropdown */}
+            <div className="relative group py-2">
+              <Link
+                href={isCustomerLoggedIn ? "/account" : "/auth/login"}
+                className="flex items-center gap-2 cursor-pointer"
+              >
+                <div className="relative">
+                  <User size={18} className="text-black group-hover:text-orange-500 transition-colors" />
+                </div>
+                <div className="text-left leading-tight">
+                  <p className="text-[10px] text-gray-400">{isCustomerLoggedIn ? "Account" : "Welcome"}</p>
+                  <p className="text-xs font-bold text-black group-hover:text-orange-500 transition-colors truncate max-w-28">
+                    {isCustomerLoggedIn ? userState.user?.name : "Sign In"}
+                  </p>
+                </div>
+              </Link>
+
+              {/* Dropdown Menu */}
+              <div className="absolute right-0 top-full mt-1 w-48 rounded-xl border border-gray-100 bg-white p-2 shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                {isCustomerLoggedIn ? (
+                  <>
+                    <div className="px-3 py-1.5 border-b border-gray-50 mb-1">
+                      <p className="text-[10px] text-gray-400">Signed in as</p>
+                      <p className="text-xs font-bold text-gray-800 truncate">{userState.user?.name}</p>
+                    </div>
+                    <Link
+                      href="/account"
+                      className="block rounded-lg px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-orange-50 hover:text-orange-500 transition-colors"
+                    >
+                      My Profile
+                    </Link>
+                    <Link
+                      href="/track-order"
+                      className="block rounded-lg px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-orange-50 hover:text-orange-500 transition-colors"
+                    >
+                      Track Order
+                    </Link>
+                    <button
+                      onClick={() => logout()}
+                      className="w-full text-left block rounded-lg px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                    >
+                      Sign Out
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      href="/auth/login"
+                      className="block rounded-lg px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-orange-50 hover:text-orange-500 transition-colors"
+                    >
+                      Sign In
+                    </Link>
+                    <Link
+                      href="/auth/register-account"
+                      className="block rounded-lg px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-orange-50 hover:text-orange-500 transition-colors"
+                    >
+                      Register Account
+                    </Link>
+                    <div className="border-t border-gray-100 my-1" />
+                    <Link
+                      href="/track-order"
+                      className="block rounded-lg px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-orange-50 hover:text-orange-500 transition-colors"
+                    >
+                      Track Order
+                    </Link>
+                  </>
+                )}
               </div>
-              <div className="text-left leading-tight">
-                <p className="text-[10px] text-gray-400">{userState.isLoggedIn ? "Account" : "Welcome"}</p>
-                <p className="text-xs font-bold text-black group-hover:text-orange-500 transition-colors truncate max-w-20">
-                  {userState.isLoggedIn ? userState.user?.name : "Sign In"}
-                </p>
-              </div>
-            </Link>
+            </div>
           </div>
 
           {/* Tablet Actions (Visible only on tablets/medium screens: >= 640px and < 1024px) */}
@@ -197,19 +223,6 @@ export default function Navbar() {
             >
               <Search size={20} />
             </button>
-
-            {/* Wishlist Button */}
-            <Link
-              href="/wishlist"
-              className="relative p-2 text-gray-700 hover:text-orange-500 transition-colors rounded-lg"
-            >
-              <Heart size={20} />
-              {wishlistItems.length > 0 && (
-                <span className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-orange-500 text-[9px] font-bold text-white">
-                  {wishlistItems.length}
-                </span>
-              )}
-            </Link>
 
             {/* Cart Button */}
             <button
@@ -226,7 +239,7 @@ export default function Navbar() {
 
             {/* User Button */}
             <Link
-              href={userState.isLoggedIn ? "/account" : "/login"}
+              href={isCustomerLoggedIn ? "/account" : "/auth/login"}
               className="p-2 text-gray-700 hover:text-orange-500 transition-colors rounded-lg"
             >
               <User size={20} />
@@ -247,9 +260,7 @@ export default function Navbar() {
           <div className="flex sm:hidden flex-row items-center justify-between gap-3 px-4 py-2 w-full">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 shrink-0">
-              <h1 className="text-xl tracking-tight text-black font-semibold">
-                GR<span className="text-orange-500 font-extrabold">i</span>VA
-              </h1>
+              <img src="/images/logo-dark.png" alt="Griva Logo" className="h-6 w-auto object-contain" />
             </Link>
 
             {/* Search Input Box */}
@@ -333,9 +344,8 @@ export default function Navbar() {
             {/* Home */}
             <Link
               href="/"
-              className={`flex flex-col items-center justify-center w-14 h-full transition-colors ${
-                pathname === "/" ? "text-orange-500" : "text-gray-600 hover:text-orange-500"
-              }`}
+              className={`flex flex-col items-center justify-center w-14 h-full transition-colors ${pathname === "/" ? "text-orange-500" : "text-gray-600 hover:text-orange-500"
+                }`}
             >
               <Home size={20} />
               <span className="text-[10px] mt-1 font-medium tracking-tight">Home</span>
@@ -368,14 +378,13 @@ export default function Navbar() {
 
             {/* Account / User */}
             <Link
-              href={userState.isLoggedIn ? "/account" : "/login"}
-              className={`flex flex-col items-center justify-center w-14 h-full transition-colors ${
-                pathname === "/account" || pathname === "/login" ? "text-orange-500" : "text-gray-600 hover:text-orange-500"
-              }`}
+              href={isCustomerLoggedIn ? "/account" : "/auth/login"}
+              className={`flex flex-col items-center justify-center w-14 h-full transition-colors ${pathname === "/account" || pathname === "/auth/login" ? "text-orange-500" : "text-gray-600 hover:text-orange-500"
+                }`}
             >
               <User size={20} />
               <span className="text-[10px] mt-1 font-medium tracking-tight">
-                {userState.isLoggedIn ? "Account" : "Sign In"}
+                {isCustomerLoggedIn ? "Account" : "Sign In"}
               </span>
             </Link>
 

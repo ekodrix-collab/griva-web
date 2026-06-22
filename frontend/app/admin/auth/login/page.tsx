@@ -3,11 +3,8 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sparkles, Eye, EyeOff, Lock, Mail, ShieldAlert } from "lucide-react";
-import { loginApi } from "../../utils/api";
-
-const FALLBACK_EMAIL = "admin@griva.qa";
-const FALLBACK_PASSWORD = "AdminPassword123!";
-const ADMIN_KEY = "griva_admin_auth";
+import { authService } from "@/app/services/auth.service";
+import { useUser } from "@/app/context/UserContext";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -16,6 +13,7 @@ export default function AdminLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const { login } = useUser();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,24 +21,20 @@ export default function AdminLoginPage() {
     setLoading(true);
 
     try {
-      // Try backend first
-      const result = await loginApi(email, password);
+      const result = await authService.login({ email, password });
       if (result && result.token) {
-        localStorage.setItem(ADMIN_KEY, "true");
-        localStorage.setItem("token", result.token);
-        localStorage.setItem("admin_user", JSON.stringify(result.user));
-        router.push("/admin");
-        return;
+        const role = result.user?.role;
+        if (role === "admin" || role === "staff") {
+          login({ name: result.user?.name || email.split("@")[0], email, role }, result.token);
+          router.push("/admin");
+          return;
+        } else {
+          setError("Invalid credentials. Access restricted to authorized personnel.");
+          return;
+        }
       }
 
-      // Fallback to hardcoded credentials if backend offline
-      if (email === FALLBACK_EMAIL && password === FALLBACK_PASSWORD) {
-        localStorage.setItem(ADMIN_KEY, "true");
-        router.push("/admin");
-        return;
-      }
-
-      setError("Invalid admin credentials. Please try again.");
+      setError("Invalid credentials. Please try again.");
     } catch {
       setError("Unable to connect to server. Please try again.");
     } finally {
@@ -63,9 +57,7 @@ export default function AdminLoginPage() {
             <div className="h-12 w-12 rounded-xl bg-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/40 mb-4">
               <Sparkles className="h-6 w-6 text-gray-900" />
             </div>
-            <h1 className="text-2xl font-black tracking-wider bg-gradient-to-r from-orange-400 to-amber-500 bg-clip-text text-transparent">
-              GRIVA
-            </h1>
+            <img src="/images/logo-dark.png" alt="Griva Logo" className="h-8 w-auto object-contain mb-1" />
             <p className="text-[10px] text-gray-400 font-bold tracking-widest uppercase mt-1">
               Admin Dashboard Access
             </p>
@@ -91,7 +83,7 @@ export default function AdminLoginPage() {
                 <input
                   type="email"
                   required
-                  placeholder="admin@griva.qa"
+                  placeholder="admin@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full bg-white border border-orange-500/30 rounded-xl pl-10 pr-4 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-500 transition-colors"
@@ -142,14 +134,18 @@ export default function AdminLoginPage() {
                 </>
               )}
             </button>
-          </form>
 
-          {/* Credentials hint */}
-          <div className="mt-6 p-3 rounded-xl bg-orange-500/5 border border-orange-500/20">
-            <p className="text-center text-[10px] text-gray-500 font-semibold">
-              Default: <span className="text-orange-500 font-bold">admin@griva.qa</span> / <span className="text-orange-500 font-bold">AdminPassword123!</span>
-            </p>
-          </div>
+            {/* Forgot Password */}
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => router.push("/admin/auth/forgot-password")}
+                className="text-xs font-medium text-orange-500 hover:text-orange-600 transition-colors cursor-pointer"
+              >
+                Forgot Password?
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

@@ -15,7 +15,7 @@ const SiteSetting = sequelize.define(
     },
     announcementBarText: {
       type: DataTypes.STRING,
-      defaultValue: "Free shipping across Doha for orders over $150!",
+      defaultValue: "Free shipping across Doha for orders over QAR 150!",
     },
     fridaySaleEnabled: {
       type: DataTypes.BOOLEAN,
@@ -35,11 +35,15 @@ const SiteSetting = sequelize.define(
     },
     supportEmail: {
       type: DataTypes.STRING,
-      defaultValue: "support@griva.qa",
+      defaultValue: "support@thegriva.com",
     },
     shippingFee: {
       type: DataTypes.DECIMAL(10, 2),
       defaultValue: 15.00,
+    },
+    freeShippingThreshold: {
+      type: DataTypes.DECIMAL(10, 2),
+      defaultValue: 150.00,
     },
   },
   {

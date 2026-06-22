@@ -29,10 +29,51 @@
  * item at the exact same millisecond).
  */
 
+const { Op } = require("sequelize");
+const { sequelize } = require("../config/db");
+const Order = require("../models/Order");
+const OrderItem = require("../models/OrderItem");
+const Product = require("../models/Product");
+const SubCategory = require("../models/SubCategory");
+const Category = require("../models/Category");
+const User = require("../models/User");
+const Cart = require("../models/Cart");
+const CartItem = require("../models/CartItem");
 const SiteSetting = require("../models/SiteSetting");
 
+/**
+ * Generate a production-safe order number: GRV-YYYYMMDD-XXXX
+ * Runs inside a transaction to prevent duplicates under concurrency.
+ */
+async function generateOrderNumber(transaction) {
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, "0");
+  const dd = String(today.getDate()).padStart(2, "0");
+  const dateStr = `${yyyy}${mm}${dd}`;
+  const prefix = `GRV-${dateStr}-`;
+
+  // Find the highest order number for today
+  const lastOrder = await Order.findOne({
+    where: {
+      order_number: { [Op.like]: `${prefix}%` },
+    },
+    order: [["order_number", "DESC"]],
+    transaction,
+    lock: transaction.LOCK.UPDATE,
+  });
+
+  let nextSeq = 1;
+  if (lastOrder && lastOrder.order_number) {
+    const lastSeq = parseInt(lastOrder.order_number.split("-").pop(), 10);
+    if (!isNaN(lastSeq)) nextSeq = lastSeq + 1;
+  }
+
+  return `${prefix}${String(nextSeq).padStart(4, "0")}`;
+}
+
 exports.createOrder = async (req, res, next) => {
-  const transaction = await sequelize.transaction();
+  let transaction;
 
   try {
     const {
@@ -64,6 +105,7 @@ exports.createOrder = async (req, res, next) => {
     const resolvedStatus    = payment_status   || paymentStatus   || "unpaid";
     const resolvedNotes     = delivery_notes   || deliveryNotes   || null;
     const resolvedCity      = city || null;
+    const resolvedSlotId    = req.body.delivery_slot_id || req.body.deliverySlotId || null;
 
     const userId = req.user ? req.user.id : null;
 
@@ -73,6 +115,28 @@ exports.createOrder = async (req, res, next) => {
 
     if (!resolvedAddress) {
       return res.status(400).json({ error: "Shipping delivery address is required." });
+    }
+
+    if (!resolvedSlotId) {
+      return res.status(400).json({ error: "Preferred delivery time slot is required." });
+    }
+
+    if (!resolvedEmail) {
+      return res.status(400).json({ error: "Email address is required." });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(resolvedEmail)) {
+      return res.status(400).json({ error: "Invalid email address format." });
+    }
+
+    transaction = await sequelize.transaction();
+
+    const DeliverySlot = require("../models/DeliverySlot");
+    const activeSlot = await DeliverySlot.findByPk(resolvedSlotId, { transaction });
+    if (!activeSlot || !activeSlot.is_active) {
+      await transaction.rollback();
+      return res.status(400).json({ error: "Selected delivery slot is invalid or inactive." });
     }
 
     let calculatedTotal = 0;
@@ -93,6 +157,13 @@ exports.createOrder = async (req, res, next) => {
         await transaction.rollback();
         return res.status(409).json({
           error: `Insufficient stock for '${product.title}'. Only ${product.stock} units available.`,
+          code: "INSUFFICIENT_STOCK",
+          details: {
+            productId: product.id,
+            title: product.title,
+            requestedQuantity: item.quantity,
+            availableStock: product.stock,
+          },
         });
       }
 
@@ -113,9 +184,23 @@ exports.createOrder = async (req, res, next) => {
       orderSummaryLines.push(`▪ ${product.title} x${item.quantity} — QAR ${unitPrice}`);
     }
 
+    // Fetch site settings for shipping fee calculation
+    const settings = await SiteSetting.findOne({ transaction });
+    const shippingFee = settings ? parseFloat(settings.shippingFee) : 15.00;
+    const freeShippingThreshold = settings ? parseFloat(settings.freeShippingThreshold) : 150.00;
+
+    let finalTotal = calculatedTotal;
+    if (calculatedTotal < freeShippingThreshold && calculatedTotal > 0) {
+      finalTotal += shippingFee;
+    }
+
+    // Generate production-safe order number: GRV-YYYYMMDD-XXXX
+    const orderNumber = await generateOrderNumber(transaction);
+
     const order = await Order.create({
+      order_number: orderNumber,
       user_id: userId,
-      total_price: calculatedTotal,
+      total_price: finalTotal,
       shipping_address: resolvedAddress,
       status: "pending",
       customer_name: resolvedName,
@@ -125,6 +210,7 @@ exports.createOrder = async (req, res, next) => {
       payment_status: resolvedStatus,
       delivery_notes: resolvedNotes,
       city: resolvedCity,
+      delivery_slot_id: resolvedSlotId,
     }, { transaction });
 
     const finalizedItems = itemsToCreate.map((item) => ({
@@ -133,40 +219,118 @@ exports.createOrder = async (req, res, next) => {
     }));
 
     await OrderItem.bulkCreate(finalizedItems, { transaction });
+
+    // Clear the user's database cart after successful order placement
+    if (userId) {
+      const userCart = await Cart.findOne({ where: { user_id: userId }, transaction });
+      if (userCart) {
+        await CartItem.destroy({ where: { cart_id: userCart.id }, transaction });
+      }
+    }
+
     await transaction.commit();
-
-    // --- Build WhatsApp redirect URL ---
-    const settings = await SiteSetting.findOne();
-    const waNumber = (settings?.whatsappNumber || "+97455551234").replace(/\D/g, "");
-    const waMessage = [
-      `🛒 *New GriVA Order #${order.id}*`,
-      ``,
-      `👤 *Customer:* ${resolvedName || "Guest"}`,
-      `📞 *Phone:* ${resolvedPhone || "Not provided"}`,
-      `📧 *Email:* ${resolvedEmail || "Not provided"}`,
-      `🏙️ *City:* ${resolvedCity || ""}`,
-      `📍 *Address:* ${resolvedAddress}`,
-      ``,
-      `📦 *Items:*`,
-      ...orderSummaryLines,
-      ``,
-      `💰 *Total:* QAR ${calculatedTotal.toFixed(2)}`,
-      `💳 *Payment:* ${resolvedMethod}`,
-      resolvedNotes ? `📝 *Notes:* ${resolvedNotes}` : null,
-    ]
-      .filter(Boolean)
-      .join("\n");
-
-    const whatsapp_url = `https://wa.me/${waNumber}?text=${encodeURIComponent(waMessage)}`;
 
     res.status(201).json({
       success: true,
       message: "Order placed successfully.",
-      order,
-      whatsapp_url,
+      order: {
+        id: order.id,
+        order_number: order.order_number,
+        status: order.status,
+        total_price: order.total_price,
+        payment_method: order.payment_method,
+        createdAt: order.createdAt,
+        delivery_slot_id: order.delivery_slot_id,
+      },
     });
   } catch (error) {
-    await transaction.rollback();
+    if (transaction) await transaction.rollback();
+    next(error);
+  }
+};
+
+/**
+ * Guest Order Tracking — look up order by order_number + phone
+ * GET /api/orders/track?order_number=GRV-...&phone=+974...
+ * No authentication required.
+ */
+exports.trackGuestOrder = async (req, res, next) => {
+  try {
+    const { order_number, phone } = req.query;
+
+    if (!order_number || !phone) {
+      return res.status(400).json({
+        success: false,
+        message: "Both order_number and phone are required.",
+      });
+    }
+
+    // Normalize phone: strip all non-digits, match using the last 6 digits as suffix to tolerate spaces/country codes
+    const digitsOnly = phone.replace(/\D/g, "");
+    const phoneSuffix = digitsOnly.length >= 6 ? digitsOnly.slice(-6) : digitsOnly;
+
+    if (!phoneSuffix) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter a valid phone number.",
+      });
+    }
+
+    const DeliverySlot = require("../models/DeliverySlot");
+    const order = await Order.findOne({
+      where: {
+        order_number,
+        customer_phone: {
+          [Op.like]: `%${phoneSuffix}`,
+        },
+      },
+      include: [
+        {
+          model: DeliverySlot,
+          as: "deliverySlot",
+          attributes: ["id", "name", "start_time", "end_time"],
+        },
+        {
+          model: OrderItem,
+          as: "items",
+          include: {
+            model: Product,
+            as: "product",
+            attributes: ["id", "title", "main_image_url", "price"],
+          },
+        },
+      ],
+    });
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found. Please check your order number and phone number.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      order: {
+        id: order.id,
+        order_number: order.order_number,
+        status: order.status,
+        total_price: order.total_price,
+        shipping_address: order.shipping_address,
+        customer_name: order.customer_name,
+        customer_phone: order.customer_phone,
+        payment_method: order.payment_method,
+        payment_status: order.payment_status,
+        delivery_notes: order.delivery_notes,
+        city: order.city,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
+        items: order.items,
+        delivery_slot_id: order.delivery_slot_id,
+        deliverySlot: order.deliverySlot,
+      },
+    });
+  } catch (error) {
     next(error);
   }
 };
@@ -179,9 +343,15 @@ exports.getMyOrders = async (req, res, next) => {
   try {
     const userId = req.user.id;
 
+    const DeliverySlot = require("../models/DeliverySlot");
     const orders = await Order.findAll({
       where: { user_id: userId },
       include: [
+        {
+          model: DeliverySlot,
+          as: "deliverySlot",
+          attributes: ["id", "name", "start_time", "end_time"],
+        },
         {
           model: OrderItem,
           as: "items",
@@ -220,6 +390,9 @@ exports.updateOrderStatus = async (req, res, next) => {
     }
 
     order.status = status;
+    if (!order.reviewed_at) {
+      order.reviewed_at = new Date();
+    }
     await order.save();
 
     res.status(200).json({
@@ -232,16 +405,44 @@ exports.updateOrderStatus = async (req, res, next) => {
 };
 
 /**
+ * Admin / Staff Action: Mark order as reviewed
+ */
+exports.reviewOrder = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const order = await Order.findByPk(id);
+    if (!order) {
+      return res.status(404).json({ error: "Order not found." });
+    }
+    order.reviewed_at = new Date();
+    await order.save();
+    res.status(200).json({
+      success: true,
+      message: "Order marked as reviewed.",
+      order,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * Fetch all platform order receipts (Admin Panel)
  */
 exports.getAllOrders = async (req, res, next) => {
   try {
+    const DeliverySlot = require("../models/DeliverySlot");
     const orders = await Order.findAll({
       include: [
         {
           model: User,
           as: "user",
           attributes: ["id", "email"],
+        },
+        {
+          model: DeliverySlot,
+          as: "deliverySlot",
+          attributes: ["id", "name", "start_time", "end_time"],
         },
         {
           model: OrderItem,
@@ -272,16 +473,21 @@ exports.getAnalytics = async (req, res, next) => {
         {
           model: OrderItem,
           as: "items",
-          include: {
+          include: [{
             model: Product,
             as: "product",
             attributes: ["id", "title", "price"],
-            include: {
-              model: Category,
-              as: "category",
+            include: [{
+              model: SubCategory,
+              as: "subcategory",
               attributes: ["id", "title"],
-            }
-          }
+              include: [{
+                model: Category,
+                as: "category",
+                attributes: ["id", "title"],
+              }]
+            }]
+          }]
         }
       ]
     });
@@ -289,19 +495,20 @@ exports.getAnalytics = async (req, res, next) => {
     let totalSales = 0;
     let totalOrders = orders.length;
     let uniqueUserIds = new Set();
-    let orderStatusCounts = { pending: 0, shipped: 0, completed: 0, cancelled: 0 };
+    let orderStatusCounts = { pending: 0, shipped: 0, delivered: 0, cancelled: 0 };
     let categorySalesMap = {};
     let dateSalesMap = {};
 
     orders.forEach((order) => {
       // Clean '$' symbol if formatted in getters
       const rawPrice = order.getDataValue("total_price");
-      const orderTotal = typeof rawPrice === "string" ? parseFloat(rawPrice.replace(/[$,]/g, "")) : parseFloat(rawPrice) || 0;
+      const orderTotal = typeof rawPrice === "string" ? parseFloat(rawPrice.replace(/([$]|qar|[\s,])/gi, "")) : parseFloat(rawPrice) || 0;
       
       totalSales += orderTotal;
       uniqueUserIds.add(order.user_id);
 
-      const status = order.status || "pending";
+      let status = order.status || "pending";
+      if (status === "completed") status = "delivered";
       if (orderStatusCounts[status] !== undefined) {
         orderStatusCounts[status]++;
       }
@@ -315,9 +522,9 @@ exports.getAnalytics = async (req, res, next) => {
 
       if (order.items) {
         order.items.forEach((item) => {
-          const categoryTitle = item.product?.category?.title || "Other";
+          const categoryTitle = item.product?.subcategory?.category?.title || "Other";
           const itemPrice = typeof item.price_at_purchase === "string" 
-            ? parseFloat(item.price_at_purchase.replace(/[$,]/g, "")) 
+            ? parseFloat(item.price_at_purchase.replace(/([$]|qar|[\s,])/gi, "")) 
             : parseFloat(item.price_at_purchase) || 0;
           const itemTotal = itemPrice * (item.quantity || 1);
           categorySalesMap[categoryTitle] = (categorySalesMap[categoryTitle] || 0) + itemTotal;
@@ -353,3 +560,258 @@ exports.getAnalytics = async (req, res, next) => {
     next(error);
   }
 };
+
+// ─────────────────────────────────────────────────────────
+// FEATURE: Delivery Boy System
+// Created: 2026-06-18
+// Do not modify without checking delivery feature docs
+// ─────────────────────────────────────────────────────────
+
+/**
+ * PATCH /api/orders/:id/assign
+ * Admin assigns a delivery boy to an order
+ */
+exports.assignDeliveryBoy = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { deliveryBoyId } = req.body;
+
+    if (!deliveryBoyId) {
+      return res.status(400).json({
+        success: false,
+        message: "deliveryBoyId is required.",
+      });
+    }
+
+    const order = await Order.findByPk(id);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found.",
+      });
+    }
+
+    // Verify the delivery boy exists and has role 'delivery'
+    const deliveryBoy = await User.findByPk(deliveryBoyId);
+    if (!deliveryBoy || deliveryBoy.role !== "delivery") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid delivery boy ID or user is not a delivery staff member.",
+      });
+    }
+
+    order.delivery_boy_id = deliveryBoyId;
+    order.assigned_at = new Date();
+    order.status = "assigned";
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Order ${order.order_number || order.id} assigned to ${deliveryBoy.name}.`,
+      order,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/admin/delivery-boys
+ * Admin fetches all delivery boy accounts with active order count
+ */
+exports.getDeliveryBoys = async (req, res, next) => {
+  try {
+    const deliveryBoys = await User.findAll({
+      where: { role: "delivery" },
+      attributes: ["id", "name", "email", "createdAt"],
+    });
+
+    // Count active (non-delivered, non-cancelled) orders per driver
+    const result = [];
+    for (const driver of deliveryBoys) {
+      const activeOrderCount = await Order.count({
+        where: {
+          delivery_boy_id: driver.id,
+          status: {
+            [Op.notIn]: ["delivered", "completed", "cancelled"],
+          },
+        },
+      });
+
+      result.push({
+        id: driver.id,
+        name: driver.name,
+        email: driver.email,
+        activeOrderCount,
+        createdAt: driver.createdAt,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      deliveryBoys: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/orders/admin/delivery-boys
+ * Admin creates/registers a new delivery boy account
+ */
+exports.createDeliveryBoy = async (req, res, next) => {
+  try {
+    const { name, email, password } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Name, email, and password are required.",
+      });
+    }
+
+    const existingUser = await User.findOne({ where: { email } });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is already registered.",
+      });
+    }
+
+    const newDriver = await User.create({
+      name,
+      email,
+      password,
+      role: "delivery",
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Delivery boy account created successfully.",
+      deliveryBoy: {
+        id: newDriver.id,
+        name: newDriver.name,
+        email: newDriver.email,
+        role: newDriver.role,
+        createdAt: newDriver.createdAt,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Bulk print orders: Mark orders as printed
+ * PATCH /api/orders/bulk-print
+ */
+exports.bulkPrintOrders = async (req, res, next) => {
+  try {
+    const { orderIds } = req.body;
+    if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
+      return res.status(400).json({ error: "orderIds array is required." });
+    }
+
+    await Order.update(
+      {
+        is_printed: true,
+        printed_at: new Date(),
+      },
+      {
+        where: {
+          id: {
+            [Op.in]: orderIds,
+          },
+        },
+      }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Orders marked as printed successfully.",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Export orders as CSV or Excel
+ * GET /api/orders/export
+ */
+exports.exportOrders = async (req, res, next) => {
+  try {
+    const { startDate, endDate, status, printStatus, format } = req.query;
+
+    const where = {};
+
+    if (startDate || endDate) {
+      where.createdAt = {};
+      if (startDate) where.createdAt[Op.gte] = new Date(startDate);
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        where.createdAt[Op.lte] = end;
+      }
+    }
+
+    if (status && status !== "all") {
+      where.status = status;
+    }
+
+    if (printStatus && printStatus !== "all") {
+      if (printStatus === "printed") {
+        where.is_printed = true;
+      } else if (printStatus === "unprinted") {
+        where.is_printed = false;
+      }
+    }
+
+    const DeliverySlot = require("../models/DeliverySlot");
+    const orders = await Order.findAll({
+      where,
+      include: [
+        {
+          model: DeliverySlot,
+          as: "deliverySlot",
+          attributes: ["id", "name", "start_time", "end_time"],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+
+    const exportData = orders.map((o) => ({
+      "Order Number": o.order_number || `ORD-${String(o.id).padStart(4, "0")}`,
+      "Order Date": new Date(o.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+      "Customer Name": o.customer_name || "N/A",
+      "Phone Number": o.customer_phone || "N/A",
+      "Status": o.status,
+      "Delivery Slot": o.deliverySlot ? o.deliverySlot.name : "N/A",
+      "Total Amount": o.total_price || "—",
+      "Payment Method": o.payment_method || "COD",
+      "Address": o.shipping_address,
+      "Created Date": o.createdAt,
+    }));
+
+    const XLSX = require("xlsx");
+    if (format === "csv") {
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const csvContent = XLSX.utils.sheet_to_csv(worksheet);
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", `attachment; filename=orders_export_${Date.now()}.csv`);
+      return res.send(csvContent);
+    } else {
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Orders");
+      const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", `attachment; filename=orders_export_${Date.now()}.xlsx`);
+      return res.send(buffer);
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+

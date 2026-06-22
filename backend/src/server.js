@@ -11,8 +11,25 @@ const startServer = async () => {
 
   if (process.env.DB_SYNC === "true") {
     try {
+      // Safely alter the ENUM role type in PostgreSQL if it exists
+      try {
+        await sequelize.query("ALTER TYPE \"enum_Users_role\" ADD VALUE IF NOT EXISTS 'staff'");
+        console.log("🟢 [DATABASE]: Altered role ENUM type if PostgreSQL to support 'staff'");
+      } catch (enumErr) {
+        console.log("ℹ️ [DATABASE]: Skipping raw ENUM alteration (type may not exist or not PostgreSQL):", enumErr.message);
+      }
+
+      // Safely add printing tracking columns to Orders table if they don't exist
+      try {
+        await sequelize.query("ALTER TABLE \"Orders\" ADD COLUMN IF NOT EXISTS is_printed BOOLEAN DEFAULT false;");
+        await sequelize.query("ALTER TABLE \"Orders\" ADD COLUMN IF NOT EXISTS printed_at TIMESTAMP WITH TIME ZONE;");
+        console.log("🟢 [DATABASE]: Added is_printed and printed_at columns to Orders table");
+      } catch (printColErr) {
+        console.log("ℹ️ [DATABASE]: Skipping raw Orders column addition:", printColErr.message);
+      }
+
       console.log("[DATABASE]: Syncing schemas...");
-      await sequelize.sync({ alter: true });
+      await sequelize.sync();
       console.log("🟢 [DATABASE]: Schemas synced successfully.");
     } catch (err) {
       console.error(
@@ -52,6 +69,7 @@ const createDefaultAdmin = async () => {
   }
 };
 
-startServer();
+startServer(); // trigger nodemon restart
+
 
 

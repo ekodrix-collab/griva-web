@@ -89,7 +89,7 @@ export default function CartDrawer() {
               <div className="border-t bg-gray-50 px-6 py-6 space-y-4">
                 <div className="flex justify-between text-base font-semibold text-gray-900">
                   <span>Subtotal</span>
-                  <span className="text-orange-500">${state.totalPrice.toFixed(2)}</span>
+                  <span className="text-orange-500">QAR {state.totalPrice.toFixed(2)}</span>
                 </div>
                 <p className="text-xs text-gray-400">
                   Shipping and taxes calculated at checkout.

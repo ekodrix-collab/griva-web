@@ -1,4 +1,6 @@
 const User = require("../models/User");
+const Order = require("../models/Order");
+const { Op } = require("sequelize");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 
@@ -10,6 +12,8 @@ const generateToken = (user) => {
     {
       id: user.id,
       role: user.role,
+      name: user.name,
+      email: user.email,
     },
     process.env.JWT_SECRET,
     {
@@ -58,6 +62,28 @@ exports.register = async (req, res, next) => {
 
     const token = generateToken(user);
 
+    // Account Linking: link guest orders by matching phone or email
+    try {
+      const userPhone = user.email; // email is always present
+      const linkedCount = await Order.update(
+        { user_id: user.id },
+        {
+          where: {
+            user_id: null,
+            [Op.or]: [
+              ...(email ? [{ customer_email: email.toLowerCase().trim() }] : []),
+            ],
+          },
+        }
+      );
+      if (linkedCount[0] > 0) {
+        console.log(`✅ Linked ${linkedCount[0]} guest order(s) to new user ${user.id}`);
+      }
+    } catch (linkError) {
+      // Non-critical — log but don't fail registration
+      console.error("⚠️ Guest order linking failed:", linkError.message);
+    }
+
     return res.status(201).json({
       success: true,
       message: "Account created successfully.",
@@ -96,6 +122,13 @@ exports.login = async (req, res, next) => {
       return res.status(401).json({
         success: false,
         message: "Invalid credentials.",
+      });
+    }
+
+    if (user.status === "BLOCKED") {
+      return res.status(403).json({
+        success: false,
+        message: "Your account has been blocked. Please contact customer support.",
       });
     }
 
@@ -179,9 +212,13 @@ exports.forgotPassword = async (req, res, next) => {
       resetPasswordToken: resetToken,
       resetPasswordExpire,
     });
-
-    const resetUrl =`${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
-
+    let resetUrl;
+    if(user.role === "customer"){
+        resetUrl =`${process.env.FRONTEND_URL}/auth/reset-password/${resetToken}`;
+    }else{
+        resetUrl =`${process.env.FRONTEND_URL}/admin/auth/reset-password/${resetToken}`;
+    }
+    
     console.log("Reset URL:", resetUrl);
 
     return res.status(200).json({

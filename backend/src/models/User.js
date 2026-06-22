@@ -43,9 +43,18 @@ const User = sequelize.define(
     },
 
     role: {
-      type: DataTypes.ENUM("customer", "admin"),
+      type: DataTypes.ENUM("customer", "admin", "delivery", "staff"),
       allowNull: false,
       defaultValue: "customer",
+    },
+    status: {
+      type: DataTypes.ENUM("ACTIVE", "BLOCKED"),
+      allowNull: false,
+      defaultValue: "ACTIVE",
+    },
+    phone: {
+      type: DataTypes.STRING,
+      allowNull: true,
     },
     resetPasswordToken: {
       type: DataTypes.STRING,
@@ -97,6 +106,17 @@ const User = sequelize.define(
  */
 User.prototype.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
+};
+
+User.associate = (models) => {
+  User.hasMany(models.Address, {
+    foreignKey: "userId",
+    as: "addresses",
+  });
+  User.hasMany(models.Notification, {
+    foreignKey: "userId",
+    as: "notifications",
+  });
 };
 
 module.exports = User;

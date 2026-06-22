@@ -12,6 +12,18 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "images.pexels.com",
       },
+      {
+        protocol: "https",
+        hostname: "www.pngmart.com",
+      },
+      {
+        protocol: "https",
+        hostname: "fdn2.gsmarena.com",
+      },
+      {
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+      }
     ],
   },
   turbopack: {
