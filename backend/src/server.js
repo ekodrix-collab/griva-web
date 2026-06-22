@@ -28,6 +28,14 @@ const startServer = async () => {
         console.log("ℹ️ [DATABASE]: Skipping raw Orders column addition:", printColErr.message);
       }
 
+      // Safely drop NOT NULL constraint on OrderItems product_id so deleting products is allowed
+      try {
+        await sequelize.query("ALTER TABLE \"OrderItems\" ALTER COLUMN \"product_id\" DROP NOT NULL;");
+        console.log("🟢 [DATABASE]: Dropped NOT NULL constraint on OrderItems.product_id");
+      } catch (dropNotNullErr) {
+        console.log("ℹ️ [DATABASE]: Skipping DROP NOT NULL on OrderItems.product_id:", dropNotNullErr.message);
+      }
+
       console.log("[DATABASE]: Syncing schemas...");
       await sequelize.sync();
       console.log("🟢 [DATABASE]: Schemas synced successfully.");
