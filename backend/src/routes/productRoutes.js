@@ -17,6 +17,7 @@ router.get("/subcategory/:subcategoryId", authenticateOptionalJWT, productContro
 router.get("/:id", authenticateOptionalJWT, productController.getProductById);
 
 
+
 /**
  * Admin / Staff Routes
  */
@@ -27,5 +28,6 @@ router.delete("/:id",authenticateJWT,isAdminOrStaff,productController.deleteProd
 
 //banner routes
 router.patch("/:id/banner",authenticateJWT,isAdminOrStaff,productController.updateBannerStatus);
+
 
 module.exports = router;

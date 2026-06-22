@@ -195,21 +195,73 @@ export default function ProductPage({ params }: ProductPageProps) {
 
               {/* Ratings Summary */}
               <div className="mt-3 flex items-center gap-3">
-                <div className="flex items-center gap-0.5">
-                  {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      className={`h-4 w-4 ${
-                        i < Math.round(product.rating)
-                          ? "fill-orange-400 text-orange-400"
-                          : "text-gray-200"
-                      }`}
-                    />
-                  ))}
-                </div>
-                <span className="text-xs font-semibold text-gray-500 hover:underline cursor-pointer">
-                  {product.review_count ?? 0} Reviews
-                </span>
+                {(() => {
+                  const count = product.review_count ?? 0;
+                  if (count === 0) {
+                    return (
+                      <>
+                        <span className="text-[10px] font-bold text-orange-500 bg-orange-50 px-2.5 py-1 rounded border border-orange-200">
+                          New Arrival
+                        </span>
+                        <span 
+                          onClick={() => setActiveTab("reviews")}
+                          className="text-xs font-semibold text-gray-500 hover:underline cursor-pointer"
+                        >
+                          Be first to review
+                        </span>
+                      </>
+                    );
+                  } else if (count >= 1 && count <= 4) {
+                    return (
+                      <>
+                        <div className="flex items-center gap-0.5">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`h-4 w-4 ${
+                                i < Math.round(product.rating)
+                                  ? "fill-orange-400 text-orange-400"
+                                  : "text-gray-200"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <span 
+                          onClick={() => setActiveTab("reviews")}
+                          className="text-xs font-semibold text-gray-500 hover:underline cursor-pointer"
+                        >
+                          {count} {count === 1 ? "Review" : "Reviews"}
+                        </span>
+                        <span className="text-[10px] font-bold text-blue-500 bg-blue-50 px-2.5 py-1 rounded border border-blue-200">
+                          Early Reviews
+                        </span>
+                      </>
+                    );
+                  } else {
+                    return (
+                      <>
+                        <div className="flex items-center gap-0.5">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`h-4 w-4 ${
+                                i < Math.round(product.rating)
+                                  ? "fill-orange-400 text-orange-400"
+                                  : "text-gray-200"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <span 
+                          onClick={() => setActiveTab("reviews")}
+                          className="text-xs font-semibold text-gray-500 hover:underline cursor-pointer"
+                        >
+                          {count} Reviews
+                        </span>
+                      </>
+                    );
+                  }
+                })()}
                 <span className="text-gray-300">|</span>
                 <span className="text-xs font-semibold text-green-600">
                   {product.stock > 0 ? `In Stock (${product.stock} left)` : "Out of Stock"}
@@ -226,7 +278,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                     QAR {formatPrice(product.old_price)}
                   </span>
                 )}
-                {product.discount_percentage && product.discount_percentage > 0 && (
+                {(product.discount_percentage ?? 0) > 0 && (
                   <span className="text-xs font-bold text-white bg-orange-500 px-2 py-0.5 rounded-full">
                     -{product.discount_percentage}%
                   </span>

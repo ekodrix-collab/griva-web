@@ -26,6 +26,7 @@ export default function ProductsTab() {
 
   const [stockPromptProductId, setStockPromptProductId] = useState<number | null>(null);
   const [stockPromptValue, setStockPromptValue] = useState<string>('');
+  const [deleteConfirmProductId, setDeleteConfirmProductId] = useState<number | null>(null);
 
   useEffect(() => {
     loadData();
@@ -79,20 +80,8 @@ export default function ProductsTab() {
     }
   };
 
-  const handleDeleteProduct = async (id: number) => {
-    const isConfirmed = await confirm(
-      "Are you sure you want to delete this product? This will permanently remove the product from the catalog.",
-      "Delete Product"
-    );
-    if (isConfirmed) {
-      try {
-        await productService.deleteProduct(id);
-        setProducts(prev => prev.filter(c => c.id !== id));
-        toast.success("Product deleted successfully");
-      } catch (err) {
-        toast.error("Failed to delete product");
-      }
-    }
+  const handleDeleteProduct = (id: number) => {
+    setDeleteConfirmProductId(id);
   };
 
   const handleConfirmAddStock = () => {
@@ -368,6 +357,46 @@ export default function ProductsTab() {
                 className="px-5 py-2 bg-orange-500 text-white text-sm font-bold rounded-xl hover:bg-orange-600 transition-colors cursor-pointer"
               >
                 Add Stock
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteConfirmProductId !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white p-6 rounded-2xl w-full max-w-sm border border-orange-500/20 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 text-red-500 mb-3">
+              <div className="p-2 bg-red-50 rounded-xl">
+                <Trash2 className="h-6 w-6" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900">Delete Product</h3>
+            </div>
+            <p className="text-xs text-gray-500 leading-relaxed mb-6">
+              Are you sure you want to delete this product? This action cannot be undone and will permanently remove it from the catalog.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setDeleteConfirmProductId(null)}
+                className="px-4 py-2 text-xs font-bold text-gray-500 hover:text-gray-900 transition-colors cursor-pointer border-none outline-none"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  const id = deleteConfirmProductId;
+                  setDeleteConfirmProductId(null);
+                  try {
+                    await productService.deleteProduct(id);
+                    setProducts(prev => prev.filter(c => c.id !== id));
+                    toast.success("Product deleted successfully");
+                  } catch (err) {
+                    toast.error("Failed to delete product");
+                  }
+                }}
+                className="px-5 py-2.5 bg-red-500 text-white text-xs font-bold rounded-xl hover:bg-red-600 transition-colors cursor-pointer shadow-md shadow-red-500/10 border-none outline-none"
+              >
+                Delete Product
               </button>
             </div>
           </div>

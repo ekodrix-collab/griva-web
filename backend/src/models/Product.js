@@ -1,5 +1,6 @@
 const { DataTypes } = require("sequelize");
 const { sequelize } = require("../config/db");
+const DealOfDay = require("./DealOfDay");
 
 const Product = sequelize.define(
   "Product",
@@ -54,6 +55,11 @@ const Product = sequelize.define(
     mobile_ad_banner:{
       type: DataTypes.STRING,
       allowNull: true,
+    },
+
+    deal_of_day:{
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
     },
 
     discount_percentage: {
@@ -179,5 +185,15 @@ Product.associate = (models) => {
     as: "subcategory",
   });
 };
+
+Product.hasOne(DealOfDay, {
+  foreignKey: "productId",
+  as: "dealOfDay",
+});
+
+DealOfDay.belongsTo(Product, {
+  foreignKey: "productId",
+  as: "product",
+});
 
 module.exports = Product;

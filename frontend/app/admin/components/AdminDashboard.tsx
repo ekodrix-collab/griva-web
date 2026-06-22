@@ -250,8 +250,8 @@ export default function AdminDashboard() {
           )}
           {activeTab === "banners" && (
             <BannersTab
-              slidesList={slidesList} categoriesList={categoriesList} offersList={offersList}
-              handleToggleSlide={() => { }} handleToggleOffer={handleToggleOffer}
+              slidesList={slidesList}
+              handleToggleSlide={() => { }}
               mobileBannersList={mobileBannersList} setMobileBannersList={setMobileBannersList}
             />
           )}
