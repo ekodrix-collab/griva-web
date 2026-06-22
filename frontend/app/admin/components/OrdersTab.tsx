@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   ShoppingCart, CheckCircle, Truck, XCircle, Clock, UserCheck,
-  ChevronDown, Package, MapPin, Mail, Hash, AlertTriangle, RefreshCw, PhoneCall
+  ChevronDown, Package, MapPin, Mail, Hash, AlertTriangle, RefreshCw, PhoneCall,
+  Printer, Download
 } from 'lucide-react';
-import { AdminOrder, updateOrderStatusApi } from '../../utils/api';
+import { AdminOrder, updateOrderStatusApi, downloadOrdersExportApi, bulkPrintOrdersApi } from '../../utils/api';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
@@ -59,6 +60,15 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
   const [filterSlot, setFilterSlot] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDateRange, setFilterDateRange] = useState('all');
+  const [filterPrintStatus, setFilterPrintStatus] = useState<string>('all');
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [exportStartDate, setExportStartDate] = useState('');
+  const [exportEndDate, setExportEndDate] = useState('');
+  const [exportStatus, setExportStatus] = useState('all');
+  const [exportPrintStatus, setExportPrintStatus] = useState('all');
+  const [exportFormat, setExportFormat] = useState<'csv' | 'xlsx'>('xlsx');
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState('');
 
   useEffect(() => {
     if (statusParam) {
@@ -207,6 +217,334 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
     }
   };
 
+  const printOrderSlip = (order: AdminOrder) => {
+    const itemsHtml = (order.items || []).map(item => `
+      <tr style="border-bottom: 1px solid #eee;">
+        <td style="padding: 8px 0; font-size: 14px;">${item.quantity} x ${item.product?.title || `Product #${item.product_id}`}</td>
+        <td style="padding: 8px 0; text-align: right; font-size: 14px; font-weight: bold;">
+          QAR ${(Number(String(item.price_at_purchase).replace(/([$]|qar|[\s,])/gi, "")) * item.quantity).toFixed(2)}
+        </td>
+      </tr>
+    `).join('');
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert("Please allow popups to print orders.");
+      return;
+    }
+
+    const orderNumber = order.order_number || `ORD-${String(order.id).padStart(4, '0')}`;
+    const orderDate = new Date(order.createdAt).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
+
+    const html = `
+      <html>
+        <head>
+          <title>Print Order ${orderNumber}</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              margin: 20px;
+              color: #333;
+              line-height: 1.4;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 20px;
+            }
+            .header h1 {
+              margin: 0;
+              font-size: 24px;
+              letter-spacing: 2px;
+            }
+            .section {
+              margin-bottom: 15px;
+              padding-bottom: 10px;
+              border-bottom: 1px dashed #ccc;
+            }
+            .section-title {
+              font-size: 12px;
+              text-transform: uppercase;
+              color: #777;
+              font-weight: bold;
+              margin-bottom: 5px;
+            }
+            .info-row {
+              margin-bottom: 4px;
+              font-size: 14px;
+            }
+            .info-label {
+              font-weight: bold;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 15px 0;
+            }
+            .total-row {
+              font-size: 16px;
+              font-weight: bold;
+              display: flex;
+              justify-content: space-between;
+              margin-top: 10px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>GRIVA</h1>
+            <p style="font-size: 12px; margin: 5px 0 0 0; color: #666;">Order Print Slip</p>
+          </div>
+
+          <div class="section">
+            <div class="info-row"><span class="info-label">Order Number:</span> ${orderNumber}</div>
+            <div class="info-row"><span class="info-label">Date:</span> ${orderDate}</div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Customer Details</div>
+            <div class="info-row"><span class="info-label">Name:</span> ${order.customer_name || 'N/A'}</div>
+            <div class="info-row"><span class="info-label">Phone:</span> ${order.customer_phone || 'N/A'}</div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Delivery Details</div>
+            <div class="info-row"><span class="info-label">Address:</span> ${order.shipping_address}</div>
+            <div class="info-row"><span class="info-label">Delivery Slot:</span> ${(order as any).deliverySlot?.name || 'N/A'}</div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Products</div>
+            <table>
+              <tbody>
+                ${itemsHtml}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="section" style="border-bottom: none;">
+            <div class="total-row">
+              <span>Total Items:</span>
+              <span>${(order.items || []).reduce((acc, item) => acc + item.quantity, 0)}</span>
+            </div>
+            <div class="total-row" style="margin-top: 5px; font-size: 18px;">
+              <span>Total Amount:</span>
+              <span>${order.total_price || '—'}</span>
+            </div>
+            <div class="info-row" style="margin-top: 15px;"><span class="info-label">Order Status:</span> <span style="text-transform: capitalize;">${order.status}</span></div>
+            ${order.delivery_notes ? `<div class="info-row" style="margin-top: 10px;"><span class="info-label">Notes:</span> ${order.delivery_notes}</div>` : ''}
+          </div>
+
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
+  const handlePrintNewOrders = async () => {
+    const unprintedOrders = ordersList.filter(o => !(o as any).is_printed);
+    if (unprintedOrders.length === 0) {
+      setToastMsg('No new unprinted orders to print.');
+      setTimeout(() => setToastMsg(''), 3000);
+      return;
+    }
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert("Please allow popups to print orders.");
+      return;
+    }
+
+    const slipsHtml = unprintedOrders.map(order => {
+      const orderNumber = order.order_number || `ORD-${String(order.id).padStart(4, '0')}`;
+      const orderDate = new Date(order.createdAt).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
+      const itemsHtml = (order.items || []).map(item => `
+        <tr style="border-bottom: 1px solid #eee;">
+          <td style="padding: 8px 0; font-size: 14px;">${item.quantity} x ${item.product?.title || `Product #${item.product_id}`}</td>
+          <td style="padding: 8px 0; text-align: right; font-size: 14px; font-weight: bold;">
+            QAR ${(Number(String(item.price_at_purchase).replace(/([$]|qar|[\s,])/gi, "")) * item.quantity).toFixed(2)}
+          </td>
+        </tr>
+      `).join('');
+
+      return `
+        <div class="order-slip">
+          <div class="header">
+            <h1>GRIVA</h1>
+            <p style="font-size: 12px; margin: 5px 0 0 0; color: #666;">Order Print Slip</p>
+          </div>
+
+          <div class="section">
+            <div class="info-row"><span class="info-label">Order Number:</span> ${orderNumber}</div>
+            <div class="info-row"><span class="info-label">Date:</span> ${orderDate}</div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Customer Details</div>
+            <div class="info-row"><span class="info-label">Name:</span> ${order.customer_name || 'N/A'}</div>
+            <div class="info-row"><span class="info-label">Phone:</span> ${order.customer_phone || 'N/A'}</div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Delivery Details</div>
+            <div class="info-row"><span class="info-label">Address:</span> ${order.shipping_address}</div>
+            <div class="info-row"><span class="info-label">Delivery Slot:</span> ${(order as any).deliverySlot?.name || 'N/A'}</div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Products</div>
+            <table>
+              <tbody>
+                ${itemsHtml}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="section" style="border-bottom: none;">
+            <div class="total-row">
+              <span>Total Items:</span>
+              <span>${(order.items || []).reduce((acc, item) => acc + item.quantity, 0)}</span>
+            </div>
+            <div class="total-row" style="margin-top: 5px; font-size: 18px;">
+              <span>Total Amount:</span>
+              <span>${order.total_price || '—'}</span>
+            </div>
+            <div class="info-row" style="margin-top: 15px;"><span class="info-label">Order Status:</span> <span style="text-transform: capitalize;">${order.status}</span></div>
+            ${order.delivery_notes ? `<div class="info-row" style="margin-top: 10px;"><span class="info-label">Notes:</span> ${order.delivery_notes}</div>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    const html = `
+      <html>
+        <head>
+          <title>Print Bulk Orders</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              margin: 20px;
+              color: #333;
+              line-height: 1.4;
+            }
+            .order-slip {
+              page-break-after: always;
+              border-bottom: 2px solid #333;
+              padding-bottom: 30px;
+              margin-bottom: 30px;
+            }
+            .order-slip:last-child {
+              page-break-after: avoid;
+              border-bottom: none;
+              padding-bottom: 0;
+              margin-bottom: 0;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 20px;
+            }
+            .header h1 {
+              margin: 0;
+              font-size: 24px;
+              letter-spacing: 2px;
+            }
+            .section {
+              margin-bottom: 15px;
+              padding-bottom: 10px;
+              border-bottom: 1px dashed #ccc;
+            }
+            .section-title {
+              font-size: 12px;
+              text-transform: uppercase;
+              color: #777;
+              font-weight: bold;
+              margin-bottom: 5px;
+            }
+            .info-row {
+              margin-bottom: 4px;
+              font-size: 14px;
+            }
+            .info-label {
+              font-weight: bold;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 15px 0;
+            }
+            .total-row {
+              font-size: 16px;
+              font-weight: bold;
+              display: flex;
+              justify-content: space-between;
+              margin-top: 10px;
+            }
+            @media print {
+              .order-slip {
+                border-bottom: none;
+                padding-bottom: 0;
+                margin-bottom: 0;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          ${slipsHtml}
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+
+    const orderIds = unprintedOrders.map(o => o.id);
+    try {
+      const success = await bulkPrintOrdersApi(orderIds);
+      if (success) {
+        setOrdersList(prev =>
+          prev.map(o => orderIds.includes(o.id) ? { ...o, is_printed: true, printed_at: new Date().toISOString() } : o)
+        );
+        setToastMsg(`Successfully printed and marked ${orderIds.length} orders.`);
+        setTimeout(() => setToastMsg(''), 3500);
+      }
+    } catch {}
+  };
+
+  const handleExportOrders = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setExporting(true);
+    setExportError('');
+    try {
+      await downloadOrdersExportApi({
+        startDate: exportStartDate || undefined,
+        endDate: exportEndDate || undefined,
+        status: exportStatus === 'all' ? undefined : exportStatus,
+        printStatus: exportPrintStatus === 'all' ? undefined : exportPrintStatus,
+        format: exportFormat,
+      });
+      setIsExportModalOpen(false);
+    } catch (err: any) {
+      setExportError(err.message || 'Failed to export orders. Please try again.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const timeSince = (dateStr: string) => {
     const secs = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
     if (secs < 60) return 'just now';
@@ -261,7 +599,15 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
       matchesSearch = orderNo.includes(query) || customerName.includes(query) || customerPhone.includes(query);
     }
 
-    return matchesStatus && matchesSlot && matchesDate && matchesSearch;
+    // 5. Print Status Filter
+    let matchesPrintStatus = true;
+    if (filterPrintStatus === 'printed') {
+      matchesPrintStatus = !!(o as any).is_printed;
+    } else if (filterPrintStatus === 'unprinted') {
+      matchesPrintStatus = !(o as any).is_printed;
+    }
+
+    return matchesStatus && matchesSlot && matchesDate && matchesSearch && matchesPrintStatus;
   });
 
   const counts: Record<string, number> = {
@@ -471,8 +817,40 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
         </div>
       )}
 
+      {/* Order Operations Top Action Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-orange-500/30 shadow-xs">
+        <div>
+          <h3 className="text-sm font-black text-gray-800 uppercase tracking-wider">Order Operations</h3>
+          <p className="text-[10px] text-gray-400 mt-0.5">Manage packing slips, batch printing, and flexible data exports.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={handlePrintNewOrders}
+            className="flex items-center gap-2 px-4.5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl text-xs font-bold shadow-md hover:opacity-90 transition-all cursor-pointer active:scale-95 flex items-center justify-center"
+          >
+            <Printer className="h-4 w-4" />
+            Print New Orders
+          </button>
+          <button
+            onClick={() => {
+              setExportStartDate('');
+              setExportEndDate('');
+              setExportStatus('all');
+              setExportPrintStatus('all');
+              setExportFormat('xlsx');
+              setExportError('');
+              setIsExportModalOpen(true);
+            }}
+            className="flex items-center gap-2 px-4.5 py-2.5 border border-orange-500/30 hover:bg-orange-500/5 text-gray-700 hover:text-gray-900 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center"
+          >
+            <Download className="h-4 w-4" />
+            Export Orders
+          </button>
+        </div>
+      </div>
+
       {/* Search and Filters Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-4 rounded-2xl border border-orange-500/30 shadow-xs">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white p-4 rounded-2xl border border-orange-500/30 shadow-xs">
         {/* Unified Search Input */}
         <div className="md:col-span-2 relative">
           <input
@@ -502,6 +880,17 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
           <option value="today">📅 Today</option>
           <option value="yesterday">📅 Yesterday</option>
           <option value="week">📅 Last 7 Days</option>
+        </select>
+
+        {/* Print Status Dropdown */}
+        <select
+          value={filterPrintStatus}
+          onChange={(e) => setFilterPrintStatus(e.target.value)}
+          className="text-xs font-bold text-gray-750 bg-gray-50 border border-orange-500/10 hover:border-orange-500/30 rounded-xl px-3 py-2.5 outline-none cursor-pointer focus:bg-white transition-all shadow-xs"
+        >
+          <option value="all">🖨️ All Print Statuses</option>
+          <option value="printed">🖨️ Printed Orders</option>
+          <option value="unprinted">🖨️ Unprinted Orders</option>
         </select>
       </div>
 
@@ -691,6 +1080,23 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
                               );
                             })}
                             <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                printOrderSlip(order);
+                                bulkPrintOrdersApi([order.id]).then(success => {
+                                  if (success) {
+                                    setOrdersList(prev =>
+                                      prev.map(o => o.id === order.id ? { ...o, is_printed: true, printed_at: new Date().toISOString() } : o)
+                                    );
+                                  }
+                                });
+                              }}
+                              title="Print Order Slip"
+                              className="p-1.5 rounded-lg text-orange-500 hover:text-orange-600 hover:bg-orange-55 border border-orange-500/20 cursor-pointer"
+                            >
+                              <Printer className="h-3.5 w-3.5" />
+                            </button>
+                            <button
                               onClick={() => setExpandedOrderId(isExpanded ? null : order.id)}
                               className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer border border-orange-500/20"
                             >
@@ -765,6 +1171,38 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
                                         {order.total_price ? `QAR ${parseFloat(String(order.total_price).replace(/([$]|qar|[\s,])/gi, "") || "0").toFixed(2)}` : "—"}
                                       </p>
                                     </div>
+                                  </div>
+                                  {/* Print Slip Section */}
+                                  <div className="pt-3 border-t border-orange-500/10 flex flex-wrap items-center justify-between gap-2">
+                                    <div>
+                                      <p className="text-[10px] text-gray-400 font-bold uppercase mb-1 flex items-center gap-1">
+                                        <span>🖨️</span> Order Slip Tracking
+                                      </p>
+                                      <p className="text-[10px] text-gray-500 font-semibold">
+                                        Status: {order.is_printed ? (
+                                          <span className="text-green-600 font-black">Printed</span>
+                                        ) : (
+                                          <span className="text-red-500 font-black">Unprinted</span>
+                                        )}
+                                      </p>
+                                    </div>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        printOrderSlip(order);
+                                        bulkPrintOrdersApi([order.id]).then(success => {
+                                          if (success) {
+                                            setOrdersList(prev =>
+                                              prev.map(o => o.id === order.id ? { ...o, is_printed: true, printed_at: new Date().toISOString() } : o)
+                                            );
+                                          }
+                                        });
+                                      }}
+                                      className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-[10px] font-bold text-white rounded-lg shadow-xs hover:opacity-90 active:scale-95 transition-all cursor-pointer h-[32px]"
+                                    >
+                                      <Printer size={12} />
+                                      Print Order Slip
+                                    </button>
                                   </div>
                                   {/* FEATURE: Delivery Boy System — Assign Driver */}
                                  <div className="pt-3 border-t border-orange-500/10">
@@ -900,6 +1338,108 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
                 Cancel
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Export Orders Modal */}
+      {isExportModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setIsExportModalOpen(false)}>
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-xs" />
+          <div className="relative bg-white rounded-2xl w-full max-w-md p-6 space-y-4 shadow-xl z-10" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-sm font-black text-gray-900 uppercase tracking-wider flex items-center gap-1.5 border-b border-orange-500/10 pb-2">
+              <Download className="h-4.5 w-4.5 text-orange-500" />
+              Export Orders System
+            </h3>
+            <form onSubmit={handleExportOrders} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] text-gray-400 font-bold uppercase block mb-1">From Date</label>
+                  <input
+                    type="date"
+                    value={exportStartDate}
+                    onChange={(e) => setExportStartDate(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-orange-500 bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-gray-400 font-bold uppercase block mb-1">To Date</label>
+                  <input
+                    type="date"
+                    value={exportEndDate}
+                    onChange={(e) => setExportEndDate(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-orange-500 bg-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-gray-400 font-bold uppercase block mb-1">Order Status</label>
+                <select
+                  value={exportStatus}
+                  onChange={(e) => setExportStatus(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-orange-500 bg-white"
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="pending">Pending</option>
+                  <option value="processing">Processing</option>
+                  <option value="assigned">Assigned</option>
+                  <option value="out_for_delivery">Out for Delivery</option>
+                  <option value="shipped">Shipped</option>
+                  <option value="delivered">Delivered</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-gray-400 font-bold uppercase block mb-1">Print Status</label>
+                <select
+                  value={exportPrintStatus}
+                  onChange={(e) => setExportPrintStatus(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-orange-500 bg-white"
+                >
+                  <option value="all">All Orders</option>
+                  <option value="printed">Printed Only</option>
+                  <option value="unprinted">Unprinted Only</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-gray-400 font-bold uppercase block mb-1">Format</label>
+                <select
+                  value={exportFormat}
+                  onChange={(e) => setExportFormat(e.target.value as 'csv' | 'xlsx')}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-orange-500 bg-white font-bold"
+                >
+                  <option value="xlsx">Excel Spreadsheet (.xlsx)</option>
+                  <option value="csv">CSV Document (.csv)</option>
+                </select>
+              </div>
+
+              {exportError && (
+                <p className="text-red-600 text-xs font-bold bg-red-50 border border-red-200 rounded-xl p-2.5">
+                  {exportError}
+                </p>
+              )}
+
+              <div className="flex gap-2 pt-2 border-t border-orange-500/10">
+                <button
+                  type="submit"
+                  disabled={exporting}
+                  className="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-xs font-bold py-2.5 rounded-xl disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5 shadow-sm active:scale-98"
+                >
+                  {exporting ? 'Exporting...' : 'Start Export'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsExportModalOpen(false)}
+                  className="flex-1 bg-gray-100 text-gray-600 text-xs font-bold py-2.5 rounded-xl cursor-pointer hover:bg-gray-200 flex items-center justify-center"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

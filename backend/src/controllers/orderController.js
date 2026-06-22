@@ -701,3 +701,117 @@ exports.createDeliveryBoy = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * Bulk print orders: Mark orders as printed
+ * PATCH /api/orders/bulk-print
+ */
+exports.bulkPrintOrders = async (req, res, next) => {
+  try {
+    const { orderIds } = req.body;
+    if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
+      return res.status(400).json({ error: "orderIds array is required." });
+    }
+
+    await Order.update(
+      {
+        is_printed: true,
+        printed_at: new Date(),
+      },
+      {
+        where: {
+          id: {
+            [Op.in]: orderIds,
+          },
+        },
+      }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Orders marked as printed successfully.",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Export orders as CSV or Excel
+ * GET /api/orders/export
+ */
+exports.exportOrders = async (req, res, next) => {
+  try {
+    const { startDate, endDate, status, printStatus, format } = req.query;
+
+    const where = {};
+
+    if (startDate || endDate) {
+      where.createdAt = {};
+      if (startDate) where.createdAt[Op.gte] = new Date(startDate);
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        where.createdAt[Op.lte] = end;
+      }
+    }
+
+    if (status && status !== "all") {
+      where.status = status;
+    }
+
+    if (printStatus && printStatus !== "all") {
+      if (printStatus === "printed") {
+        where.is_printed = true;
+      } else if (printStatus === "unprinted") {
+        where.is_printed = false;
+      }
+    }
+
+    const DeliverySlot = require("../models/DeliverySlot");
+    const orders = await Order.findAll({
+      where,
+      include: [
+        {
+          model: DeliverySlot,
+          as: "deliverySlot",
+          attributes: ["id", "name", "start_time", "end_time"],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+
+    const exportData = orders.map((o) => ({
+      "Order Number": o.order_number || `ORD-${String(o.id).padStart(4, "0")}`,
+      "Order Date": new Date(o.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+      "Customer Name": o.customer_name || "N/A",
+      "Phone Number": o.customer_phone || "N/A",
+      "Status": o.status,
+      "Delivery Slot": o.deliverySlot ? o.deliverySlot.name : "N/A",
+      "Total Amount": o.total_price || "—",
+      "Payment Method": o.payment_method || "COD",
+      "Address": o.shipping_address,
+      "Created Date": o.createdAt,
+    }));
+
+    const XLSX = require("xlsx");
+    if (format === "csv") {
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const csvContent = XLSX.utils.sheet_to_csv(worksheet);
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", `attachment; filename=orders_export_${Date.now()}.csv`);
+      return res.send(csvContent);
+    } else {
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Orders");
+      const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", `attachment; filename=orders_export_${Date.now()}.xlsx`);
+      return res.send(buffer);
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
