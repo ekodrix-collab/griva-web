@@ -127,9 +127,36 @@ export default function TrendingProductCard({
           </h3>
 
           {/* Rating */}
-          <div className="mt-1 flex items-center gap-1.5">
-            <Rating rating={product.rating} />
-            <span className="text-[10px] text-gray-400">({product.review_count})</span>
+          <div className="mt-1 flex items-center gap-1.5 flex-wrap min-h-[20px]">
+            {(() => {
+              const count = product.review_count ?? 0;
+              if (count === 0) {
+                return (
+                  <span className="text-[9px] font-bold text-orange-500 bg-orange-50 px-1.5 py-0.5 rounded border border-orange-200">
+                    New Arrival
+                  </span>
+                );
+              } else if (count >= 1 && count <= 4) {
+                return (
+                  <>
+                    <Rating rating={product.rating} />
+                    <span className="text-[10px] text-gray-400">
+                      ({count})
+                    </span>
+                    <span className="text-[8px] font-bold text-blue-500 bg-blue-50 px-1 py-0.5 rounded border border-blue-200 scale-90 origin-left">
+                      Early Reviews
+                    </span>
+                  </>
+                );
+              } else {
+                return (
+                  <>
+                    <Rating rating={product.rating} />
+                    <span className="text-[10px] text-gray-400">({count})</span>
+                  </>
+                );
+              }
+            })()}
           </div>
 
           {/* Price */}
