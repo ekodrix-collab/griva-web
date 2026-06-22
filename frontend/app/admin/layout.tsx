@@ -13,7 +13,7 @@ type AuthState = "loading" | "authorized" | "denied";
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { isAuthenticated, isAdmin, loading, logout } = useUser();
+  const { isAuthenticated, isAdmin, isStaff, loading, logout } = useUser();
   const [authState, setAuthState] = useState<AuthState>("loading");
 
   useEffect(() => {
@@ -32,7 +32,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       return;
     }
 
-    if (!isAdmin) {
+    if (!isAdmin && !isStaff) {
       logout();
       setAuthState("denied");
       return;

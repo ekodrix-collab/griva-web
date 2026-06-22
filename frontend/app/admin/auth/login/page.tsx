@@ -23,17 +23,18 @@ export default function AdminLoginPage() {
     try {
       const result = await authService.login({ email, password });
       if (result && result.token) {
-        if (result.user?.role === "admin") {
-          login({ name: result.user?.name || email.split("@")[0], email, role: "admin" }, result.token);
+        const role = result.user?.role;
+        if (role === "admin" || role === "staff") {
+          login({ name: result.user?.name || email.split("@")[0], email, role }, result.token);
           router.push("/admin");
           return;
         } else {
-          setError("Invalid admin credentials. Please try again.");
+          setError("Invalid credentials. Access restricted to authorized personnel.");
           return;
         }
       }
 
-      setError("Invalid admin credentials. Please try again.");
+      setError("Invalid credentials. Please try again.");
     } catch {
       setError("Unable to connect to server. Please try again.");
     } finally {

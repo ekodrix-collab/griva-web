@@ -80,8 +80,21 @@ const isAdmin = (req, res, next) => {
   });
 };
 
+// Admin or Staff Authorization
+const isAdminOrStaff = (req, res, next) => {
+  if (req.user && (req.user.role === "admin" || req.user.role === "staff")) {
+    return next();
+  }
+
+  return res.status(403).json({
+    success: false,
+    message: "Admin or Staff privileges are required.",
+  });
+};
+
 module.exports = {
   authenticateJWT,
   authenticateOptionalJWT,
   isAdmin,
+  isAdminOrStaff,
 };

@@ -82,6 +82,6 @@ CartItem.belongsTo(Cart, { foreignKey: "cart_id", as: "cart" });
 Cart.hasMany(CartItem, { foreignKey: "cart_id", as: "items", onDelete: "CASCADE" });
 
 CartItem.belongsTo(Product, { foreignKey: "product_id", as: "product" });
-Product.hasMany(CartItem, { foreignKey: "product_id", as: "cartItems" });
+Product.hasMany(CartItem, { foreignKey: "product_id", as: "cartItems", onDelete: "CASCADE" });
 
 module.exports = CartItem;

@@ -159,13 +159,13 @@ export default function DealOfTheDaySection() {
           {/* ── MOBILE ONLY: orange timer banner ── */}
           <div className="lg:hidden bg-orange-500 px-5 py-4 flex items-center justify-between gap-4">
             <div className="flex flex-col">
-              <span className="text-[8px] font-black uppercase tracking-[2.5px] text-orange-100">
+              <span className="text-[8px] font-black uppercase tracking-[2.5px]" style={{ color: "#ffd0b0" }}>
                 Only For Today
               </span>
               <h2 className="text-[15px] font-black text-white leading-snug">
                 Deal of the Day
               </h2>
-              <p className="text-[8px] text-orange-200 mt-0.5 leading-tight">
+              <p className="text-[8px] mt-0.5 leading-tight" style={{ color: "#ffc49a" }}>
                 Lightning deals on electronics!
               </p>
             </div>
@@ -178,7 +178,7 @@ export default function DealOfTheDaySection() {
                         {String(value).padStart(2, "0")}
                       </span>
                     </div>
-                    <span className="mt-0.5 text-[7px] font-bold text-orange-200 uppercase">
+                    <span className="mt-0.5 text-[7px] font-bold uppercase" style={{ color: "#ffc49a" }}>
                       {label}
                     </span>
                   </div>
@@ -205,7 +205,6 @@ export default function DealOfTheDaySection() {
                 if (offset.x < -50) next();
                 else if (offset.x > 50) prev();
               }}
-              // ✅ CHANGED: mobile flex-col with full width, desktop flex-row
               className="flex w-full flex-col gap-4 p-4 lg:flex-row lg:gap-6 lg:p-6 cursor-grab active:cursor-grabbing"
             >
               {/* ── IMAGE SECTION ── */}
@@ -216,11 +215,19 @@ export default function DealOfTheDaySection() {
                     <div
                       key={index}
                       onClick={(e) => { e.stopPropagation(); setActiveImage(image); }}
-                      className={`flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-lg border transition-all ${
-                        displayImage === image
-                          ? "border-orange-500 bg-orange-50"
-                          : "border-gray-100 bg-gray-50 hover:border-orange-200"
-                      }`}
+                      className="flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-lg border transition-all"
+                      style={{
+                        borderColor: displayImage === image ? "#FF6A00" : "#f3f4f6",
+                        backgroundColor: displayImage === image ? "#FF6A0010" : "#f9fafb",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (displayImage !== image)
+                          e.currentTarget.style.borderColor = "#FF6A0040";
+                      }}
+                      onMouseLeave={(e) => {
+                        if (displayImage !== image)
+                          e.currentTarget.style.borderColor = "#f3f4f6";
+                      }}
                     >
                       <Image src={image} alt="thumb" width={36} height={36} className="object-contain" style={{ width: "auto", height: "auto" }} />
                     </div>
@@ -240,11 +247,13 @@ export default function DealOfTheDaySection() {
               </div>
 
               {/* ── PRODUCT CONTENT ── */}
-              {/* ✅ CHANGED: w-full on mobile so content + button fill the card */}
               <div className="flex w-full min-w-0 flex-col gap-3 lg:flex-1 lg:justify-between">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="rounded bg-orange-500 px-2 py-0.5 text-[9px] font-extrabold uppercase text-white">
+                    <span
+                      className="rounded px-2 py-0.5 text-[9px] font-extrabold uppercase text-white"
+                      style={{ backgroundColor: "#FF6A00" }}
+                    >
                       {slide.badge}
                     </span>
                     {slide.hot && (
@@ -271,7 +280,6 @@ export default function DealOfTheDaySection() {
                   </p>
                 </div>
 
-                {/* ✅ CHANGED: w-full on all screens, lg:w-44 on desktop only */}
                 <button
                   onClick={(e) => { e.stopPropagation(); handleAddToCart(); }}
                   className="z-10 mt-2 flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-[5px] bg-orange-500 text-xs font-bold uppercase text-white shadow-md shadow-orange-500/20 transition hover:bg-orange-600 lg:w-44"

@@ -63,9 +63,11 @@ const subCategoryRoutes = require("./routes/subCategoryRoutes");
 const cartRoutes = require("./routes/cartRoutes");
 const deliveryRoutes = require("./routes/deliveryRoutes"); // FEATURE: Delivery Boy System
 const customerRoutes = require("./routes/customerRoutes");
+const staffRoutes = require("./routes/staffRoutes");
 const testEmailRoutes = require("./routes/testEmailRoutes");
 const deliveryAttemptRoutes = require("./routes/deliveryAttemptRoutes");
 const uploadRoutes = require("./routes/uploadRoutes"); //IMAGE UPLOAD
+const deliverySlotRoutes = require("./routes/deliverySlotRoutes");
 const dealOfDayRoutes = require("./routes/dealOfDayRoutes");
 
 // Mount API Routers
@@ -83,9 +85,11 @@ app.use("/api/subcategories", subCategoryRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/delivery", deliveryRoutes); // FEATURE: Delivery Boy System
 app.use("/api/admin/customers", customerRoutes);
+app.use("/api/admin/staff", staffRoutes);
 app.use("/api/delivery", deliveryAttemptRoutes); // FEATURE: Delivery Attempt Management
 app.use("/api/test-email", testEmailRoutes);
 app.use("/api/uploads", uploadRoutes); //IMAGE UPLOAD
+app.use("/api/delivery-slots", deliverySlotRoutes);
 app.use("/api/deal-of-day", dealOfDayRoutes);
 
 // Global Error Handler Middleware

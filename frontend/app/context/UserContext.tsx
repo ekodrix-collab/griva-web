@@ -63,6 +63,7 @@ interface UserContextType {
   loading: boolean;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  isStaff: boolean;
   isCustomer: boolean;
 }
 
@@ -107,8 +108,22 @@ export function UserProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        const token = localStorage.getItem(isAdminPath ? "griva_admin_token" : "griva_user_token");
-        const storedUser = localStorage.getItem(isAdminPath ? "griva_admin_user" : "griva_user");
+        let token = null;
+        let storedUser = null;
+        if (isAdminPath) {
+          let roleKey = "admin";
+          const activeRole = sessionStorage.getItem("griva_active_role");
+          if (activeRole === "admin" || activeRole === "staff") {
+            roleKey = activeRole;
+          } else if (!localStorage.getItem("griva_admin_token") && localStorage.getItem("griva_staff_token")) {
+            roleKey = "staff";
+          }
+          token = localStorage.getItem(`griva_${roleKey}_token`);
+          storedUser = localStorage.getItem(`griva_${roleKey}_user`);
+        } else {
+          token = localStorage.getItem("griva_user_token");
+          storedUser = localStorage.getItem("griva_user");
+        }
         const storedAddresses = localStorage.getItem("griva_addresses");
         const storedOrders = localStorage.getItem("griva_orders");
 
@@ -184,6 +199,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
     if (role === "admin") {
       localStorage.setItem("griva_admin_token", token);
       localStorage.setItem("griva_admin_user", JSON.stringify(user));
+      sessionStorage.setItem("griva_active_role", "admin");
+    } else if (role === "staff") {
+      localStorage.setItem("griva_staff_token", token);
+      localStorage.setItem("griva_staff_user", JSON.stringify(user));
+      sessionStorage.setItem("griva_active_role", "staff");
     } else {
       localStorage.setItem("griva_user_token", token);
       localStorage.setItem("griva_user", JSON.stringify(user));
@@ -200,8 +220,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
       token: null
     }));
     if (isAdminPath) {
-      localStorage.removeItem("griva_admin_token");
-      localStorage.removeItem("griva_admin_user");
+      const activeRole = sessionStorage.getItem("griva_active_role") || state.role;
+      if (activeRole === "staff") {
+        localStorage.removeItem("griva_staff_token");
+        localStorage.removeItem("griva_staff_user");
+      } else {
+        localStorage.removeItem("griva_admin_token");
+        localStorage.removeItem("griva_admin_user");
+      }
+      sessionStorage.removeItem("griva_active_role");
     } else {
       localStorage.removeItem("griva_user_token");
       localStorage.removeItem("griva_user");
@@ -270,6 +297,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     loading: state.loading,
     isAuthenticated: state.isLoggedIn,
     isAdmin: state.role === "admin",
+    isStaff: state.role === "staff",
     isCustomer: state.role === "customer",
   };
 

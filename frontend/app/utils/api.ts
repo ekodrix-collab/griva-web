@@ -9,7 +9,14 @@ function getAuthHeaders(): HeadersInit {
     const pathname = window.location.pathname;
     let token = null;
     if (pathname.startsWith("/admin")) {
-      token = localStorage.getItem("griva_admin_token");
+      const activeRole = sessionStorage.getItem("griva_active_role");
+      if (activeRole === "staff") {
+        token = localStorage.getItem("griva_staff_token");
+      } else if (activeRole === "admin") {
+        token = localStorage.getItem("griva_admin_token");
+      } else {
+        token = localStorage.getItem("griva_admin_token") || localStorage.getItem("griva_staff_token");
+      }
     } else if (pathname.startsWith("/delivery")) {
       token = localStorage.getItem("griva_delivery_token");
     } else {
@@ -178,6 +185,8 @@ export interface GlobalSettings {
   announcementBarEnabled: boolean;
   fridaySaleEnabled: boolean;
   midnightSaleEnabled: boolean;
+  shippingFee?: number;
+  freeShippingThreshold?: number;
 }
 
 export async function getSettingsApi(): Promise<GlobalSettings> {
@@ -189,6 +198,8 @@ export async function getSettingsApi(): Promise<GlobalSettings> {
         announcementBarEnabled: true,
         fridaySaleEnabled: true,
         midnightSaleEnabled: false,
+        shippingFee: 10,
+        freeShippingThreshold: 99,
       },
     }
   );
@@ -207,11 +218,69 @@ export async function updateSettingsApi(settings: Partial<GlobalSettings>): Prom
         announcementBarEnabled: true,
         fridaySaleEnabled: true,
         midnightSaleEnabled: false,
+        shippingFee: 10,
+        freeShippingThreshold: 99,
         ...settings,
       },
     }
   );
   return res.settings;
+}
+
+// ─────────────────────────────────────────────────────────
+// Delivery Slots APIs
+// ─────────────────────────────────────────────────────────
+export interface DeliverySlot {
+  id: number;
+  name: string;
+  start_time?: string;
+  end_time?: string;
+  is_active: boolean;
+  sort_order: number;
+}
+
+export async function getDeliverySlotsApi(): Promise<DeliverySlot[]> {
+  const res = await safeFetch<{ slots: DeliverySlot[] }>(
+    "/delivery-slots",
+    { method: "GET" },
+    { slots: [] }
+  );
+  return res.slots || [];
+}
+
+export async function createDeliverySlotApi(slotData: Partial<DeliverySlot>): Promise<DeliverySlot> {
+  const res = await safeFetch<{ slot: DeliverySlot }>(
+    "/delivery-slots",
+    {
+      method: "POST",
+      body: JSON.stringify(slotData),
+    },
+    { slot: { id: Date.now(), name: slotData.name || "", is_active: true, sort_order: 0 } }
+  );
+  return res.slot;
+}
+
+export async function updateDeliverySlotApi(id: number, slotData: Partial<DeliverySlot>): Promise<DeliverySlot> {
+  const res = await safeFetch<{ slot: DeliverySlot }>(
+    `/delivery-slots/${id}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(slotData),
+    },
+    { slot: { id, name: "", is_active: true, sort_order: 0, ...slotData } }
+  );
+  return res.slot;
+}
+
+export async function deleteDeliverySlotApi(id: number): Promise<boolean> {
+  const res = await safeFetch<any>(
+    `/delivery-slots/${id}`,
+    {
+      method: "DELETE",
+    },
+    { success: true }
+  );
+  return !!res;
 }
 
 // ─────────────────────────────────────────────────────────
@@ -354,8 +423,16 @@ export interface AdminOrder {
   total_price: string;
   shipping_address: string;
   createdAt: string;
+  reviewed_at?: string;
   user?: { id: number; email: string };
   items?: OrderItem[];
+  customer_name?: string;
+  customer_phone?: string;
+  customer_email?: string;
+  delivery_notes?: string;
+  delivery_slot_id?: number;
+  is_printed?: boolean;
+  printed_at?: string;
 }
 
 const MOCK_ORDERS: AdminOrder[] = [
@@ -536,4 +613,123 @@ export async function updateCustomerStatusApi(id: number, status: "ACTIVE" | "BL
 }
 
 //authentication
+
+export async function downloadOrdersExportApi(params: {
+  startDate?: string;
+  endDate?: string;
+  status?: string;
+  printStatus?: string;
+  format: "csv" | "xlsx";
+}): Promise<void> {
+  const query = new URLSearchParams();
+  if (params.startDate) query.append("startDate", params.startDate);
+  if (params.endDate) query.append("endDate", params.endDate);
+  if (params.status) query.append("status", params.status);
+  if (params.printStatus) query.append("printStatus", params.printStatus);
+  query.append("format", params.format);
+
+  const pathname = window.location.pathname;
+  let token = null;
+  if (pathname.startsWith("/admin")) {
+    const activeRole = sessionStorage.getItem("griva_active_role");
+    if (activeRole === "staff") {
+      token = localStorage.getItem("griva_staff_token");
+    } else if (activeRole === "admin") {
+      token = localStorage.getItem("griva_admin_token");
+    } else {
+      token = localStorage.getItem("griva_admin_token") || localStorage.getItem("griva_staff_token");
+    }
+  } else {
+    token = localStorage.getItem("griva_user_token");
+  }
+
+  const headers: HeadersInit = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${API_BASE_URL}/orders/export?${query.toString()}`, {
+    method: "GET",
+    headers,
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to export orders");
+  }
+
+  const blob = await res.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `orders_export_${Date.now()}.${params.format}`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+}
+
+export async function downloadCustomersExportApi(params: {
+  segment?: string;
+  startDate?: string;
+  endDate?: string;
+  format: "csv" | "xlsx";
+}): Promise<void> {
+  const query = new URLSearchParams();
+  if (params.segment) query.append("segment", params.segment);
+  if (params.startDate) query.append("startDate", params.startDate);
+  if (params.endDate) query.append("endDate", params.endDate);
+  query.append("format", params.format);
+
+  const pathname = window.location.pathname;
+  let token = null;
+  if (pathname.startsWith("/admin")) {
+    const activeRole = sessionStorage.getItem("griva_active_role");
+    if (activeRole === "staff") {
+      token = localStorage.getItem("griva_staff_token");
+    } else if (activeRole === "admin") {
+      token = localStorage.getItem("griva_admin_token");
+    } else {
+      token = localStorage.getItem("griva_admin_token") || localStorage.getItem("griva_staff_token");
+    }
+  } else {
+    token = localStorage.getItem("griva_user_token");
+  }
+
+  const headers: HeadersInit = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${API_BASE_URL}/admin/customers/export?${query.toString()}`, {
+    method: "GET",
+    headers,
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to export customers");
+  }
+
+  const blob = await res.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `customers_export_${Date.now()}.${params.format}`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+}
+
+export async function bulkPrintOrdersApi(orderIds: number[]): Promise<boolean> {
+  const res = await safeFetch<any>(
+    "/orders/bulk-print",
+    {
+      method: "PATCH",
+      body: JSON.stringify({ orderIds }),
+    },
+    { success: true }
+  );
+  return !!res;
+}
+
 

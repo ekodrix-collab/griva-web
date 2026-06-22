@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useAdminSettings } from "../../context/AdminContext";
 import {
@@ -20,6 +20,9 @@ const SHOPPER_VARIANCE = 32;
 const SHOPPER_MIN = 240;
 const SHOPPER_MAX = 340;
 
+const PRIMARY_ORANGE = "#FF6A00";
+const DARK_ORANGE = "#E85F00";
+
 const marqueeItems = [
   { icon: Truck, text: "FREE DELIVERY ON ORDERS OVER QAR 150" },
   { icon: Zap, text: "NEW ARRIVALS EVERY WEEK" },
@@ -29,22 +32,18 @@ const marqueeItems = [
   { icon: Star, text: "4.9 RATED BY 2,400 CUSTOMERS" },
 ];
 
-// Stable outside component — no re-creation on render
 function MarqueeContent() {
   return (
-    <div className="flex items-center gap-[48px] pr-[48px] shrink-0 flex-nowrap">
+    <div className="flex shrink-0 flex-nowrap items-center gap-[48px] pr-[48px]">
       {marqueeItems.map((item, idx) => {
         const IconComponent = item.icon;
         return (
-          <div
-            key={idx}
-            className="flex items-center gap-2 shrink-0 flex-nowrap"
-          >
+          <div key={idx} className="flex shrink-0 flex-nowrap items-center gap-2">
             <IconComponent size={14} strokeWidth={2} className="text-white" />
-            <span className="font-body text-[8px] font-medium tracking-[1.5px] text-white uppercase whitespace-nowrap">
+            <span className="font-body whitespace-nowrap text-[8px] font-medium uppercase tracking-[1.5px] text-white">
               {item.text}
             </span>
-            <span className="text-white/40 font-body font-medium ml-4">·</span>
+            <span className="ml-4 font-body font-medium text-white/40">·</span>
           </div>
         );
       })}
@@ -54,24 +53,20 @@ function MarqueeContent() {
 
 export default function AnnouncementBar() {
   const [mounted, setMounted] = useState(false);
-  // Start with null — same on server and client, no random value
   const [shoppersCount, setShoppersCount] = useState<number | null>(null);
   const [trend, setTrend] = useState<"up" | "down" | "neutral">("neutral");
 
-  // Use ref to track previous count for trend — avoids setState in setState
-  const prevCountRef = useRef<number>(SHOPPER_BASE);
+  const { announcementBarEnabled } = useAdminSettings();
+  const pathname = usePathname();
 
   useEffect(() => {
     setMounted(true);
-    // Random value only set on client, after mount
     const initial = SHOPPER_BASE + Math.floor(Math.random() * SHOPPER_VARIANCE);
     setShoppersCount(initial);
-    prevCountRef.current = initial;
 
     const timer = setInterval(() => {
       const steps = [-2, -1, 0, 1, 2];
       const delta = steps[Math.floor(Math.random() * steps.length)];
-
       if (delta > 0) setTrend("up");
       else if (delta < 0) setTrend("down");
       else setTrend("neutral");
@@ -79,7 +74,6 @@ export default function AnnouncementBar() {
       setShoppersCount((prev) => {
         const current = prev ?? initial;
         const next = current + delta;
-
         if (next < SHOPPER_MIN) return SHOPPER_MIN + 6;
         if (next > SHOPPER_MAX) return SHOPPER_MAX - 8;
         return next;
@@ -89,10 +83,12 @@ export default function AnnouncementBar() {
     return () => clearInterval(timer);
   }, []);
 
-  const { announcementBarEnabled } = useAdminSettings();
-  const pathname = usePathname();
   if (!mounted) return null;
-  if (pathname.startsWith("/admin") || pathname.startsWith("/delivery")) return null;
+
+  if (pathname.startsWith("/admin") || pathname.startsWith("/delivery")) {
+    return null;
+  }
+
   if (!announcementBarEnabled) return null;
 
   const trendClass =
@@ -105,40 +101,48 @@ export default function AnnouncementBar() {
   return (
     <div
       suppressHydrationWarning
-      className="h-7 md:h-10 bg-gradient-to-r from-brand-orange via-brand-orange to-brand-orange-dark text-white flex items-center sticky top-0 z-[9999] select-none border-b border-white/10 shadow-[0_1px_0_rgba(0,0,0,0.08)] w-full"
+      className="sticky top-0 z-[9999] flex h-7 w-full select-none items-center border-b border-white/10 text-white shadow-[0_1px_0_rgba(0,0,0,0.08)] md:h-10"
+      style={{
+        background: `linear-gradient(to right, ${PRIMARY_ORANGE}, ${PRIMARY_ORANGE}, ${DARK_ORANGE})`,
+      }}
     >
-      <div className="mx-auto flex h-full w-full max-w-7xl items-center justify-between">
+      <div className="mx-auto flex h-full w-full  items-center justify-between">
 
-        {/* Left Section - Infinite Marquee */}
-        <div className="w-full sm:w-[70%] h-full flex items-center relative overflow-hidden">
+        {/* Left Section - Infinite Marquee — 60% on mobile, 70% on sm+ */}
+        <div className="relative flex h-full w-[60%] items-center overflow-hidden sm:w-[70%]">
           {/* Gradient edge masks */}
-          <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-brand-orange to-transparent z-10 pointer-events-none" />
-          <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-brand-orange to-transparent z-10 pointer-events-none" />
-
-          <div className="w-full overflow-hidden flex items-center">
-            {/* Only 2 copies needed for seamless loop */}
-            <div className="flex flex-row flex-nowrap shrink-0 animate-[marquee_30s_linear_infinite] hover:[animation-play-state:paused]">
+          <div
+            className="pointer-events-none absolute left-0 top-0 bottom-0 z-10 w-12"
+            style={{ background: `linear-gradient(to right, ${PRIMARY_ORANGE}, transparent)` }}
+          />
+          <div
+            className="pointer-events-none absolute right-0 top-0 bottom-0 z-10 w-12"
+            style={{ background: `linear-gradient(to left, ${PRIMARY_ORANGE}, transparent)` }}
+          />
+          <div className="flex w-full items-center overflow-hidden">
+            <div className="flex shrink-0 flex-row flex-nowrap animate-[marquee_30s_linear_infinite] hover:[animation-play-state:paused]">
               <MarqueeContent />
               <MarqueeContent />
             </div>
           </div>
         </div>
 
-        {/* Right Section */}
-        <div className="hidden sm:flex w-[30%] h-full items-center text-white border-l border-white/15 shrink-0">
+        {/* Right Section — hidden on mobile originally, now flex on mobile too */}
+        {/* Was: hidden sm:flex — now: flex (always visible) */}
+        <div className="flex h-full w-[40%] shrink-0 items-center border-l border-white/15 text-white sm:w-[30%]">
 
           {/* Zone A: Live Shoppers */}
-          <div className="w-1/2 h-full flex items-center justify-center gap-2 px-3 lg:px-4 bg-black/15">
+          <div className="flex h-full w-1/2 items-center justify-center gap-1.5 bg-black/8 px-1 lg:px-4">
             <span className="relative flex h-2 w-2 shrink-0">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
             </span>
-            <Users size={12} className="text-white shrink-0" />
-            {/* suppressHydrationWarning on the count span since value differs server vs client */}
-            <span className="font-body text-[8px] lg:text-[10px] font-medium tracking-[0.5px] text-white whitespace-nowrap">
+            <Users size={10} className="shrink-0 text-white sm:hidden" />
+            <Users size={12} className="hidden shrink-0 text-white sm:block" />
+            <span className="font-body whitespace-nowrap text-[7px] font-medium tracking-[0.5px] text-white sm:text-[8px] lg:text-[10px]">
               <span
-                className={`inline-block transition-all duration-300 ${trendClass}`}
                 suppressHydrationWarning
+                className={`inline-block transition-all duration-300 ${trendClass}`}
               >
                 {shoppersCount ?? "—"}
               </span>{" "}
@@ -149,15 +153,20 @@ export default function AnnouncementBar() {
           {/* Zone B: Exclusive Deals CTA */}
           <Link
             href="/exclusive-offers"
-            className="group w-1/2 h-full flex items-center justify-center gap-1.5 px-3 lg:px-4 bg-black/25 hover:bg-black/40 border-l border-white/10 transition-colors duration-200 cursor-pointer whitespace-nowrap"
+            className="group flex h-full w-1/2 cursor-pointer items-center justify-center gap-1 border-l border-white/10 bg-black/25 px-1 transition-colors duration-200 hover:bg-black/40 lg:px-4"
           >
-            <span className="font-body text-[8px] lg:text-[10px] font-semibold text-white tracking-wide">
+            <span className="font-body whitespace-nowrap text-[7px] font-semibold tracking-wide text-white sm:text-[8px] lg:text-[10px]">
               Exclusive Deals
             </span>
             <ChevronRight
-              size={14}
-              className="text-white shrink-0 transition-transform duration-200 group-hover:translate-x-1"
+              size={11}
               strokeWidth={2.5}
+              className="shrink-0 text-white transition-transform duration-200 group-hover:translate-x-1 sm:hidden"
+            />
+            <ChevronRight
+              size={14}
+              strokeWidth={2.5}
+              className="hidden shrink-0 text-white transition-transform duration-200 group-hover:translate-x-1 sm:block"
             />
           </Link>
         </div>
