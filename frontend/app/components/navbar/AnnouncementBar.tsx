@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useAdminSettings } from "../../context/AdminContext";
+import { getSettingsApi } from "../../utils/api";
 import {
   Truck,
   Zap,
@@ -23,16 +24,16 @@ const SHOPPER_MAX = 340;
 const PRIMARY_ORANGE = "#FF6A00";
 const DARK_ORANGE = "#E85F00";
 
-const marqueeItems = [
-  { icon: Truck, text: "FREE DELIVERY ON ORDERS OVER QAR 150" },
-  { icon: Zap, text: "NEW ARRIVALS EVERY WEEK" },
-  { icon: MessageCircle, text: "ORDER VIA WHATSAPP" },
-  { icon: Moon, text: "BIG NIGHT SALE EVERY THURSDAY" },
-  { icon: Package, text: "CASH ON DELIVERY QATAR-WIDE" },
-  { icon: Star, text: "4.9 RATED BY 2,400 CUSTOMERS" },
-];
+function MarqueeContent({ freeShippingThreshold }: { freeShippingThreshold: number }) {
+  const marqueeItems = [
+    { icon: Truck, text: `FREE DELIVERY ON ORDERS OVER QAR ${freeShippingThreshold}` },
+    { icon: Zap, text: "NEW ARRIVALS EVERY WEEK" },
+    { icon: MessageCircle, text: "ORDER VIA WHATSAPP" },
+    { icon: Moon, text: "BIG NIGHT SALE EVERY THURSDAY" },
+    { icon: Package, text: "CASH ON DELIVERY QATAR-WIDE" },
+    { icon: Star, text: "4.9 RATED BY 2,400 CUSTOMERS" },
+  ];
 
-function MarqueeContent() {
   return (
     <div className="flex shrink-0 flex-nowrap items-center gap-[48px] pr-[48px]">
       {marqueeItems.map((item, idx) => {
@@ -55,6 +56,7 @@ export default function AnnouncementBar() {
   const [mounted, setMounted] = useState(false);
   const [shoppersCount, setShoppersCount] = useState<number | null>(null);
   const [trend, setTrend] = useState<"up" | "down" | "neutral">("neutral");
+  const [freeShippingThreshold, setFreeShippingThreshold] = useState<number>(99);
 
   const { announcementBarEnabled } = useAdminSettings();
   const pathname = usePathname();
@@ -63,6 +65,18 @@ export default function AnnouncementBar() {
     setMounted(true);
     const initial = SHOPPER_BASE + Math.floor(Math.random() * SHOPPER_VARIANCE);
     setShoppersCount(initial);
+
+    const fetchSettings = async () => {
+      try {
+        const settings = await getSettingsApi();
+        if (settings && settings.freeShippingThreshold !== undefined) {
+          setFreeShippingThreshold(Number(settings.freeShippingThreshold));
+        }
+      } catch (err) {
+        console.error("Failed to fetch settings in AnnouncementBar", err);
+      }
+    };
+    fetchSettings();
 
     const timer = setInterval(() => {
       const steps = [-2, -1, 0, 1, 2];
@@ -121,8 +135,8 @@ export default function AnnouncementBar() {
           />
           <div className="flex w-full items-center overflow-hidden">
             <div className="flex shrink-0 flex-row flex-nowrap animate-[marquee_30s_linear_infinite] hover:[animation-play-state:paused]">
-              <MarqueeContent />
-              <MarqueeContent />
+              <MarqueeContent freeShippingThreshold={freeShippingThreshold} />
+              <MarqueeContent freeShippingThreshold={freeShippingThreshold} />
             </div>
           </div>
         </div>
