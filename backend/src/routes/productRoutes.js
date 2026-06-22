@@ -15,7 +15,7 @@ router.get("/new-arrivals",productController.getNewProducts);
 router.get("/banner",productController.getBannerActiveProducts);
 router.get("/subcategory/:subcategoryId",productController.getProductsBySubCategory);
 router.get("/:id", productController.getProductById);
-router.get("/deal-of-day",productController.getDealOfDayProducts);
+
 
 
 /**
@@ -29,7 +29,5 @@ router.delete("/:id",authenticateJWT,isAdminOrStaff,productController.deleteProd
 //banner routes
 router.patch("/:id/banner",authenticateJWT,isAdminOrStaff,productController.updateBannerStatus);
 
-//deal of the day routes
-router.patch("/:id/deal-of-day",authenticateJWT,isAdmin,productController.updateDealOfDay);
 
 module.exports = router;

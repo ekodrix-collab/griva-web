@@ -1,12 +1,8 @@
 const express = require("express");
 const router = express.Router();
-
 const dealController = require("../controllers/dealOfDay.controller");
 
-const {
-  authenticateJWT,
-  isAdmin,
-} = require("../middleware/auth");
+const { authenticateJWT, isAdmin } = require("../middleware/auth");
 
 /**
  * Public APIs
