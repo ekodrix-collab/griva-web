@@ -79,7 +79,7 @@ const Review = sequelize.define(
 
 // Establish database relationship mappings (JPA @ManyToOne equivalents)
 Review.belongsTo(Product, { foreignKey: "product_id", as: "product" });
-Product.hasMany(Review, { foreignKey: "product_id", as: "reviews" });
+Product.hasMany(Review, { foreignKey: "product_id", as: "reviews", onDelete: "CASCADE" });
 
 Review.belongsTo(User, { foreignKey: "user_id", as: "user" });
 User.hasMany(Review, { foreignKey: "user_id", as: "reviews" });
