@@ -40,7 +40,18 @@ const User = require("../models/User");
 const Cart = require("../models/Cart");
 const CartItem = require("../models/CartItem");
 const SiteSetting = require("../models/SiteSetting");
+// const {
+//   sendAdminOrderNotification,
+//   sendOrderShippedEmail,
+//   sendOrderDeliveredEmail,
+// } = require("../services/brevoService");
 
+const {
+  sendAdminOrderNotification,
+  sendCustomerOrderConfirmation,
+  sendOutForDeliveryEmail,
+  sendOrderDeliveredEmail,
+} = require("../services/brevoService");
 /**
  * Generate a production-safe order number: GRV-YYYYMMDD-XXXX
  * Runs inside a transaction to prevent duplicates under concurrency.
@@ -307,6 +318,7 @@ exports.createOrder = async (req, res, next) => {
       checkout_token: tokenVal,
     }, { transaction });
 
+
     const finalizedItems = itemsToCreate.map((item) => ({
       ...item,
       order_id: order.id,
@@ -314,6 +326,12 @@ exports.createOrder = async (req, res, next) => {
 
     await OrderItem.bulkCreate(finalizedItems, { transaction });
 
+    const productCount = items.length;
+
+    const totalQuantity = items.reduce(
+      (sum, item) => sum + Number(item.quantity || 0),
+      0
+    );
     // Clear the user's database cart after successful order placement
     if (userId) {
       const userCart = await Cart.findOne({ where: { user_id: userId }, transaction });
@@ -323,7 +341,25 @@ exports.createOrder = async (req, res, next) => {
     }
 
     await transaction.commit();
+    // await sendAdminOrderNotification(order);
+    try {
+      await sendAdminOrderNotification(order);
+    } catch (error) {
+      console.error("Admin email failed:", error.message);
+    }
 
+    try {
+      await sendCustomerOrderConfirmation(
+        order,
+        productCount,
+        totalQuantity
+      );
+    } catch (error) {
+      console.error(
+        "Customer confirmation email failed:",
+        error.message
+      );
+    }
     res.status(201).json({
       success: true,
       message: "Order placed successfully.",
@@ -542,6 +578,25 @@ exports.updateOrderStatus = async (req, res, next) => {
     }
 
     await transaction.commit();
+
+    if (status === "out_for_delivery") {
+      try {
+        await sendOutForDeliveryEmail(order);
+      } catch (error) {
+        console.error(
+          "Out for delivery email failed:",
+          error.message
+        );
+      }
+    }
+
+    if (status === "delivered") {
+      try {
+        await sendOrderDeliveredEmail(order);
+      } catch (error) {
+        console.error("Delivered email failed:", error.message);
+      }
+    }
 
     res.status(200).json({
       message: "Order status updated successfully.",

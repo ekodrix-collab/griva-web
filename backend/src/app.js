@@ -74,6 +74,7 @@ const deliveryAttemptRoutes = require("./routes/deliveryAttemptRoutes");
 const uploadRoutes = require("./routes/uploadRoutes"); //IMAGE UPLOAD
 const deliverySlotRoutes = require("./routes/deliverySlotRoutes");
 const dealOfDayRoutes = require("./routes/dealOfDayRoutes");
+// const testShippedEmailRoutes = require("./routes/testShippedEmailRoutes");
 
 // Mount API Routers
 app.use("/api/auth", authRoutes);
@@ -92,7 +93,7 @@ app.use("/api/delivery", deliveryRoutes); // FEATURE: Delivery Boy System
 app.use("/api/admin/customers", customerRoutes);
 app.use("/api/admin/staff", staffRoutes);
 app.use("/api/delivery", deliveryAttemptRoutes); // FEATURE: Delivery Attempt Management
-app.use("/api/test-email", testEmailRoutes);
+// app.use("/api/test-email", testEmailRoutes);
 app.use("/api/uploads", uploadRoutes); //IMAGE UPLOAD
 app.use("/api/delivery-slots", deliverySlotRoutes);
 app.use("/api/deal-of-day", dealOfDayRoutes);
