@@ -24,6 +24,7 @@ import {
   Sun,
   Moon
 } from "lucide-react";
+import { useToast } from "@/app/context/ToastContext";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 
@@ -56,11 +57,11 @@ interface DeliveryOrder {
   items?: OrderItem[];
   user?: { id: number; name: string; email: string };
 }
-
 export default function DeliveryOrderDetailPage() {
   const router = useRouter();
   const params = useParams();
   const orderId = params.id as string;
+  const { toast } = useToast();
 
   const [order, setOrder] = useState<DeliveryOrder | null>(null);
   const [loading, setLoading] = useState(true);
@@ -68,7 +69,6 @@ export default function DeliveryOrderDetailPage() {
   const [updating, setUpdating] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
   const [theme, setTheme] = useState<"dark" | "light">("dark");
 
   useEffect(() => {
@@ -141,13 +141,13 @@ export default function DeliveryOrderDetailPage() {
       });
       if (res.ok) {
         setOrder((prev) => prev ? { ...prev, status: newStatus } : prev);
-        showToast(`Status: ${newStatus.replace(/_/g, ' ').toUpperCase()}`);
+        toast.success(`Status: ${newStatus.replace(/_/g, ' ').toUpperCase()}`);
       } else {
         const data = await res.json();
-        alert(data.message || "Failed to update status.");
+        toast.error(data.message || "Failed to update status.");
       }
     } catch {
-      alert("Check your internet connection.");
+      toast.error("Check your internet connection.");
     } finally {
       setUpdating(false);
     }
@@ -158,15 +158,10 @@ export default function DeliveryOrderDetailPage() {
     const fullAddr = order.shipping_address + (order.city ? `, ${order.city}` : "");
     navigator.clipboard.writeText(fullAddr).then(() => {
       setCopied(true);
+      toast.success("Address copied to clipboard!");
       setTimeout(() => setCopied(false), 2000);
     });
   };
-
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(""), 3000);
-  };
-
   const parseTotal = (tp: string) => {
     const num = parseFloat(String(tp).replace(/[$,]/g, ""));
     return isNaN(num) ? "0.00" : num.toFixed(2);
@@ -416,19 +411,6 @@ export default function DeliveryOrderDetailPage() {
         )}
       </div>
 
-      {/* Dynamic Toast Popup */}
-      <AnimatePresence>
-        {toastMessage && (
-          <motion.div 
-            initial={{ opacity: 0, y: 50, x: "-50%" }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-24 left-1/2 z-[60] bg-zinc-950 border border-zinc-900 text-[#FF6A00] text-xs font-bold px-6 py-3.5 rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.8)] tracking-wider"
-          >
-            {toastMessage.toUpperCase()}
-          </motion.div>
-        )}
-      </AnimatePresence>
 
     </div>
   );

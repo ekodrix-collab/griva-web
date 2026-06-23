@@ -69,16 +69,24 @@ exports.getProducts = async (req, res) => {
 
     const where = {};
 
+    // CRIT-4: Enforce is_active check for public views (allow admin/staff to see deactivated ones)
+    const isAdminOrStaffUser = req.user && (req.user.role === "admin" || req.user.role === "staff");
+    if (!isAdminOrStaffUser) {
+      where.is_active = true;
+    }
+
     if (search) {
+      // MED-11: Escape SQL wildcard characters % and _ in search query
+      const escapedSearch = search.replace(/[%_]/g, "\\$&");
       where[Op.or] = [
         {
           title: {
-            [Op.iLike]: `%${search}%`,
+            [Op.iLike]: `%${escapedSearch}%`,
           },
         },
         {
           description: {
-            [Op.iLike]: `%${search}%`,
+            [Op.iLike]: `%${escapedSearch}%`,
           },
         },
       ];
@@ -123,7 +131,9 @@ exports.getProductById = async (req, res) => {
   try {
     const product = await Product.findByPk(req.params.id);
 
-    if (!product) {
+    // CRIT-4: Add is_active check for public views on product details
+    const isAdminOrStaffUser = req.user && (req.user.role === "admin" || req.user.role === "staff");
+    if (!product || (!product.is_active && !isAdminOrStaffUser)) {
       return res.status(404).json({
         success: false,
         message: "Product not found",
@@ -149,10 +159,18 @@ exports.getProductById = async (req, res) => {
  */
 exports.getProductsBySubCategory = async (req, res) => {
   try {
+    const where = {
+      subcategory_id: req.params.subcategoryId,
+    };
+
+    // CRIT-4: Enforce is_active check for public subcategory view
+    const isAdminOrStaffUser = req.user && (req.user.role === "admin" || req.user.role === "staff");
+    if (!isAdminOrStaffUser) {
+      where.is_active = true;
+    }
+
     const products = await Product.findAll({
-      where: {
-        subcategory_id: req.params.subcategoryId,
-      },
+      where,
     });
 
     res.status(200).json({
@@ -417,3 +435,62 @@ exports.getBannerActiveProducts = async (req, res) => {
     });
   }
 };
+
+//deal of the day
+exports.updateDealOfDay = async (req, res) => {
+  try {
+    const product = await Product.findByPk(req.params.id);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    const { deal_of_day} = req.body;
+
+    await product.update({
+      deal_of_day
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "deal of the day updated successfully",
+      data: product,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+//get deal of the day products
+exports.getDealOfDayProducts = async (req, res) => {
+  try {
+    const products = await Product.findAll({
+      where: {
+        deal_of_day: true,
+        is_active: true,
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      count: products.length,
+      data: products,
+    });
+  } catch (error) {
+    console.log(error);
+
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+

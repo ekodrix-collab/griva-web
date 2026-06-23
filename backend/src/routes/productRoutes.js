@@ -2,19 +2,20 @@ const express = require("express");
 const router = express.Router();
 
 const productController = require("../controllers/productController");
-const { authenticateJWT, isAdminOrStaff } = require("../middleware/auth");
+const { authenticateJWT, authenticateOptionalJWT, isAdminOrStaff } = require("../middleware/auth");
 
 /**
  * Public Routes
  */
-router.get("/", productController.getProducts);
+router.get("/", authenticateOptionalJWT, productController.getProducts);
 router.get("/featured",productController.getFeaturedProducts);
 router.get("/trending", productController.getTrendingProducts);
 router.get("/best-sellers",productController.getBestSellerProducts);
 router.get("/new-arrivals",productController.getNewProducts);
 router.get("/banner",productController.getBannerActiveProducts);
-router.get("/subcategory/:subcategoryId",productController.getProductsBySubCategory);
-router.get("/:id", productController.getProductById);
+router.get("/subcategory/:subcategoryId", authenticateOptionalJWT, productController.getProductsBySubCategory);
+router.get("/:id", authenticateOptionalJWT, productController.getProductById);
+
 
 
 /**
@@ -27,5 +28,6 @@ router.delete("/:id",authenticateJWT,isAdminOrStaff,productController.deleteProd
 
 //banner routes
 router.patch("/:id/banner",authenticateJWT,isAdminOrStaff,productController.updateBannerStatus);
+
 
 module.exports = router;

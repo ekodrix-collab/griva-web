@@ -24,20 +24,24 @@ const router = express.Router();
 const orderController = require("../controllers/orderController");
 const { reopenOrder, getNeedsAttention } = require("../controllers/deliveryAttemptController");
 const { authenticateJWT, authenticateOptionalJWT, isAdmin, isAdminOrStaff } = require("../middleware/auth");
+const { strictLimiter } = require("../middleware/rateLimit");
 
 // ─────────────────────────────────────────────────────────
 // Public Routes (No authentication required)
 // ─────────────────────────────────────────────────────────
 
 // Maps to: GET /api/orders/track?order_number=GRV-...&phone=+974... (Guest order tracking)
-router.get("/track", orderController.trackGuestOrder);
+router.get("/track", strictLimiter, orderController.trackGuestOrder);
 
 // ─────────────────────────────────────────────────────────
 // Customer Authorized Routes (Requires valid JWT session)
 // ─────────────────────────────────────────────────────────
 
 // Maps to: POST /api/orders (Creates new order transaction)
-router.post("/", authenticateOptionalJWT, orderController.createOrder);
+router.post("/", strictLimiter, authenticateOptionalJWT, orderController.createOrder);
+
+// Maps to: PATCH /api/orders/:id/cancel (Customer cancels their pending order)
+router.patch("/:id/cancel", authenticateJWT, orderController.cancelMyOrder);
 
 // Maps to: GET /api/orders/my-orders (Fetches past purchase receipts)
 router.get("/my-orders", authenticateJWT, orderController.getMyOrders);

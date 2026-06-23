@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useAdminSettings } from "../../context/AdminContext";
+import { getSettingsApi } from "../../utils/api";
 import {
   Truck,
   Zap,
@@ -19,20 +20,19 @@ const SHOPPER_BASE = 278;
 const SHOPPER_VARIANCE = 32;
 const SHOPPER_MIN = 240;
 const SHOPPER_MAX = 340;
-
 const PRIMARY_ORANGE = "#FF6A00";
 const DARK_ORANGE = "#E85F00";
 
-const marqueeItems = [
-  { icon: Truck, text: "FREE DELIVERY ON ORDERS OVER QAR 150" },
-  { icon: Zap, text: "NEW ARRIVALS EVERY WEEK" },
-  { icon: MessageCircle, text: "ORDER VIA WHATSAPP" },
-  { icon: Moon, text: "BIG NIGHT SALE EVERY THURSDAY" },
-  { icon: Package, text: "CASH ON DELIVERY QATAR-WIDE" },
-  { icon: Star, text: "4.9 RATED BY 2,400 CUSTOMERS" },
-];
+function MarqueeContent({ freeShippingThreshold }: { freeShippingThreshold: number }) {
+  const marqueeItems = [
+    { icon: Truck, text: `FREE DELIVERY ON ORDERS OVER QAR ${freeShippingThreshold}` },
+    { icon: Zap, text: "NEW ARRIVALS EVERY WEEK" },
+    { icon: MessageCircle, text: "ORDER VIA WHATSAPP" },
+    { icon: Moon, text: "BIG NIGHT SALE EVERY THURSDAY" },
+    { icon: Package, text: "CASH ON DELIVERY QATAR-WIDE" },
+    { icon: Star, text: "4.9 RATED BY 2,400 CUSTOMERS" },
+  ];
 
-function MarqueeContent() {
   return (
     <div className="flex shrink-0 flex-nowrap items-center gap-[48px] pr-[48px]">
       {marqueeItems.map((item, idx) => {
@@ -55,6 +55,7 @@ export default function AnnouncementBar() {
   const [mounted, setMounted] = useState(false);
   const [shoppersCount, setShoppersCount] = useState<number | null>(null);
   const [trend, setTrend] = useState<"up" | "down" | "neutral">("neutral");
+  const [freeShippingThreshold, setFreeShippingThreshold] = useState<number>(99);
 
   const { announcementBarEnabled } = useAdminSettings();
   const pathname = usePathname();
@@ -63,6 +64,18 @@ export default function AnnouncementBar() {
     setMounted(true);
     const initial = SHOPPER_BASE + Math.floor(Math.random() * SHOPPER_VARIANCE);
     setShoppersCount(initial);
+
+    const fetchSettings = async () => {
+      try {
+        const settings = await getSettingsApi();
+        if (settings && settings.freeShippingThreshold !== undefined) {
+          setFreeShippingThreshold(Number(settings.freeShippingThreshold));
+        }
+      } catch (err) {
+        console.error("Failed to fetch settings in AnnouncementBar", err);
+      }
+    };
+    fetchSettings();
 
     const timer = setInterval(() => {
       const steps = [-2, -1, 0, 1, 2];
@@ -101,35 +114,26 @@ export default function AnnouncementBar() {
   return (
     <div
       suppressHydrationWarning
-      className="sticky top-0 z-[9999] flex h-7 w-full select-none items-center border-b border-white/10 text-white shadow-[0_1px_0_rgba(0,0,0,0.08)] md:h-10"
-      style={{
-        background: `linear-gradient(to right, ${PRIMARY_ORANGE}, ${PRIMARY_ORANGE}, ${DARK_ORANGE})`,
-      }}
+      className="sticky top-0 z-[9999] bg-orange-600 flex h-7 w-full select-none items-center text-white  md:h-10"
+     
     >
       <div className="mx-auto flex h-full w-full  items-center justify-between">
 
         {/* Left Section - Infinite Marquee — 60% on mobile, 70% on sm+ */}
         <div className="relative flex h-full w-[60%] items-center overflow-hidden sm:w-[70%]">
           {/* Gradient edge masks */}
-          <div
-            className="pointer-events-none absolute left-0 top-0 bottom-0 z-10 w-12"
-            style={{ background: `linear-gradient(to right, ${PRIMARY_ORANGE}, transparent)` }}
-          />
-          <div
-            className="pointer-events-none absolute right-0 top-0 bottom-0 z-10 w-12"
-            style={{ background: `linear-gradient(to left, ${PRIMARY_ORANGE}, transparent)` }}
-          />
+         
           <div className="flex w-full items-center overflow-hidden">
             <div className="flex shrink-0 flex-row flex-nowrap animate-[marquee_30s_linear_infinite] hover:[animation-play-state:paused]">
-              <MarqueeContent />
-              <MarqueeContent />
+              <MarqueeContent freeShippingThreshold={freeShippingThreshold} />
+              <MarqueeContent freeShippingThreshold={freeShippingThreshold} />
             </div>
           </div>
         </div>
 
         {/* Right Section — hidden on mobile originally, now flex on mobile too */}
         {/* Was: hidden sm:flex — now: flex (always visible) */}
-        <div className="flex h-full w-[40%] shrink-0 items-center border-l border-white/15 text-white sm:w-[30%]">
+        <div className="flex h-full w-[40%] shrink-0 items-center  text-white sm:w-[30%]">
 
           {/* Zone A: Live Shoppers */}
           <div className="flex h-full w-1/2 items-center justify-center gap-1.5 bg-black/8 px-1 lg:px-4">
@@ -153,7 +157,7 @@ export default function AnnouncementBar() {
           {/* Zone B: Exclusive Deals CTA */}
           <Link
             href="/exclusive-offers"
-            className="group flex h-full w-1/2 cursor-pointer items-center justify-center gap-1 border-l border-white/10 bg-black/25 px-1 transition-colors duration-200 hover:bg-black/40 lg:px-4"
+            className="group flex h-full w-1/2 cursor-pointer items-center justify-center gap-1  bg-black/25 px-1 transition-colors duration-200 hover:bg-black/40 lg:px-4"
           >
             <span className="font-body whitespace-nowrap text-[7px] font-semibold tracking-wide text-white sm:text-[8px] lg:text-[10px]">
               Exclusive Deals

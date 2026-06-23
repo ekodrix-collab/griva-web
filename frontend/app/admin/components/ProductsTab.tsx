@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Search, Plus, Trash2, Edit, Check, X, ChevronDown
+  Search, Plus, Trash2, Edit, Check, X, ChevronDown, Package, CheckCircle, AlertTriangle, XCircle, ShoppingBag
 } from 'lucide-react';
 import { ProductRequest, Category, SubCategory } from '@/app/types/types';
 import { productService } from '@/app/services/product.service';
+import { useToast } from '@/app/context/ToastContext';
 import { categoryService } from '@/app/services/category.service';
 import { subCategoryService } from '@/app/services/subCategory.service';
 import AddProductModal from './AddProductModal';
 
 export default function ProductsTab() {
+  const { toast, confirm } = useToast();
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
@@ -18,6 +20,7 @@ export default function ProductsTab() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [openCategoryFilter, setOpenCategoryFilter] = useState(false);
+  const [quickFilter, setQuickFilter] = useState<string>("all");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
@@ -60,8 +63,9 @@ export default function ProductsTab() {
     setProducts((prev) => prev.map((x) => x.id === id ? { ...x, stock: next } : x));
     try {
       await productService.updateProductStock(id, next);
+      toast.success("Stock updated successfully");
     } catch (err) {
-      alert("Failed to update stock");
+      toast.error("Failed to update stock");
       loadData(); // Revert on failure
     }
   };
@@ -70,8 +74,9 @@ export default function ProductsTab() {
     setProducts((prev) => prev.map((p) => p.id === id ? { ...p, stock: val } : p));
     try {
       await productService.updateProductStock(id, val);
+      toast.success("Stock updated successfully");
     } catch (err) {
-      alert("Failed to update stock");
+      toast.error("Failed to update stock");
       loadData();
     }
   };
@@ -112,11 +117,21 @@ export default function ProductsTab() {
     return cat ? cat.title : "Unknown";
   };
 
+  const counts = {
+    total: products.length,
+    active: products.filter(p => p.is_active).length,
+    inactive: products.filter(p => !p.is_active).length,
+    lowStock: products.filter(p => p.stock !== undefined && p.stock > 0 && p.stock <= 5).length,
+    outOfStock: products.filter(p => !p.stock || p.stock === 0).length,
+  };
+
   const filteredProducts = products.filter((p) => {
+    // 1. Search Query
     const ms = (p.title?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
                (p.slug?.toLowerCase() || "").includes(searchQuery.toLowerCase());
     if (!ms) return false;
     
+    // 2. Category Filter
     if (filterCategory !== "all") {
       const sub = subCategories.find(s => s.id === p.subcategory_id);
       if (!sub) return false;
@@ -124,11 +139,97 @@ export default function ProductsTab() {
       if (!cat || cat.id.toString() !== filterCategory) return false;
     }
     
+    // 3. Quick Status Filter
+    if (quickFilter === 'active') {
+      return p.is_active;
+    }
+    if (quickFilter === 'inactive') {
+      return !p.is_active;
+    }
+    if (quickFilter === 'lowStock') {
+      return p.stock > 0 && p.stock <= 5;
+    }
+    if (quickFilter === 'outOfStock') {
+      return !p.stock || p.stock === 0;
+    }
+    
     return true;
   });
 
   return (
     <div className="space-y-6 animate-in fade-in-50 duration-300">
+      {/* Top Summary Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Total Products */}
+        <div className="bg-white border border-orange-500/20 rounded-2xl p-5 shadow-sm relative overflow-hidden group hover:border-orange-500/40 transition-all duration-300">
+          <div className="absolute right-0 bottom-0 translate-x-3 translate-y-3 opacity-5 text-orange-500 pointer-events-none group-hover:scale-110 transition-transform duration-300">
+            <ShoppingBag className="h-28 w-28" />
+          </div>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2.5 bg-orange-100 rounded-xl text-orange-500">
+              <ShoppingBag className="h-5 w-5" />
+            </div>
+            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Total Products</span>
+          </div>
+          <h3 className="text-2xl font-black text-gray-900 tracking-tight">{counts.total}</h3>
+          <span className="text-[9px] text-gray-500 font-semibold block mt-1">
+            Active: <span className="text-green-500 font-bold">{counts.active}</span> | Inactive: <span className="text-red-500 font-bold">{counts.inactive}</span>
+          </span>
+        </div>
+
+        {/* Active Products */}
+        <div className="bg-white border border-orange-500/20 rounded-2xl p-5 shadow-sm relative overflow-hidden group hover:border-orange-500/40 transition-all duration-300">
+          <div className="absolute right-0 bottom-0 translate-x-3 translate-y-3 opacity-5 text-green-500 pointer-events-none group-hover:scale-110 transition-transform duration-300">
+            <CheckCircle className="h-28 w-28" />
+          </div>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2.5 bg-green-100 rounded-xl text-green-600">
+              <CheckCircle className="h-5 w-5" />
+            </div>
+            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Active Products</span>
+          </div>
+          <h3 className="text-2xl font-black text-gray-900 tracking-tight">{counts.active}</h3>
+          <span className="text-[9px] text-gray-500 font-semibold block mt-1">
+            Enabled catalog listings
+          </span>
+        </div>
+
+        {/* Low Stock Products */}
+        <div className="bg-white border border-orange-500/20 rounded-2xl p-5 shadow-sm relative overflow-hidden group hover:border-orange-500/40 transition-all duration-300">
+          <div className="absolute right-0 bottom-0 translate-x-3 translate-y-3 opacity-5 text-orange-500 pointer-events-none group-hover:scale-110 transition-transform duration-300">
+            <AlertTriangle className="h-28 w-28" />
+          </div>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2.5 bg-orange-100 rounded-xl text-orange-600">
+              <AlertTriangle className="h-5 w-5" />
+            </div>
+            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Low Stock Products</span>
+          </div>
+          <h3 className="text-2xl font-black text-gray-900 tracking-tight">{counts.lowStock}</h3>
+          <span className="text-[9px] text-gray-500 font-semibold block mt-1">
+            Threshold: <span className="text-orange-500 font-bold">&le; 5 units</span>
+          </span>
+        </div>
+
+        {/* Out Of Stock Products */}
+        <div className="bg-white border border-orange-500/20 rounded-2xl p-5 shadow-sm relative overflow-hidden group hover:border-orange-500/40 transition-all duration-300">
+          <div className="absolute right-0 bottom-0 translate-x-3 translate-y-3 opacity-5 text-red-500 pointer-events-none group-hover:scale-110 transition-transform duration-300">
+            <XCircle className="h-28 w-28" />
+          </div>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2.5 bg-red-100 rounded-xl text-red-650">
+              <XCircle className="h-5 w-5" />
+            </div>
+            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Out of Stock</span>
+          </div>
+          <h3 className="text-2xl font-black text-gray-900 tracking-tight">{counts.outOfStock}</h3>
+          <span className="text-[9px] text-gray-500 font-semibold block mt-1">
+            Requires immediate reorder
+          </span>
+        </div>
+      </div>
+
+      {/* Search & Action Bar */}
       <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white p-4 rounded-xl border border-orange-500/30">
         <div className="flex flex-1 gap-3 w-full sm:w-auto">
           <div className="relative flex-1 max-w-md">
@@ -205,118 +306,197 @@ export default function ProductsTab() {
         </button>
       </div>
 
+      {/* Quick Status Filters */}
+      <div className="flex flex-wrap gap-2 bg-white p-3 rounded-xl border border-orange-500/30">
+        {([
+          { key: 'all', label: 'All Products', count: counts.total, icon: <ShoppingBag className="h-3.5 w-3.5" /> },
+          { key: 'active', label: 'Active', count: counts.active, icon: <CheckCircle className="h-3.5 w-3.5 text-green-500" /> },
+          { key: 'inactive', label: 'Inactive', count: counts.inactive, icon: <XCircle className="h-3.5 w-3.5 text-red-500" /> },
+          { key: 'lowStock', label: 'Low Stock', count: counts.lowStock, icon: <AlertTriangle className="h-3.5 w-3.5 text-orange-500" /> },
+          { key: 'outOfStock', label: 'Out of Stock', count: counts.outOfStock, icon: <XCircle className="h-3.5 w-3.5 text-red-650 animate-pulse" /> },
+        ] as const).map((tab) => {
+          const isActive = quickFilter === tab.key;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setQuickFilter(tab.key)}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer border ${
+                isActive
+                  ? 'bg-orange-500 text-white border-orange-500 shadow-sm shadow-orange-500/30'
+                  : 'bg-white text-gray-500 border-orange-500/20 hover:border-orange-500/50'
+              }`}
+            >
+              {tab.icon}
+              <span>{tab.label}</span>
+              <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${isActive ? 'bg-white/20' : 'bg-gray-100'}`}>
+                {tab.count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Products Table */}
       <div className="bg-white border border-orange-500/30 rounded-2xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse min-w-[700px]">
           <thead>
             <tr className="border-b border-orange-500/30 text-[10px] text-gray-400 font-bold uppercase tracking-wider bg-gray-50">
-              <th className="p-3">Product Details</th>
-              <th className="p-3">Category / Sub</th>
-              <th className="p-3">Price</th>
-              <th className="p-3 text-center">Stock Inventory</th>
-              <th className="p-3 text-right">Actions</th>
+              <th className="p-4 pl-6">Product Details</th>
+              <th className="p-4">Category / Sub</th>
+              <th className="p-4">Price</th>
+              <th className="p-4">Stock Status</th>
+              <th className="p-4 text-right pr-6">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-gray-150">
             {loading ? (
               <tr>
-                <td colSpan={5} className="p-8 text-center text-xs text-gray-400">Loading products...</td>
+                <td colSpan={5} className="p-10 text-center text-xs text-gray-400">Loading products...</td>
               </tr>
             ) : filteredProducts.length === 0 ? (
               <tr>
-                <td colSpan={5} className="p-8 text-center text-xs text-gray-400">No products matched the active filters.</td>
+                <td colSpan={5} className="p-10 text-center text-xs text-gray-400">No products matched the active filters.</td>
               </tr>
             ) : (
-              filteredProducts.map((p) => (
-                <tr key={p.id} className="hover:bg-gray-50 transition-colors group">
-                  <td className="p-3 flex items-center gap-3">
-                    <div className="h-12 w-12 rounded-xl bg-white p-1 flex items-center justify-center shrink-0 border border-orange-500/30 overflow-hidden">
-                      {p.main_image_url ? (
-                        <img src={p.main_image_url} alt={p.title} className="h-full w-full object-contain" />
-                      ) : (
-                        <span className="text-[10px] font-black text-orange-500">GRIVA</span>
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <span className="text-xs font-bold text-gray-900 block truncate max-w-[180px] group-hover:text-orange-400 transition-colors">{p.title}</span>
-                      <div className="flex gap-2 items-center mt-1">
-                        {p.is_active ? (
-                          <span className="text-[8px] font-bold text-green-500 px-1.5 py-0.5 rounded uppercase bg-green-50 border border-green-200">Active</span>
-                        ) : (
-                          <span className="text-[8px] font-bold text-red-500 px-1.5 py-0.5 rounded uppercase bg-red-50 border border-red-200">Inactive</span>
+              filteredProducts.map((p) => {
+                const isLowStock = p.stock !== undefined && p.stock > 0 && p.stock <= 5;
+                const isOutOfStock = !p.stock || p.stock === 0;
+
+                return (
+                  <tr key={p.id} className="hover:bg-orange-500/3 transition-colors group">
+                    {/* Details: Product Title, ID & Status Badge */}
+                    <td className="p-4 pl-6">
+                      <div className="flex items-center gap-3">
+                        <div className="h-12 w-12 rounded-xl bg-white p-1 flex items-center justify-center shrink-0 border border-orange-500/30 overflow-hidden shadow-xs">
+                          {p.main_image_url ? (
+                            <img src={p.main_image_url} alt={p.title} className="h-full w-full object-contain" />
+                          ) : (
+                            <span className="text-[10px] font-black text-orange-500">GRIVA</span>
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-xs font-bold text-gray-800 block truncate max-w-[200px] hover:text-orange-500 transition-colors" title={p.title}>
+                            {p.title}
+                          </span>
+                          <div className="flex gap-2 items-center mt-1">
+                            <span className="text-[9px] text-gray-400 font-semibold">ID: #{p.id}</span>
+                            <span className="text-gray-300">•</span>
+                            {p.is_active ? (
+                              <span className="inline-flex items-center text-[8px] font-black uppercase tracking-wider text-green-600 bg-green-50 border border-green-200 px-1.5 py-0.5 rounded-sm">
+                                Active
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center text-[8px] font-black uppercase tracking-wider text-red-500 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded-sm">
+                                Inactive
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Category & Subcategory */}
+                    <td className="p-4">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs font-bold text-gray-750">
+                          {getCategoryNameForSub(p.subcategory_id)}
+                        </span>
+                        <span className="text-[10px] text-gray-400 font-semibold">
+                          {getSubCategoryName(p.subcategory_id)}
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* Price */}
+                    <td className="p-4">
+                      <div>
+                        <span className="text-xs font-black text-gray-900">QAR {Number(p.price).toFixed(2)}</span>
+                        {p.old_price && (
+                          <span className="text-[10px] text-gray-400 line-through block mt-0.5">QAR {Number(p.old_price).toFixed(2)}</span>
                         )}
-                        <span className="text-[9px] text-gray-400 font-semibold">ID: #{p.id}</span>
                       </div>
-                    </div>
-                  </td>
+                    </td>
 
-                  <td className="p-3">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[10px] text-gray-700 font-semibold bg-white border border-orange-500/30 px-2 py-0.5 rounded w-fit">
-                        {getCategoryNameForSub(p.subcategory_id)}
-                      </span>
-                      <span className="text-[10px] text-gray-500 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded w-fit">
-                        {getSubCategoryName(p.subcategory_id)}
-                      </span>
-                    </div>
-                  </td>
-
-                  <td className="p-3">
-                    <div>
-                      <span className="text-xs font-black text-gray-900">${Number(p.price).toFixed(2)}</span>
-                      {p.old_price && (
-                        <span className="text-[10px] text-gray-400 line-through block mt-0.5">${Number(p.old_price).toFixed(2)}</span>
+                    {/* Stock Status Badge */}
+                    <td className="p-4">
+                      {isOutOfStock ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg border bg-red-50 border-red-200 text-red-500">
+                          <XCircle className="h-3.5 w-3.5 text-red-500 animate-pulse" />
+                          Out of Stock
+                        </span>
+                      ) : isLowStock ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg border bg-orange-50 border-orange-200 text-orange-600">
+                          <AlertTriangle className="h-3.5 w-3.5 text-orange-500" />
+                          Low Stock ({p.stock})
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg border bg-green-50 border-green-200 text-green-600">
+                          <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                          In Stock ({p.stock})
+                        </span>
                       )}
-                    </div>
-                  </td>
+                    </td>
 
-                  <td className="p-3">
-                    <div className="flex items-center justify-center gap-4">
-                      <div className="flex flex-col items-center">
-                        <input
-                          type="number"
-                          className={`w-14 text-center text-sm font-black bg-transparent border-none p-0 focus:outline-none focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${p.stock && p.stock <= 5 ? 'text-orange-500' : 'text-gray-800'}`}
-                          value={p.stock || 0}
-                          onChange={(e) => {
-                            const val = parseInt(e.target.value) || 0;
-                            handleDirectStockEdit(p.id, val);
+                    {/* Actions: Edit, Add Stock icon-button, Delete */}
+                    <td className="p-4 text-right pr-6" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-2">
+                        {/* Adjust / Add Stock */}
+                        <button
+                          onClick={() => {
+                            setStockPromptValue('');
+                            setStockPromptProductId(p.id);
                           }}
-                        />
-                        <span className="text-[9px] text-gray-400 font-semibold uppercase">Available</span>
+                          title="Add Stock"
+                          className="p-1.5 rounded-lg text-orange-500 hover:text-white bg-white hover:bg-orange-500 border border-orange-500/20 cursor-pointer shadow-xs transition-colors"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                        </button>
+                        
+                        {/* Direct Stock Edit Mode */}
+                        <div className="flex items-center border border-gray-250/60 rounded-lg overflow-hidden h-[29px] bg-gray-50/50">
+                          <button
+                            onClick={() => handleStockAdjustment(p.id, -1)}
+                            className="px-1.5 h-full text-gray-500 hover:bg-gray-100 active:bg-gray-200 border-r border-gray-200 font-bold"
+                          >
+                            -
+                          </button>
+                          <input
+                            type="number"
+                            className="w-10 text-center text-xs font-black bg-transparent border-none p-0 focus:outline-none focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-gray-800"
+                            value={p.stock || 0}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value) || 0;
+                              handleDirectStockEdit(p.id, val);
+                            }}
+                          />
+                          <button
+                            onClick={() => handleStockAdjustment(p.id, 1)}
+                            className="px-1.5 h-full text-gray-500 hover:bg-gray-100 active:bg-gray-200 border-l border-gray-200 font-bold"
+                          >
+                            +
+                          </button>
+                        </div>
+
+                        <button
+                          onClick={() => handleOpenEdit(p)}
+                          title="Edit Details"
+                          className="p-1.5 text-gray-400 hover:text-gray-900 bg-white hover:bg-gray-100 rounded-lg transition-colors cursor-pointer border border-orange-500/20"
+                        >
+                          <Edit className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteProduct(p.id)}
+                          title="Delete Product"
+                          className="p-1.5 text-gray-400 hover:text-red-500 bg-white hover:bg-red-50 rounded-lg transition-colors cursor-pointer border border-orange-500/20"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
                       </div>
-
-                      <div className="h-8 w-px bg-orange-500/20"></div>
-
-                      <button
-                        onClick={() => {
-                          setStockPromptValue('');
-                          setStockPromptProductId(p.id);
-                        }}
-                        className="px-2.5 py-1.5 rounded-lg bg-orange-50 hover:bg-orange-100 text-xs font-bold text-orange-600 border border-orange-200 transition-colors cursor-pointer whitespace-nowrap"
-                      >
-                        + Add Stock
-                      </button>
-                    </div>
-                  </td>
-
-                  <td className="p-3 text-right">
-                    <div className="flex items-center justify-end gap-2.5">
-                      <button
-                        onClick={() => handleOpenEdit(p)}
-                        className="p-2 text-gray-400 hover:text-gray-900 bg-white hover:bg-gray-100 rounded-lg transition-colors cursor-pointer border border-orange-500/30"
-                      >
-                        <Edit className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteProduct(p.id)}
-                        className="p-1.5 text-gray-400 hover:text-red-400 bg-white hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer border border-orange-500/30"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
@@ -385,8 +565,9 @@ export default function ProductsTab() {
                   try {
                     await productService.deleteProduct(id);
                     setProducts(prev => prev.filter(c => c.id !== id));
+                    toast.success("Product deleted successfully");
                   } catch (err) {
-                    alert("Failed to delete product");
+                    toast.error("Failed to delete product");
                   }
                 }}
                 className="px-5 py-2.5 bg-red-500 text-white text-xs font-bold rounded-xl hover:bg-red-600 transition-colors cursor-pointer shadow-md shadow-red-500/10 border-none outline-none"
