@@ -7,6 +7,10 @@ const Order = require("../models/Order");
 const OrderItem = require("../models/OrderItem");
 const Product = require("../models/Product");
 const User = require("../models/User");
+const {
+  sendOutForDeliveryEmail,
+  sendOrderDeliveredEmail,
+} = require("../services/brevoService");
 
 /**
  * GET /api/delivery/my-orders
@@ -108,14 +112,44 @@ exports.updateMyOrderStatus = async (req, res, next) => {
       });
     }
 
-    order.status = status;
-    await order.save();
+    // order.status = status;
+    // await order.save();
 
-    res.status(200).json({
-      success: true,
-      message: `Order status updated to '${status}'.`,
-      order,
-    });
+    // res.status(200).json({
+    //   success: true,
+    //   message: `Order status updated to '${status}'.`,
+    //   order,
+    // });
+    order.status = status;
+await order.save();
+
+if (status === "out_for_delivery") {
+  try {
+    await sendOutForDeliveryEmail(order);
+  } catch (error) {
+    console.error(
+      "Out for delivery email failed:",
+      error.message
+    );
+  }
+}
+
+if (status === "delivered") {
+  try {
+    await sendOrderDeliveredEmail(order);
+  } catch (error) {
+    console.error(
+      "Delivered email failed:",
+      error.message
+    );
+  }
+}
+
+res.status(200).json({
+  success: true,
+  message: `Order status updated to '${status}'.`,
+  order,
+});
   } catch (error) {
     next(error);
   }

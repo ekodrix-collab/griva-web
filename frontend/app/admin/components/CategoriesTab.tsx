@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Trash2, Edit, Check, X, Loader2 } from 'lucide-react';
+import { Search, Plus, Trash2, Edit, Check, X, Loader2, CheckCircle, XCircle } from 'lucide-react';
 import { Category, CategoryRequest } from '@/app/types/types';
 import { categoryService } from '@/app/services/category.service';
+import { productService } from '@/app/services/product.service';
+import { subCategoryService } from '@/app/services/subCategory.service';
+import { useToast } from '@/app/context/ToastContext';
 import { uploadService } from '@/app/services/upload.service';
 
 export default function CategoriesTab() {
+  const { toast, confirm } = useToast();
   const [categories, setCategories] = useState<Category[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [subCategories, setSubCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -34,11 +40,20 @@ export default function CategoriesTab() {
   const loadCategories = async () => {
     setLoading(true);
     try {
-      const res = await categoryService.getCategories();
-      const actualData = res?.data || res;
-      setCategories(Array.isArray(actualData) ? actualData : []);
+      const [catRes, prodRes, subRes] = await Promise.all([
+        categoryService.getCategories(),
+        productService.getProducts(),
+        subCategoryService.getSubCategories()
+      ]);
+      const catData = catRes?.data || catRes;
+      const prodData = prodRes?.data || prodRes;
+      const subData = subRes?.data || subRes;
+      
+      setCategories(Array.isArray(catData) ? catData : []);
+      setProducts(Array.isArray(prodData) ? prodData : []);
+      setSubCategories(Array.isArray(subData) ? subData : []);
     } catch (err) {
-      console.error("Failed to load categories", err);
+      console.error("Failed to load categories data", err);
     }
     setLoading(false);
   };
@@ -67,12 +82,17 @@ export default function CategoriesTab() {
   };
 
   const handleDelete = async (id: number) => {
-    if (confirm("Are you sure you want to delete this category?")) {
+    const isConfirmed = await confirm(
+      "Are you sure you want to delete this category? All subcategories and products belonging to this category will lose their parent category references.",
+      "Delete Category"
+    );
+    if (isConfirmed) {
       try {
         await categoryService.deleteCategory(id);
         setCategories(prev => prev.filter(c => c.id !== id));
+        toast.success("Category deleted successfully");
       } catch (err) {
-        alert("Failed to delete category");
+        toast.error("Failed to delete category");
       }
     }
   };
@@ -150,6 +170,13 @@ export default function CategoriesTab() {
     (c.slug?.toLowerCase() || "").includes(searchQuery.toLowerCase())
   );
 
+  const getProductCountForCategory = (categoryId: number) => {
+    const subIds = subCategories
+      .filter(sub => sub.category_id === categoryId)
+      .map(sub => sub.id);
+    return products.filter(p => subIds.includes(p.subcategory_id)).length;
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in-50 duration-300">
       {/* Search & Action Bar */}
@@ -182,81 +209,84 @@ export default function CategoriesTab() {
           <table className="w-full text-left border-collapse min-w-[700px]">
             <thead>
               <tr className="border-b border-orange-500/30 text-[10px] text-gray-400 font-bold uppercase tracking-wider bg-gray-50">
-                <th className="p-3">Category Details</th>
-                <th className="p-3">Slug</th>
-                <th className="p-3">Href</th>
-                <th className="p-3 text-center">Status</th>
-                <th className="p-3">Created</th>
-                <th className="p-3 text-right">Actions</th>
+                <th className="p-4 pl-6">Category Details</th>
+                <th className="p-4">Products Count</th>
+                <th className="p-4 text-center">Status</th>
+                <th className="p-4">Created Date</th>
+                <th className="p-4 text-right pr-6">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-150">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-xs text-gray-400">Loading categories...</td>
+                  <td colSpan={5} className="p-10 text-center text-xs text-gray-400">Loading categories...</td>
                 </tr>
               ) : filteredCategories.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-xs text-gray-400">No categories found.</td>
+                  <td colSpan={5} className="p-10 text-center text-xs text-gray-400">No categories found.</td>
                 </tr>
               ) : (
-                filteredCategories.map((cat) => (
-                  <tr key={cat.id} className="hover:bg-gray-50 transition-colors group">
-                    <td className="p-3 flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-xl bg-white p-1 flex items-center justify-center shrink-0 border border-orange-500/30 overflow-hidden">
-                        {cat.image_url ? (
-                          <img src={cat.image_url} alt={cat.title} className="h-full w-full object-cover" />
+                filteredCategories.map((cat) => {
+                  const prodCount = getProductCountForCategory(cat.id);
+                  return (
+                    <tr key={cat.id} className="hover:bg-orange-500/3 transition-colors group">
+                      <td className="p-4 pl-6 flex items-center gap-3">
+                        <div className="h-12 w-12 rounded-xl bg-white p-1 flex items-center justify-center shrink-0 border border-orange-500/30 overflow-hidden shadow-xs">
+                          {cat.image_url ? (
+                            <img src={cat.image_url} alt={cat.title} className="h-full w-full object-cover" />
+                          ) : (
+                            <span className="text-[10px] font-black text-orange-500">GRIVA</span>
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-xs font-bold text-gray-800 block truncate max-w-[200px] group-hover:text-orange-500 transition-colors">
+                            {cat.title}
+                          </span>
+                          <span className="text-[9px] text-gray-400 font-semibold mt-1 block">ID: #{cat.id}</span>
+                        </div>
+                      </td>
+
+                      <td className="p-4 text-xs font-bold text-gray-700">
+                        {prodCount} product{prodCount !== 1 ? 's' : ''}
+                      </td>
+
+                      <td className="p-4 text-center">
+                        {cat.is_active ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 border border-green-200 text-green-700 rounded-lg text-[10px] font-bold">
+                            <CheckCircle className="w-3.5 h-3.5 text-green-500" /> Active
+                          </span>
                         ) : (
-                          <span className="text-[10px] font-black text-orange-500">N/A</span>
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-50 border border-red-200 text-red-700 rounded-lg text-[10px] font-bold">
+                            <XCircle className="w-3.5 h-3.5 text-red-500" /> Inactive
+                          </span>
                         )}
-                      </div>
-                      <div className="min-w-0">
-                        <span className="text-sm font-bold text-gray-900 block truncate group-hover:text-orange-500 transition-colors">
-                          {cat.title}
-                        </span>
-                        <span className="text-[9px] text-gray-400 font-semibold">ID: #{cat.id}</span>
-                      </div>
-                    </td>
-                    <td className="p-3">
-                      <span className="text-xs text-gray-700 bg-gray-100 px-2 py-1 rounded-md">{cat.slug}</span>
-                    </td>
-                    <td className="p-3">
-                      <span className="text-xs text-gray-500 truncate max-w-[150px] block">{cat.href}</span>
-                    </td>
-                    <td className="p-3 text-center">
-                      {cat.is_active ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-md text-[10px] font-bold">
-                          <Check className="w-3 h-3" /> Active
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded-md text-[10px] font-bold">
-                          <X className="w-3 h-3" /> Inactive
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-3">
-                      <span className="text-xs text-gray-500">
-                        {new Date(cat.createdAt).toLocaleDateString()}
-                      </span>
-                    </td>
-                    <td className="p-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleOpenEdit(cat)}
-                          className="p-2 text-gray-400 hover:text-gray-900 bg-white hover:bg-gray-100 rounded-lg transition-colors cursor-pointer border border-orange-500/30"
-                        >
-                          <Edit className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(cat.id)}
-                          className="p-1.5 text-gray-400 hover:text-red-500 bg-white hover:bg-red-50 rounded-lg transition-colors cursor-pointer border border-orange-500/30"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+
+                      <td className="p-4 text-xs text-gray-500 font-medium">
+                        {new Date(cat.createdAt).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </td>
+
+                      <td className="p-4 text-right pr-6" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-2.5">
+                          <button
+                            onClick={() => handleOpenEdit(cat)}
+                            title="Edit Category"
+                            className="p-1.5 text-gray-400 hover:text-gray-900 bg-white hover:bg-gray-100 rounded-lg transition-colors cursor-pointer border border-orange-500/20"
+                          >
+                            <Edit className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(cat.id)}
+                            title="Delete Category"
+                            className="p-1.5 text-gray-400 hover:text-red-550 bg-white hover:bg-red-50 rounded-lg transition-colors cursor-pointer border border-orange-500/20"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

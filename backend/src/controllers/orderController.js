@@ -40,7 +40,18 @@ const User = require("../models/User");
 const Cart = require("../models/Cart");
 const CartItem = require("../models/CartItem");
 const SiteSetting = require("../models/SiteSetting");
+// const {
+//   sendAdminOrderNotification,
+//   sendOrderShippedEmail,
+//   sendOrderDeliveredEmail,
+// } = require("../services/brevoService");
 
+const {
+  sendAdminOrderNotification,
+  sendCustomerOrderConfirmation,
+  sendOutForDeliveryEmail,
+  sendOrderDeliveredEmail,
+} = require("../services/brevoService");
 /**
  * Generate a production-safe order number: GRV-YYYYMMDD-XXXX
  * Runs inside a transaction to prevent duplicates under concurrency.
@@ -102,10 +113,12 @@ exports.createOrder = async (req, res, next) => {
     const resolvedPhone     = customer_phone   || customerPhone   || null;
     const resolvedEmail     = customer_email   || customerEmail   || null;
     const resolvedMethod    = payment_method   || paymentMethod   || "COD";
-    const resolvedStatus    = payment_status   || paymentStatus   || "unpaid";
     const resolvedNotes     = delivery_notes   || deliveryNotes   || null;
     const resolvedCity      = city || null;
     const resolvedSlotId    = req.body.delivery_slot_id || req.body.deliverySlotId || null;
+
+    // CRIT-2: Hardcode payment status to unpaid for COD to prevent tampering
+    const resolvedStatus    = "unpaid";
 
     const userId = req.user ? req.user.id : null;
 
@@ -130,7 +143,80 @@ exports.createOrder = async (req, res, next) => {
       return res.status(400).json({ error: "Invalid email address format." });
     }
 
+    // CRIT-5: Validate name/phone are present
+    if (!resolvedName || !resolvedName.trim()) {
+      return res.status(400).json({ error: "Customer name is required." });
+    }
+    if (!resolvedPhone || !resolvedPhone.trim()) {
+      return res.status(400).json({ error: "Customer phone is required." });
+    }
+
+    // HIGH-5: Qatar phone regex validation
+    const cleanedPhone = resolvedPhone.replace(/[\s\-\(\)]/g, "");
+    const qatarPhoneRegex = /^(?:\+?974|00974)?[3567]\d{7}$/;
+    if (!qatarPhoneRegex.test(cleanedPhone)) {
+      return res.status(400).json({ error: "Invalid Qatar phone number format. Must be an 8-digit number (optionally starting with +974) starting with 3, 5, 6, or 7." });
+    }
+
+    // CRIT-3: Backend Idempotency check before transaction
+    const tokenVal = req.body.checkout_token || req.body.checkoutToken || null;
+    if (tokenVal) {
+      const existingOrder = await Order.findOne({
+        where: { checkout_token: tokenVal },
+        include: [
+          {
+            model: OrderItem,
+            as: "items",
+            include: {
+              model: Product,
+              as: "product",
+              attributes: ["id", "title", "main_image_url"],
+            },
+          },
+        ],
+      });
+      if (existingOrder) {
+        return res.status(201).json({
+          success: true,
+          message: "Order already placed successfully (idempotent response).",
+          order: {
+            id: existingOrder.id,
+            order_number: existingOrder.order_number,
+            status: existingOrder.status,
+            total_price: existingOrder.total_price,
+            payment_method: existingOrder.payment_method,
+            createdAt: existingOrder.createdAt,
+            delivery_slot_id: existingOrder.delivery_slot_id,
+          },
+        });
+      }
+    }
+
     transaction = await sequelize.transaction();
+
+    // CRIT-3: DB double-lock check inside transaction
+    if (tokenVal) {
+      const existingOrder = await Order.findOne({
+        where: { checkout_token: tokenVal },
+        transaction,
+      });
+      if (existingOrder) {
+        await transaction.rollback();
+        return res.status(201).json({
+          success: true,
+          message: "Order already placed successfully (idempotent response).",
+          order: {
+            id: existingOrder.id,
+            order_number: existingOrder.order_number,
+            status: existingOrder.status,
+            total_price: existingOrder.total_price,
+            payment_method: existingOrder.payment_method,
+            createdAt: existingOrder.createdAt,
+            delivery_slot_id: existingOrder.delivery_slot_id,
+          },
+        });
+      }
+    }
 
     const DeliverySlot = require("../models/DeliverySlot");
     const activeSlot = await DeliverySlot.findByPk(resolvedSlotId, { transaction });
@@ -146,14 +232,32 @@ exports.createOrder = async (req, res, next) => {
     for (const item of items) {
       // Accept product_id OR id from frontend
       const productId = item.product_id || item.id;
-      const product = await Product.findByPk(productId, { transaction });
+
+      // HIGH-6: Parse and validate qty
+      const qty = parseInt(item.quantity, 10);
+      if (isNaN(qty) || qty <= 0 || qty > 100) {
+        await transaction.rollback();
+        return res.status(400).json({ error: "Item quantity must be a positive integer not exceeding 100." });
+      }
+
+      // CRIT-1: DB Lock using transaction.LOCK.UPDATE to prevent overselling race conditions
+      const product = await Product.findByPk(productId, {
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
 
       if (!product) {
         await transaction.rollback();
         return res.status(404).json({ error: `Product ID ${productId} not found.` });
       }
 
-      if (product.stock < item.quantity) {
+      // CRIT-4: Check product is_active status
+      if (!product.is_active) {
+        await transaction.rollback();
+        return res.status(400).json({ error: `Product '${product.title}' is currently inactive and cannot be ordered.` });
+      }
+
+      if (product.stock < qty) {
         await transaction.rollback();
         return res.status(409).json({
           error: `Insufficient stock for '${product.title}'. Only ${product.stock} units available.`,
@@ -161,27 +265,27 @@ exports.createOrder = async (req, res, next) => {
           details: {
             productId: product.id,
             title: product.title,
-            requestedQuantity: item.quantity,
+            requestedQuantity: qty,
             availableStock: product.stock,
           },
         });
       }
 
-      product.stock -= item.quantity;
+      product.stock -= qty;
       await product.save({ transaction });
 
       const unitPrice = parseFloat(product.getDataValue("price"));
-      calculatedTotal += unitPrice * item.quantity;
+      calculatedTotal += unitPrice * qty;
 
       itemsToCreate.push({
         product_id: product.id,
-        quantity: item.quantity,
+        quantity: qty,
         selected_color: item.selectedColor || item.selected_color || null,
         selected_storage: item.selectedStorage || item.selected_storage || null,
         price_at_purchase: unitPrice,
       });
 
-      orderSummaryLines.push(`▪ ${product.title} x${item.quantity} — QAR ${unitPrice}`);
+      orderSummaryLines.push(`▪ ${product.title} x${qty} — QAR ${unitPrice}`);
     }
 
     // Fetch site settings for shipping fee calculation
@@ -204,14 +308,16 @@ exports.createOrder = async (req, res, next) => {
       shipping_address: resolvedAddress,
       status: "pending",
       customer_name: resolvedName,
-      customer_phone: resolvedPhone,
+      customer_phone: cleanedPhone,
       customer_email: resolvedEmail,
       payment_method: resolvedMethod,
       payment_status: resolvedStatus,
       delivery_notes: resolvedNotes,
       city: resolvedCity,
       delivery_slot_id: resolvedSlotId,
+      checkout_token: tokenVal,
     }, { transaction });
+
 
     const finalizedItems = itemsToCreate.map((item) => ({
       ...item,
@@ -220,6 +326,12 @@ exports.createOrder = async (req, res, next) => {
 
     await OrderItem.bulkCreate(finalizedItems, { transaction });
 
+    const productCount = items.length;
+
+    const totalQuantity = items.reduce(
+      (sum, item) => sum + Number(item.quantity || 0),
+      0
+    );
     // Clear the user's database cart after successful order placement
     if (userId) {
       const userCart = await Cart.findOne({ where: { user_id: userId }, transaction });
@@ -229,7 +341,25 @@ exports.createOrder = async (req, res, next) => {
     }
 
     await transaction.commit();
+    // await sendAdminOrderNotification(order);
+    try {
+      await sendAdminOrderNotification(order);
+    } catch (error) {
+      console.error("Admin email failed:", error.message);
+    }
 
+    try {
+      await sendCustomerOrderConfirmation(
+        order,
+        productCount,
+        totalQuantity
+      );
+    } catch (error) {
+      console.error(
+        "Customer confirmation email failed:",
+        error.message
+      );
+    }
     res.status(201).json({
       success: true,
       message: "Order placed successfully.",
@@ -265,11 +395,12 @@ exports.trackGuestOrder = async (req, res, next) => {
       });
     }
 
-    // Normalize phone: strip all non-digits, match using the last 6 digits as suffix to tolerate spaces/country codes
-    const digitsOnly = phone.replace(/\D/g, "");
-    const phoneSuffix = digitsOnly.length >= 6 ? digitsOnly.slice(-6) : digitsOnly;
+    // HIGH-2: Exact phone verification using normalized values (anti-IDOR)
+    const queryDigits = phone.replace(/\D/g, "");
+    const stripQatarPrefix = (numStr) => numStr.replace(/^(974|00974)/, "");
+    const normalizedQuery = stripQatarPrefix(queryDigits);
 
-    if (!phoneSuffix) {
+    if (!normalizedQuery) {
       return res.status(400).json({
         success: false,
         message: "Please enter a valid phone number.",
@@ -280,9 +411,6 @@ exports.trackGuestOrder = async (req, res, next) => {
     const order = await Order.findOne({
       where: {
         order_number,
-        customer_phone: {
-          [Op.like]: `%${phoneSuffix}`,
-        },
       },
       include: [
         {
@@ -309,6 +437,17 @@ exports.trackGuestOrder = async (req, res, next) => {
       });
     }
 
+    const dbDigits = (order.customer_phone || "").replace(/\D/g, "");
+    const normalizedDb = stripQatarPrefix(dbDigits);
+
+    if (normalizedQuery !== normalizedDb) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found. Please check your order number and phone number.",
+      });
+    }
+
+    // HIGH-3: Exclude sensitive PII (customer_name, customer_phone, customer_email)
     res.status(200).json({
       success: true,
       order: {
@@ -317,8 +456,6 @@ exports.trackGuestOrder = async (req, res, next) => {
         status: order.status,
         total_price: order.total_price,
         shipping_address: order.shipping_address,
-        customer_name: order.customer_name,
-        customer_phone: order.customer_phone,
         payment_method: order.payment_method,
         payment_status: order.payment_status,
         delivery_notes: order.delivery_notes,
@@ -376,6 +513,7 @@ exports.getMyOrders = async (req, res, next) => {
  * Powers: Admin order processing dashboard
  */
 exports.updateOrderStatus = async (req, res, next) => {
+  let transaction;
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -384,22 +522,88 @@ exports.updateOrderStatus = async (req, res, next) => {
       return res.status(400).json({ error: "Order status parameter is required." });
     }
 
-    const order = await Order.findByPk(id);
+    transaction = await sequelize.transaction();
+
+    const order = await Order.findByPk(id, { transaction });
     if (!order) {
+      await transaction.rollback();
       return res.status(404).json({ error: "Order not found." });
     }
 
-    order.status = status;
-    if (!order.reviewed_at) {
-      order.reviewed_at = new Date();
+    if (order.status !== status) {
+      const currentStatus = order.status;
+
+      // CRIT-7: Enforce Order State Machine Transitions
+      const VALID_TRANSITIONS = {
+        pending: ["processing", "cancelled"],
+        processing: ["assigned", "shipped", "cancelled"],
+        assigned: ["out_for_delivery", "cancelled"],
+        shipped: ["delivered", "cancelled"],
+        out_for_delivery: ["delivered", "attempted", "failed"],
+        delivered: ["completed"],
+        completed: [],
+        cancelled: [],
+        attempted: ["out_for_delivery", "rescheduled", "cancelled"],
+        rescheduled: ["out_for_delivery", "cancelled"],
+        failed: ["pending", "cancelled"],
+        returned: [],
+      };
+
+      const allowed = VALID_TRANSITIONS[currentStatus] || [];
+      if (!allowed.includes(status)) {
+        await transaction.rollback();
+        return res.status(400).json({ error: `Invalid status transition from '${currentStatus}' to '${status}'.` });
+      }
+
+      // HIGH-1: Restore stock on cancellation
+      if (status === "cancelled") {
+        const items = await OrderItem.findAll({ where: { order_id: order.id }, transaction });
+        for (const item of items) {
+          const product = await Product.findByPk(item.product_id, {
+            transaction,
+            lock: transaction.LOCK.UPDATE,
+          });
+          if (product) {
+            product.stock += item.quantity;
+            await product.save({ transaction });
+          }
+        }
+      }
+
+      order.status = status;
+      if (!order.reviewed_at) {
+        order.reviewed_at = new Date();
+      }
+      await order.save({ transaction });
     }
-    await order.save();
+
+    await transaction.commit();
+
+    if (status === "out_for_delivery") {
+      try {
+        await sendOutForDeliveryEmail(order);
+      } catch (error) {
+        console.error(
+          "Out for delivery email failed:",
+          error.message
+        );
+      }
+    }
+
+    if (status === "delivered") {
+      try {
+        await sendOrderDeliveredEmail(order);
+      } catch (error) {
+        console.error("Delivered email failed:", error.message);
+      }
+    }
 
     res.status(200).json({
       message: "Order status updated successfully.",
       order,
     });
   } catch (error) {
+    if (transaction) await transaction.rollback();
     next(error);
   }
 };
@@ -468,7 +672,23 @@ exports.getAllOrders = async (req, res, next) => {
  */
 exports.getAnalytics = async (req, res, next) => {
   try {
+    const { startDate, endDate } = req.query;
+
+    const where = {};
+    if (startDate || endDate) {
+      where.createdAt = {};
+      if (startDate) {
+        where.createdAt[Op.gte] = new Date(startDate);
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        where.createdAt[Op.lte] = end;
+      }
+    }
+
     const orders = await Order.findAll({
+      where,
       include: [
         {
           model: OrderItem,
@@ -493,7 +713,7 @@ exports.getAnalytics = async (req, res, next) => {
     });
 
     let totalSales = 0;
-    let totalOrders = orders.length;
+    let netOrdersCount = 0;
     let uniqueUserIds = new Set();
     let orderStatusCounts = { pending: 0, shipped: 0, delivered: 0, cancelled: 0 };
     let categorySalesMap = {};
@@ -504,35 +724,43 @@ exports.getAnalytics = async (req, res, next) => {
       const rawPrice = order.getDataValue("total_price");
       const orderTotal = typeof rawPrice === "string" ? parseFloat(rawPrice.replace(/([$]|qar|[\s,])/gi, "")) : parseFloat(rawPrice) || 0;
       
-      totalSales += orderTotal;
-      uniqueUserIds.add(order.user_id);
-
       let status = order.status || "pending";
       if (status === "completed") status = "delivered";
       if (orderStatusCounts[status] !== undefined) {
         orderStatusCounts[status]++;
       }
 
-      // Format Date: e.g. "Jun 09"
-      const dateKey = new Date(order.createdAt).toLocaleDateString("en-US", {
-        month: "short",
-        day: "2-digit",
-      });
-      dateSalesMap[dateKey] = (dateSalesMap[dateKey] || 0) + orderTotal;
+      // Senior Dev Accounting rule: exclude cancelled, failed, and returned orders from sales/revenue metrics
+      const isRealizedRevenue = !["cancelled", "failed", "returned"].includes(order.status);
+      if (isRealizedRevenue) {
+        totalSales += orderTotal;
+        netOrdersCount++;
+        if (order.user_id) {
+          uniqueUserIds.add(order.user_id);
+        }
 
-      if (order.items) {
-        order.items.forEach((item) => {
-          const categoryTitle = item.product?.subcategory?.category?.title || "Other";
-          const itemPrice = typeof item.price_at_purchase === "string" 
-            ? parseFloat(item.price_at_purchase.replace(/([$]|qar|[\s,])/gi, "")) 
-            : parseFloat(item.price_at_purchase) || 0;
-          const itemTotal = itemPrice * (item.quantity || 1);
-          categorySalesMap[categoryTitle] = (categorySalesMap[categoryTitle] || 0) + itemTotal;
+        // Format Date: e.g. "Jun 09"
+        const dateKey = new Date(order.createdAt).toLocaleDateString("en-US", {
+          month: "short",
+          day: "2-digit",
         });
+        dateSalesMap[dateKey] = (dateSalesMap[dateKey] || 0) + orderTotal;
+
+        if (order.items) {
+          order.items.forEach((item) => {
+            const categoryTitle = item.product?.subcategory?.category?.title || "Other";
+            const itemPrice = typeof item.price_at_purchase === "string" 
+              ? parseFloat(item.price_at_purchase.replace(/([$]|qar|[\s,])/gi, "")) 
+              : parseFloat(item.price_at_purchase) || 0;
+            const itemTotal = itemPrice * (item.quantity || 1);
+            categorySalesMap[categoryTitle] = (categorySalesMap[categoryTitle] || 0) + itemTotal;
+          });
+        }
       }
     });
 
     const totalCustomers = uniqueUserIds.size;
+    const totalOrders = netOrdersCount;
     const averageOrderValue = totalOrders > 0 ? (totalSales / totalOrders) : 0;
 
     const salesByCategory = Object.keys(categorySalesMap).map((cat) => ({
@@ -679,6 +907,14 @@ exports.createDeliveryBoy = async (req, res, next) => {
       });
     }
 
+    // MED-10: Password strength validation (min 6 chars)
+    if (!password || password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 6 characters long.",
+      });
+    }
+
     const newDriver = await User.create({
       name,
       email,
@@ -713,10 +949,11 @@ exports.bulkPrintOrders = async (req, res, next) => {
       return res.status(400).json({ error: "orderIds array is required." });
     }
 
+    // MED-6: Prevent overwriting printed_at for already-printed orders
     await Order.update(
       {
         is_printed: true,
-        printed_at: new Date(),
+        printed_at: sequelize.literal("COALESCE(printed_at, NOW())"),
       },
       {
         where: {
@@ -777,6 +1014,16 @@ exports.exportOrders = async (req, res, next) => {
           as: "deliverySlot",
           attributes: ["id", "name", "start_time", "end_time"],
         },
+        // LOW-3: Include order items and products in export query
+        {
+          model: OrderItem,
+          as: "items",
+          include: {
+            model: Product,
+            as: "product",
+            attributes: ["title"],
+          },
+        },
       ],
       order: [["createdAt", "DESC"]],
     });
@@ -791,6 +1038,10 @@ exports.exportOrders = async (req, res, next) => {
       "Total Amount": o.total_price || "—",
       "Payment Method": o.payment_method || "COD",
       "Address": o.shipping_address,
+      // LOW-3: Format ordered items list
+      "Items Ordered": o.items && o.items.length > 0
+        ? o.items.map((item) => `${item.product ? item.product.title : "Unknown Product"} (x${item.quantity})`).join(", ")
+        : "N/A",
       "Created Date": o.createdAt,
     }));
 
@@ -811,6 +1062,64 @@ exports.exportOrders = async (req, res, next) => {
       return res.send(buffer);
     }
   } catch (error) {
+    next(error);
+  }
+};
+
+// MED-7: Customer self-cancellation endpoint (allows pending order cancellation)
+exports.cancelMyOrder = async (req, res, next) => {
+  let transaction;
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    transaction = await sequelize.transaction();
+
+    const order = await Order.findOne({
+      where: { id, user_id: userId },
+      include: [
+        {
+          model: OrderItem,
+          as: "items",
+        },
+      ],
+      transaction,
+    });
+
+    if (!order) {
+      await transaction.rollback();
+      return res.status(404).json({ error: "Order not found." });
+    }
+
+    if (order.status !== "pending") {
+      await transaction.rollback();
+      return res.status(400).json({ error: "Only pending orders can be cancelled." });
+    }
+
+    // Restore stock
+    for (const item of order.items) {
+      const product = await Product.findByPk(item.product_id, {
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+      if (product) {
+        product.stock += item.quantity;
+        await product.save({ transaction });
+      }
+    }
+
+    order.status = "cancelled";
+    await order.save({ transaction });
+
+    await transaction.commit();
+
+    res.status(200).json({
+      success: true,
+      message: "Order cancelled successfully.",
+      order,
+    });
+  } catch (error) {
+    if (transaction) await transaction.rollback();
     next(error);
   }
 };

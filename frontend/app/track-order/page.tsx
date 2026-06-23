@@ -12,7 +12,6 @@ import {
   Calendar,
   MapPin,
   CreditCard,
-  MessageSquare,
   AlertCircle,
   CheckCircle2,
   Truck,
@@ -33,7 +32,6 @@ function TrackOrderContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [order, setOrder] = useState<TrackedOrder | null>(null);
-  const [whatsappNumber, setWhatsappNumber] = useState("+97455551234");
   const [guestOrders, setGuestOrders] = useState<Array<{ order_number: string; phone: string; total: string; date?: string }>>([]);
 
   useEffect(() => {
@@ -45,21 +43,6 @@ function TrackOrderContent() {
     } catch {}
   }, []);
 
-  // Fetch settings for WhatsApp contact on mount
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/settings`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data?.settings?.whatsappNumber) {
-            setWhatsappNumber(data.settings.whatsappNumber);
-          }
-        }
-      } catch {}
-    };
-    fetchSettings();
-  }, []);
 
   // Auto-search if query params are present
   useEffect(() => {
@@ -123,7 +106,6 @@ function TrackOrderContent() {
 
   const currentStep = order ? getMilestoneIndex(order.status) : 0;
   const isCancelled = order?.status === "cancelled";
-  const cleanedWhatsapp = whatsappNumber.replace(/[^\d]/g, "");
 
   return (
     <div className="bg-gray-50/50 min-h-screen py-8">
@@ -397,27 +379,7 @@ function TrackOrderContent() {
               </div>
             </div>
 
-            {/* Support section */}
-            <div className="bg-green-50/60 rounded-3xl border border-green-100 p-6 flex flex-col md:flex-row items-center justify-between gap-4">
-              <div>
-                <h4 className="text-sm font-bold text-green-800 flex items-center gap-1.5">
-                  <MessageSquare className="h-4.5 w-4.5 text-green-600" /> Have questions about your delivery?
-                </h4>
-                <p className="text-xs text-green-700 mt-1">
-                  Connect with our team on WhatsApp for quick inquiries regarding this order.
-                </p>
-              </div>
-              <a
-                href={`https://wa.me/${cleanedWhatsapp}?text=${encodeURIComponent(
-                  `Hi, I have a query about my order: *${order.order_number}*`
-                )}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-xl bg-[#25D366] text-white hover:bg-[#20ba5a] px-5 py-2.5 text-xs font-bold transition-all shadow-md shadow-green-500/10 cursor-pointer shrink-0"
-              >
-                Chat on WhatsApp
-              </a>
-            </div>
+
           </div>
         )}
       </div>

@@ -41,12 +41,22 @@ async function safeFetch<T>(
   fallbackValue: T
 ): Promise<T> {
   try {
+    const headers: Record<string, string> = {};
+    const authHeaders = getAuthHeaders();
+    if (authHeaders) {
+      Object.assign(headers, authHeaders);
+    }
+    if (options.headers) {
+      Object.assign(headers, options.headers);
+    }
+
+    if (options.body && typeof options.body === "string" && !Object.keys(headers).some(k => k.toLowerCase() === "content-type")) {
+      headers["Content-Type"] = "application/json";
+    }
+
     const res = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
-      headers: {
-        ...getAuthHeaders(),
-        ...options.headers,
-      },
+      headers,
     });
 
     if (!res.ok) {
@@ -187,12 +197,17 @@ export interface GlobalSettings {
   midnightSaleEnabled: boolean;
   shippingFee?: number;
   freeShippingThreshold?: number;
+  whatsappNumber?: string;
+  supportEmail?: string;
 }
 
 export async function getSettingsApi(): Promise<GlobalSettings> {
   const res = await safeFetch<{ settings: GlobalSettings }>(
     "/settings",
-    { method: "GET" },
+    { 
+      method: "GET",
+      cache: "no-store"
+    },
     {
       settings: {
         announcementBarEnabled: true,
@@ -373,7 +388,7 @@ export interface AnalyticsData {
   salesOverTime: { date: string; sales: number }[];
 }
 
-export async function getAnalyticsApi(): Promise<AnalyticsData> {
+export async function getAnalyticsApi(startDate?: string, endDate?: string): Promise<AnalyticsData> {
   const mockAnalytics: AnalyticsData = {
     totalSales: 14897.50,
     totalOrders: 12,
@@ -399,8 +414,13 @@ export async function getAnalyticsApi(): Promise<AnalyticsData> {
     ],
   };
 
+  const query = new URLSearchParams();
+  if (startDate) query.append("startDate", startDate);
+  if (endDate) query.append("endDate", endDate);
+  const queryString = query.toString() ? `?${query.toString()}` : "";
+
   const res = await safeFetch<{ analytics: AnalyticsData }>(
-    "/orders/analytics",
+    `/orders/analytics${queryString}`,
     { method: "GET" },
     { analytics: mockAnalytics }
   );

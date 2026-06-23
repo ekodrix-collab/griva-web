@@ -13,6 +13,7 @@ import { CartItem, CartState, CartAction } from "@/app/types/types";
 import { parsePriceNumber } from "@/app/data/data";
 import { useUser } from "./UserContext";
 import { cartService } from "../services/cart.service";
+import { useToast } from "./ToastContext";
 
 // ─────────────────────────────────────────────────────────
 // Reducer
@@ -100,6 +101,7 @@ const CartContext = createContext<CartContextValue | null>(null);
 // Provider
 // ─────────────────────────────────────────────────────────
 export function CartProvider({ children }: { children: ReactNode }) {
+  const { toast } = useToast();
   const [state, dispatch] = useReducer(cartReducer, {
     items: [],
     totalItems: 0,
@@ -181,7 +183,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         // User logged out: clear memory cart
         dispatch({ type: "CLEAR" });
       }
-      
+
       prevIsLoggedInRef.current = isLoggedIn;
     };
 
@@ -218,9 +220,45 @@ export function CartProvider({ children }: { children: ReactNode }) {
       } catch (error: any) {
         if (error.response?.status === 403) return; // Handled globally by auth block interceptor
         const errMsg = error.response?.data?.message || "Failed to add item to database cart.";
-        alert(errMsg);
+        toast.error(errMsg);
       }
     } else {
+      // CRIT-6: Guest Cart Stock & Activity Validation
+      const existing = state.items.find(
+        (item) =>
+          item.productId === product.id &&
+          item.selectedColor === product.selectedColor &&
+          item.selectedStorage === product.selectedStorage
+      );
+      const currentQty = existing ? existing.quantity : 0;
+      const targetQty = currentQty + qty;
+
+      if (targetQty > 10) {
+        toast.warning("Cannot add more items. A maximum of 10 units per product variant is allowed.");
+        return;
+      }
+
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/${product.id}`);
+        if (!res.ok) {
+          toast.error("Product details could not be verified.");
+          return;
+        }
+        const data = await res.json();
+        const serverProd = data.data;
+        if (!serverProd || !serverProd.is_active) {
+          toast.warning("This product is no longer active and cannot be added to your cart.");
+          return;
+        }
+        if (targetQty > serverProd.stock) {
+          toast.warning(`Cannot add more items. Only ${serverProd.stock} left in stock.`);
+          return;
+        }
+      } catch (err) {
+        toast.error("Failed to validate product availability. Please check your connection.");
+        return;
+      }
+
       const cartItem: CartItem = {
         id: Date.now() + Math.random(),
         productId: product.id,
@@ -263,9 +301,40 @@ export function CartProvider({ children }: { children: ReactNode }) {
       } catch (error: any) {
         if (error.response?.status === 403) return; // Handled globally by auth block interceptor
         const errMsg = error.response?.data?.message || "Failed to sync cart update with server.";
-        alert(errMsg);
+        toast.error(errMsg);
       }
     } else {
+      // CRIT-6: Guest Cart Quantity Update Stock Validation
+      if (action.type === "UPDATE_QTY") {
+        const item = state.items.find((i) => i.id === action.payload.id);
+        const qty = action.payload.quantity;
+
+        if (qty > 10) {
+          toast.warning("A maximum of 10 units per product variant is allowed.");
+          return;
+        }
+
+        if (item) {
+          try {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/${item.productId}`);
+            if (res.ok) {
+              const data = await res.json();
+              const serverProd = data.data;
+              if (serverProd) {
+                if (!serverProd.is_active) {
+                  toast.warning("This product is no longer active and has been removed.");
+                  dispatch({ type: "REMOVE", payload: { id: item.id } });
+                  return;
+                }
+                if (qty > serverProd.stock) {
+                  toast.warning(`Requested quantity exceeds available stock. Only ${serverProd.stock} available.`);
+                  return;
+                }
+              }
+            }
+          } catch { }
+        }
+      }
       dispatch(action);
     }
   };

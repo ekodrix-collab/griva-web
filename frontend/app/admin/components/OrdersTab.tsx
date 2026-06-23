@@ -5,6 +5,7 @@ import {
   ChevronDown, Package, MapPin, Mail, Hash, AlertTriangle, RefreshCw, PhoneCall,
   Printer, Download
 } from 'lucide-react';
+import { useToast } from '@/app/context/ToastContext';
 import { AdminOrder, updateOrderStatusApi, downloadOrdersExportApi, bulkPrintOrdersApi } from '../../utils/api';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
@@ -31,16 +32,16 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
 
 const STATUS_FLOW: Record<string, string[]> = {
   pending:          ['processing', 'cancelled'],
-  processing:       ['shipped', 'cancelled'],
-  assigned:         ['out_for_delivery', 'cancelled'],
+  processing:       ['shipped', 'delivered', 'cancelled'],
+  assigned:         ['out_for_delivery', 'delivered', 'cancelled'],
   out_for_delivery: ['delivered', 'cancelled'],
   shipped:          ['delivered', 'cancelled'],
   delivered:        [],
   completed:        [],
   cancelled:        [],
-  attempted:        ['processing', 'cancelled'],
-  rescheduled:      ['cancelled'],
-  failed:           ['processing', 'cancelled'],
+  attempted:        ['processing', 'delivered', 'cancelled'],
+  rescheduled:      ['delivered', 'cancelled'],
+  failed:           ['processing', 'delivered', 'cancelled'],
 };
 
 interface DeliveryBoy {
@@ -51,6 +52,7 @@ interface DeliveryBoy {
 }
 
 export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps) {
+  const { toast } = useToast();
   const searchParams = useSearchParams();
   const statusParam = searchParams?.get('status');
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
@@ -229,7 +231,7 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
-      alert("Please allow popups to print orders.");
+      toast.warning("Please allow popups in your browser to print orders.");
       return;
     }
 
@@ -359,7 +361,7 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
-      alert("Please allow popups to print orders.");
+      toast.warning("Please allow popups in your browser to print orders.");
       return;
     }
 
@@ -895,33 +897,116 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex flex-wrap gap-2 bg-white p-3 rounded-xl border border-orange-500/30">
-        {(['all', 'new', 'pending', 'processing', 'assigned', 'out_for_delivery', 'shipped', 'delivered', 'cancelled']).map((status) => {
-          const cfg = status === 'all' ? null : STATUS_CONFIG[status];
-          const isActive = filterStatus === status;
-          return (
+      <div className="flex flex-wrap gap-4 items-center justify-between bg-white p-4 rounded-xl border border-orange-500/30">
+        <div className="flex flex-wrap items-center gap-4">
+          {/* All Tab */}
+          <div>
             <button
-              key={status}
-              onClick={() => setFilterStatus(status)}
+              onClick={() => setFilterStatus('all')}
               className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer border ${
-                isActive
+                filterStatus === 'all'
                   ? 'bg-orange-500 text-white border-orange-500 shadow-sm shadow-orange-500/30'
                   : 'bg-white text-gray-500 border-orange-500/20 hover:border-orange-500/50'
               }`}
             >
-              {cfg?.icon}
-              <span className="capitalize">{status === 'new' ? 'New' : status}</span>
-              <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${isActive ? 'bg-white/20' : 'bg-gray-100'}`}>
-                {counts[status]}
+              <span>All</span>
+              <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${filterStatus === 'all' ? 'bg-white/20' : 'bg-gray-100'}`}>
+                {counts['all']}
               </span>
             </button>
-          );
-        })}
+          </div>
+
+          {/* Action Required Group */}
+          <div className="flex flex-wrap items-center gap-2 bg-orange-50/45 p-3.5 pt-4 rounded-xl border border-orange-100 relative">
+            <span className="absolute -top-2 left-3 bg-white px-1.5 text-[8px] font-black text-orange-650 tracking-wider uppercase border border-orange-100 rounded-sm">
+              ⚠️ Action Required
+            </span>
+            {(['new', 'pending', 'processing', 'assigned', 'out_for_delivery']).map((status) => {
+              const cfg = STATUS_CONFIG[status];
+              const isActive = filterStatus === status;
+              
+              let activeClass = 'bg-orange-500 text-white border-orange-500 shadow-orange-500/30';
+              let inactiveClass = 'bg-white text-gray-500 border-orange-500/20 hover:border-orange-500/50';
+              if (status === 'new') {
+                activeClass = 'bg-red-600 text-white border-red-600 shadow-sm shadow-red-500/30';
+                inactiveClass = 'bg-white text-red-650 border-red-200 hover:border-red-400';
+              } else if (status === 'pending') {
+                activeClass = 'bg-orange-500 text-white border-orange-500 shadow-sm shadow-orange-500/30';
+                inactiveClass = 'bg-white text-orange-650 border-orange-200 hover:border-orange-400';
+              } else if (status === 'processing') {
+                activeClass = 'bg-amber-500 text-white border-amber-500 shadow-sm shadow-amber-500/30';
+                inactiveClass = 'bg-white text-amber-650 border-amber-200 hover:border-amber-400';
+              } else if (status === 'assigned') {
+                activeClass = 'bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-500/30';
+                inactiveClass = 'bg-white text-blue-650 border-blue-200 hover:border-blue-400';
+              } else if (status === 'out_for_delivery') {
+                activeClass = 'bg-orange-600 text-white border-orange-600 shadow-sm shadow-orange-550/30';
+                inactiveClass = 'bg-white text-orange-700 border-orange-200 hover:border-orange-400';
+              }
+
+              return (
+                <button
+                  key={status}
+                  onClick={() => setFilterStatus(status)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer border ${
+                    isActive ? activeClass : inactiveClass
+                  }`}
+                >
+                  {cfg?.icon}
+                  <span className="capitalize">{status === 'new' ? 'New' : status.replace(/_/g, ' ')}</span>
+                  <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${isActive ? 'bg-white/20' : 'bg-gray-100'}`}>
+                    {counts[status]}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Completed Group */}
+          <div className="flex flex-wrap items-center gap-2 bg-gray-50 p-3.5 pt-4 rounded-xl border border-gray-200 relative">
+            <span className="absolute -top-2 left-3 bg-white px-1.5 text-[8px] font-black text-gray-500 tracking-wider uppercase border border-gray-200 rounded-sm">
+              ✅ Completed
+            </span>
+            {(['shipped', 'delivered', 'cancelled']).map((status) => {
+              const cfg = STATUS_CONFIG[status];
+              const isActive = filterStatus === status;
+              
+              let activeClass = 'bg-gray-500 text-white border-gray-500 shadow-gray-500/30';
+              let inactiveClass = 'bg-white text-gray-500 border-gray-200 hover:border-gray-400';
+              if (status === 'shipped') {
+                activeClass = 'bg-indigo-600 text-white border-indigo-600 shadow-sm shadow-indigo-500/30';
+                inactiveClass = 'bg-white text-indigo-650 border-indigo-200 hover:border-indigo-400';
+              } else if (status === 'delivered') {
+                activeClass = 'bg-green-600 text-white border-green-600 shadow-sm shadow-green-500/30';
+                inactiveClass = 'bg-white text-green-650 border-green-200 hover:border-green-400';
+              } else if (status === 'cancelled') {
+                activeClass = 'bg-gray-600 text-white border-gray-600 shadow-sm shadow-gray-550/30';
+                inactiveClass = 'bg-white text-gray-500 border-gray-200 hover:border-gray-450';
+              }
+
+              return (
+                <button
+                  key={status}
+                  onClick={() => setFilterStatus(status)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer border ${
+                    isActive ? activeClass : inactiveClass
+                  }`}
+                >
+                  {cfg?.icon}
+                  <span className="capitalize">{status}</span>
+                  <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${isActive ? 'bg-white/20' : 'bg-gray-100'}`}>
+                    {counts[status]}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         <select
           value={filterSlot}
           onChange={(e) => setFilterSlot(e.target.value)}
-          className="text-xs font-bold text-gray-750 bg-white border border-orange-500/20 rounded-lg px-3 py-1.5 outline-none hover:border-orange-500/40 cursor-pointer md:ml-auto"
+          className="text-xs font-bold text-gray-750 bg-white border border-orange-500/20 rounded-lg px-3 py-2.5 outline-none hover:border-orange-500/40 cursor-pointer md:ml-auto"
         >
           <option value="all">All Delivery Slots</option>
           {deliverySlots.map(s => (
@@ -1206,91 +1291,100 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
                                   </div>
                                   {/* FEATURE: Delivery Boy System — Assign Driver */}
                                  <div className="pt-3 border-t border-orange-500/10">
-                                   <p className="text-[10px] text-gray-400 font-bold uppercase mb-2 flex items-center gap-1">
-                                     <span>🚚</span> Assign Delivery Driver
-                                   </p>
                                    {(order as any).delivery_boy_id ? (
-                                     <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-xl">
-                                       <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
-                                       <p className="text-xs font-bold text-blue-700">
-                                         Assigned to: {deliveryBoys.find(d => d.id === (order as any).delivery_boy_id)?.name || `Driver #${(order as any).delivery_boy_id}`}
+                                     <>
+                                       <p className="text-[10px] text-gray-400 font-bold uppercase mb-2 flex items-center gap-1">
+                                         <span>🚚</span> Assigned Delivery Driver
                                        </p>
-                                     </div>
+                                       <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-xl">
+                                         <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
+                                         <p className="text-xs font-bold text-blue-700">
+                                           Assigned to: {deliveryBoys.find(d => d.id === (order as any).delivery_boy_id)?.name || `Driver #${(order as any).delivery_boy_id}`}
+                                         </p>
+                                       </div>
+                                     </>
                                    ) : (
-                                     <div className="flex items-center gap-2 max-w-sm relative">
-                                       {/* Custom Dropdown Trigger */}
-                                       <div className="relative flex-1">
-                                         <button
-                                           type="button"
-                                           onClick={(e) => {
-                                             e.stopPropagation();
-                                             setOpenDriverSelectId(openDriverSelectId === order.id ? null : order.id);
-                                           }}
-                                           className="w-full flex items-center justify-between text-xs font-semibold text-gray-700 bg-white border border-orange-500/20 rounded-xl px-3 py-2.5 outline-none hover:border-orange-500/40 transition-all cursor-pointer text-left h-[38px]"
-                                         >
-                                           <span className="truncate">
-                                             {selectedDriverId[order.id]
-                                               ? deliveryBoys.find(d => d.id === selectedDriverId[order.id])?.name + ` (${deliveryBoys.find(d => d.id === selectedDriverId[order.id])?.activeOrderCount} active)`
-                                               : "Select Driver..."}
-                                           </span>
-                                           <ChevronDown size={14} className={`text-gray-400 shrink-0 transition-transform ${openDriverSelectId === order.id ? "rotate-180 text-orange-500" : ""}`} />
-                                         </button>
-
-                                         {/* Custom Dropdown List */}
-                                         {openDriverSelectId === order.id && (
-                                           <>
-                                             {/* Invisible Fullscreen Backdrop to safely catch click-outside */}
-                                             <div
-                                               className="fixed inset-0 z-40 bg-transparent cursor-default"
+                                     !['delivered', 'completed', 'cancelled'].includes(order.status) && (
+                                       <>
+                                         <p className="text-[10px] text-gray-400 font-bold uppercase mb-2 flex items-center gap-1">
+                                           <span>🚚</span> Assign Delivery Driver
+                                         </p>
+                                         <div className="flex items-center gap-2 max-w-sm relative">
+                                           {/* Custom Dropdown Trigger */}
+                                           <div className="relative flex-1">
+                                             <button
+                                               type="button"
                                                onClick={(e) => {
                                                  e.stopPropagation();
-                                                 setOpenDriverSelectId(null);
+                                                 setOpenDriverSelectId(openDriverSelectId === order.id ? null : order.id);
                                                }}
-                                             />
-                                             <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-100 rounded-xl shadow-xl z-50 py-1 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 max-h-48 overflow-y-auto">
-                                               <button
-                                                 type="button"
-                                                 onClick={() => {
-                                                   setSelectedDriverId(prev => ({ ...prev, [order.id]: 0 }));
-                                                   setOpenDriverSelectId(null);
-                                                 }}
-                                                 className="w-full text-left px-3 py-2 text-xs font-semibold text-gray-400 hover:bg-orange-50 hover:text-orange-500 transition-colors"
-                                               >
-                                                 Select Driver...
-                                               </button>
-                                               {deliveryBoys.map(d => (
-                                                 <button
-                                                   key={d.id}
-                                                   type="button"
-                                                   onClick={() => {
-                                                     setSelectedDriverId(prev => ({ ...prev, [order.id]: d.id }));
+                                               className="w-full flex items-center justify-between text-xs font-semibold text-gray-700 bg-white border border-orange-500/20 rounded-xl px-3 py-2.5 outline-none hover:border-orange-500/40 transition-all cursor-pointer text-left h-[38px]"
+                                             >
+                                               <span className="truncate">
+                                                 {selectedDriverId[order.id]
+                                                   ? deliveryBoys.find(d => d.id === selectedDriverId[order.id])?.name + ` (${deliveryBoys.find(d => d.id === selectedDriverId[order.id])?.activeOrderCount} active)`
+                                                   : "Select Driver..."}
+                                               </span>
+                                               <ChevronDown size={14} className={`text-gray-400 shrink-0 transition-transform ${openDriverSelectId === order.id ? "rotate-180 text-orange-500" : ""}`} />
+                                             </button>
+
+                                             {/* Custom Dropdown List */}
+                                             {openDriverSelectId === order.id && (
+                                               <>
+                                                 {/* Invisible Fullscreen Backdrop to safely catch click-outside */}
+                                                 <div
+                                                   className="fixed inset-0 z-40 bg-transparent cursor-default"
+                                                   onClick={(e) => {
+                                                     e.stopPropagation();
                                                      setOpenDriverSelectId(null);
                                                    }}
-                                                   className={`w-full text-left px-3 py-2 text-xs font-semibold transition-colors flex items-center justify-between ${
-                                                     selectedDriverId[order.id] === d.id
-                                                       ? "text-orange-500 bg-orange-50/50 font-bold"
-                                                       : "text-gray-700 hover:bg-orange-50 hover:text-orange-500"
-                                                   }`}
-                                                 >
-                                                   <span>👤 {d.name}</span>
-                                                   <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${d.activeOrderCount > 0 ? "bg-orange-100 text-orange-600" : "bg-gray-100 text-gray-400"}`}>
-                                                     {d.activeOrderCount} active
-                                                   </span>
-                                                 </button>
-                                               ))}
-                                             </div>
-                                           </>
-                                         )}
-                                       </div>
+                                                 />
+                                                 <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-100 rounded-xl shadow-xl z-50 py-1 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 max-h-48 overflow-y-auto">
+                                                   <button
+                                                     type="button"
+                                                     onClick={() => {
+                                                       setSelectedDriverId(prev => ({ ...prev, [order.id]: 0 }));
+                                                       setOpenDriverSelectId(null);
+                                                     }}
+                                                     className="w-full text-left px-3 py-2 text-xs font-semibold text-gray-400 hover:bg-orange-50 hover:text-orange-500 transition-colors"
+                                                   >
+                                                     Select Driver...
+                                                   </button>
+                                                   {deliveryBoys.map(d => (
+                                                     <button
+                                                       key={d.id}
+                                                       type="button"
+                                                       onClick={() => {
+                                                         setSelectedDriverId(prev => ({ ...prev, [order.id]: d.id }));
+                                                         setOpenDriverSelectId(null);
+                                                       }}
+                                                       className={`w-full text-left px-3 py-2 text-xs font-semibold transition-colors flex items-center justify-between ${
+                                                         selectedDriverId[order.id] === d.id
+                                                           ? "text-orange-500 bg-orange-50/50 font-bold"
+                                                           : "text-gray-700 hover:bg-orange-50 hover:text-orange-500"
+                                                       }`}
+                                                     >
+                                                       <span>👤 {d.name}</span>
+                                                       <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${d.activeOrderCount > 0 ? "bg-orange-100 text-orange-600" : "bg-gray-100 text-gray-400"}`}>
+                                                         {d.activeOrderCount} active
+                                                       </span>
+                                                     </button>
+                                                   ))}
+                                                 </div>
+                                               </>
+                                             )}
+                                           </div>
 
-                                       <button
-                                         disabled={!selectedDriverId[order.id] || assigningId === order.id}
-                                         onClick={(e) => { e.stopPropagation(); handleAssignDriver(order.id); }}
-                                         className="text-xs font-bold text-white bg-gradient-to-r from-orange-500 to-amber-500 hover:opacity-90 disabled:opacity-50 px-4 py-2.5 rounded-xl cursor-pointer shadow-sm active:scale-[0.98] transition-all shrink-0 h-[38px] flex items-center justify-center"
-                                       >
-                                         {assigningId === order.id ? '...' : 'Assign'}
-                                       </button>
-                                     </div>
+                                           <button
+                                             disabled={!selectedDriverId[order.id] || assigningId === order.id}
+                                             onClick={(e) => { e.stopPropagation(); handleAssignDriver(order.id); }}
+                                             className="text-xs font-bold text-white bg-gradient-to-r from-orange-500 to-amber-500 hover:opacity-90 disabled:opacity-50 px-4 py-2.5 rounded-xl cursor-pointer shadow-sm active:scale-[0.98] transition-all shrink-0 h-[38px] flex items-center justify-center"
+                                           >
+                                             {assigningId === order.id ? '...' : 'Assign'}
+                                           </button>
+                                         </div>
+                                       </>
+                                     )
                                    )}
                                  </div>
                                 </div>

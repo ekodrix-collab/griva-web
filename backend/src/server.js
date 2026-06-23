@@ -1,4 +1,5 @@
-require("dotenv").config();
+const path = require("path");
+require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
 const app = require("./app");
 const User = require("./models/User");
 
@@ -23,7 +24,8 @@ const startServer = async () => {
       try {
         await sequelize.query("ALTER TABLE \"Orders\" ADD COLUMN IF NOT EXISTS is_printed BOOLEAN DEFAULT false;");
         await sequelize.query("ALTER TABLE \"Orders\" ADD COLUMN IF NOT EXISTS printed_at TIMESTAMP WITH TIME ZONE;");
-        console.log("🟢 [DATABASE]: Added is_printed and printed_at columns to Orders table");
+        await sequelize.query("ALTER TABLE \"Orders\" ADD COLUMN IF NOT EXISTS checkout_token VARCHAR(255);");
+        console.log("🟢 [DATABASE]: Added is_printed, printed_at and checkout_token columns to Orders table");
       } catch (printColErr) {
         console.log("ℹ️ [DATABASE]: Skipping raw Orders column addition:", printColErr.message);
       }
@@ -34,6 +36,14 @@ const startServer = async () => {
         console.log("🟢 [DATABASE]: Dropped NOT NULL constraint on OrderItems.product_id");
       } catch (dropNotNullErr) {
         console.log("ℹ️ [DATABASE]: Skipping DROP NOT NULL on OrderItems.product_id:", dropNotNullErr.message);
+      }
+
+      // Safely add deal_of_day column to products table if it doesn't exist
+      try {
+        await sequelize.query("ALTER TABLE \"products\" ADD COLUMN IF NOT EXISTS deal_of_day BOOLEAN DEFAULT false;");
+        console.log("🟢 [DATABASE]: Added deal_of_day column to products table");
+      } catch (dodColErr) {
+        console.log("ℹ️ [DATABASE]: Skipping raw products column addition:", dodColErr.message);
       }
 
       // Safely alter Reviews foreign key to cascade delete
