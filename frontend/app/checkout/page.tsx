@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { getSettingsApi, getDeliverySlotsApi } from "@/app/utils/api";
 
 // ─────────────────────────────────────────────────────────
 // Types
@@ -102,11 +103,10 @@ export default function CheckoutPage() {
       : Math.random().toString(36).substring(2) + Date.now().toString(36);
     setCheckoutToken(token);
   }, [cartState.items]);
-
   // Shipping config from backend
   const [shippingConfig, setShippingConfig] = useState<ShippingConfig>({
-    shippingFee: 15,
-    freeShippingThreshold: 150,
+    shippingFee: 10,
+    freeShippingThreshold: 99,
     whatsappNumber: "+97455551234",
   });
 
@@ -116,17 +116,13 @@ export default function CheckoutPage() {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/settings`);
-        if (res.ok) {
-          const data = await res.json();
-          const s = data.settings;
-          if (s) {
-            setShippingConfig({
-              shippingFee: parseFloat(s.shippingFee) || 15,
-              freeShippingThreshold: parseFloat(s.freeShippingThreshold) || 150,
-              whatsappNumber: s.whatsappNumber || "+97455551234",
-            });
-          }
+        const settings = await getSettingsApi();
+        if (settings) {
+          setShippingConfig({
+            shippingFee: settings.shippingFee !== undefined ? Number(settings.shippingFee) : 10,
+            freeShippingThreshold: settings.freeShippingThreshold !== undefined ? Number(settings.freeShippingThreshold) : 99,
+            whatsappNumber: settings.whatsappNumber || "+97455551234",
+          });
         }
       } catch {
         // Use defaults silently
@@ -135,12 +131,9 @@ export default function CheckoutPage() {
 
     const fetchSlots = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/delivery-slots`);
-        if (res.ok) {
-          const data = await res.json();
-          const activeSlots = data.slots?.filter((s: any) => s.is_active) || [];
-          setDeliverySlots(activeSlots);
-        }
+        const slots = await getDeliverySlotsApi();
+        const activeSlots = slots?.filter((s: any) => s.is_active) || [];
+        setDeliverySlots(activeSlots);
       } catch {
         // Fail silently
       }

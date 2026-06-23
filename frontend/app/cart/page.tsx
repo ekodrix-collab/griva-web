@@ -8,6 +8,7 @@ import { useCart } from "@/app/context/CartContext";
 import SectionHeading from "@/app/components/common/SectionHeading";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/app/context/ToastContext";
+import { getSettingsApi } from "@/app/utils/api";
 
 export default function CartPage() {
   const { state, dispatch } = useCart();
@@ -47,8 +48,8 @@ export default function CartPage() {
   };
 
   const [shippingConfig, setShippingConfig] = useState({
-    shippingFee: 15,
-    freeShippingThreshold: 150,
+    shippingFee: 10,
+    freeShippingThreshold: 99,
   });
 
   const [stockStatus, setStockStatus] = useState<Record<number, { available: number; ok: boolean; active: boolean; title: string }>>({});
@@ -94,16 +95,12 @@ export default function CartPage() {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/settings`);
-        if (res.ok) {
-          const data = await res.json();
-          const s = data.settings;
-          if (s) {
-            setShippingConfig({
-              shippingFee: parseFloat(s.shippingFee) || 15,
-              freeShippingThreshold: parseFloat(s.freeShippingThreshold) || 150,
-            });
-          }
+        const settings = await getSettingsApi();
+        if (settings) {
+          setShippingConfig({
+            shippingFee: settings.shippingFee !== undefined ? Number(settings.shippingFee) : 10,
+            freeShippingThreshold: settings.freeShippingThreshold !== undefined ? Number(settings.freeShippingThreshold) : 99,
+          });
         }
       } catch {
         // Use defaults silently

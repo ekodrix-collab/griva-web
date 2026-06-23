@@ -41,12 +41,22 @@ async function safeFetch<T>(
   fallbackValue: T
 ): Promise<T> {
   try {
+    const headers: Record<string, string> = {};
+    const authHeaders = getAuthHeaders();
+    if (authHeaders) {
+      Object.assign(headers, authHeaders);
+    }
+    if (options.headers) {
+      Object.assign(headers, options.headers);
+    }
+
+    if (options.body && typeof options.body === "string" && !Object.keys(headers).some(k => k.toLowerCase() === "content-type")) {
+      headers["Content-Type"] = "application/json";
+    }
+
     const res = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
-      headers: {
-        ...getAuthHeaders(),
-        ...options.headers,
-      },
+      headers,
     });
 
     if (!res.ok) {
@@ -187,12 +197,17 @@ export interface GlobalSettings {
   midnightSaleEnabled: boolean;
   shippingFee?: number;
   freeShippingThreshold?: number;
+  whatsappNumber?: string;
+  supportEmail?: string;
 }
 
 export async function getSettingsApi(): Promise<GlobalSettings> {
   const res = await safeFetch<{ settings: GlobalSettings }>(
     "/settings",
-    { method: "GET" },
+    { 
+      method: "GET",
+      cache: "no-store"
+    },
     {
       settings: {
         announcementBarEnabled: true,
