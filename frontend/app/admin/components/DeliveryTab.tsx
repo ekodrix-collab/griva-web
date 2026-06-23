@@ -334,48 +334,63 @@ export default function DeliveryTab() {
             </button>
           </div>
 
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse min-w-[600px]">
             <thead>
               <tr className="border-b border-orange-500/30 text-[10px] text-gray-400 font-bold uppercase tracking-wider bg-gray-50">
-                <th className="p-4">Driver Name</th>
-                <th className="p-4">Email</th>
-                <th className="p-4 text-center">Active Orders</th>
-                <th className="p-4">Created At</th>
+                <th className="p-4 pl-6">Driver</th>
+                <th className="p-4 text-center">Active Workload</th>
+                <th className="p-4 pr-6">Created Date</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-150">
               {loading && drivers.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="p-8 text-center text-xs text-gray-400 font-semibold">
+                  <td colSpan={3} className="p-10 text-center text-xs text-gray-400 font-semibold">
                     <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2 text-orange-500" />
                     Loading drivers...
                   </td>
                 </tr>
               ) : drivers.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="p-8 text-center text-xs text-gray-400 font-semibold">
+                  <td colSpan={3} className="p-10 text-center text-xs text-gray-400 font-semibold">
                     No drivers registered yet.
                   </td>
                 </tr>
               ) : (
-                drivers.map((driver) => (
-                  <tr key={driver.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="p-4 text-xs font-bold text-gray-800">👤 {driver.name}</td>
-                    <td className="p-4 text-xs text-gray-500">{driver.email}</td>
-                    <td className="p-4 text-xs font-black text-center text-orange-500">
-                      {driver.activeOrderCount > 0 ? (
-                        <span className="bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-lg">
-                          {driver.activeOrderCount} orders
-                        </span>
-                      ) : (
-                        <span className="text-gray-300">0</span>
-                      )}
-                    </td>
-                    <td className="p-4 text-xs text-gray-400">
-                      {driver.createdAt ? new Date(driver.createdAt).toLocaleDateString() : "N/A"}
-                    </td>
-                  </tr>
-                ))
+                drivers.map((driver) => {
+                  const initials = driver.name ? driver.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase() : "D";
+                  return (
+                    <tr key={driver.id} className="hover:bg-orange-500/3 transition-colors group">
+                      <td className="p-4 pl-6">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-orange-400 to-amber-500 flex items-center justify-center font-black text-xs text-white shrink-0 shadow-xs">
+                            {initials}
+                          </div>
+                          <div>
+                            <span className="text-xs font-bold text-gray-800 block truncate max-w-[200px] hover:text-orange-500 transition-colors">{driver.name}</span>
+                            <span className="text-[10px] text-gray-450 font-medium block truncate max-w-[200px]">{driver.email}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4 text-center">
+                        {driver.activeOrderCount > 0 ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-orange-50 border border-orange-200 text-orange-700 rounded-lg text-[10px] font-bold">
+                            <span className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
+                            {driver.activeOrderCount} active order{driver.activeOrderCount !== 1 ? 's' : ''}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-50 border border-gray-200 text-gray-400 rounded-lg text-[10px] font-bold">
+                            <span className="h-1.5 w-1.5 rounded-full bg-gray-300" />
+                            Idle / No active orders
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-4 text-xs text-gray-500 font-medium pr-6">
+                        {driver.createdAt ? new Date(driver.createdAt).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }) : "N/A"}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
