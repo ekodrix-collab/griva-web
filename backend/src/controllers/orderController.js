@@ -40,7 +40,18 @@ const User = require("../models/User");
 const Cart = require("../models/Cart");
 const CartItem = require("../models/CartItem");
 const SiteSetting = require("../models/SiteSetting");
+// const {
+//   sendAdminOrderNotification,
+//   sendOrderShippedEmail,
+//   sendOrderDeliveredEmail,
+// } = require("../services/brevoService");
 
+const {
+  sendAdminOrderNotification,
+  sendCustomerOrderConfirmation,
+  sendOutForDeliveryEmail,
+  sendOrderDeliveredEmail,
+} = require("../services/brevoService");
 /**
  * Generate a production-safe order number: GRV-YYYYMMDD-XXXX
  * Runs inside a transaction to prevent duplicates under concurrency.
@@ -97,14 +108,14 @@ exports.createOrder = async (req, res, next) => {
     } = req.body;
 
     // Accept both camelCase and snake_case field names
-    const resolvedAddress   = shipping_address || shippingAddress;
-    const resolvedName      = customer_name    || customerName    || null;
-    const resolvedPhone     = customer_phone   || customerPhone   || null;
-    const resolvedEmail     = customer_email   || customerEmail   || null;
-    const resolvedMethod    = payment_method   || paymentMethod   || "COD";
-    const resolvedStatus    = payment_status   || paymentStatus   || "unpaid";
-    const resolvedNotes     = delivery_notes   || deliveryNotes   || null;
-    const resolvedCity      = city || null;
+    const resolvedAddress = shipping_address || shippingAddress;
+    const resolvedName = customer_name || customerName || null;
+    const resolvedPhone = customer_phone || customerPhone || null;
+    const resolvedEmail = customer_email || customerEmail || null;
+    const resolvedMethod = payment_method || paymentMethod || "COD";
+    const resolvedStatus = payment_status || paymentStatus || "unpaid";
+    const resolvedNotes = delivery_notes || deliveryNotes || null;
+    const resolvedCity = city || null;
 
     const userId = req.user ? req.user.id : null;
 
@@ -189,6 +200,7 @@ exports.createOrder = async (req, res, next) => {
       city: resolvedCity,
     }, { transaction });
 
+
     const finalizedItems = itemsToCreate.map((item) => ({
       ...item,
       order_id: order.id,
@@ -196,6 +208,12 @@ exports.createOrder = async (req, res, next) => {
 
     await OrderItem.bulkCreate(finalizedItems, { transaction });
 
+    const productCount = items.length;
+
+    const totalQuantity = items.reduce(
+      (sum, item) => sum + Number(item.quantity || 0),
+      0
+    );
     // Clear the user's database cart after successful order placement
     if (userId) {
       const userCart = await Cart.findOne({ where: { user_id: userId }, transaction });
@@ -205,7 +223,25 @@ exports.createOrder = async (req, res, next) => {
     }
 
     await transaction.commit();
+    // await sendAdminOrderNotification(order);
+    try {
+      await sendAdminOrderNotification(order);
+    } catch (error) {
+      console.error("Admin email failed:", error.message);
+    }
 
+    try {
+      await sendCustomerOrderConfirmation(
+        order,
+        productCount,
+        totalQuantity
+      );
+    } catch (error) {
+      console.error(
+        "Customer confirmation email failed:",
+        error.message
+      );
+    }
     res.status(201).json({
       success: true,
       message: "Order placed successfully.",
@@ -350,9 +386,28 @@ exports.updateOrderStatus = async (req, res, next) => {
       return res.status(404).json({ error: "Order not found." });
     }
 
+
     order.status = status;
     await order.save();
 
+    if (status === "out_for_delivery") {
+      try {
+        await sendOutForDeliveryEmail(order);
+      } catch (error) {
+        console.error(
+          "Out for delivery email failed:",
+          error.message
+        );
+      }
+    }
+
+    if (status === "delivered") {
+      try {
+        await sendOrderDeliveredEmail(order);
+      } catch (error) {
+        console.error("Delivered email failed:", error.message);
+      }
+    }
     res.status(200).json({
       message: "Order status updated successfully.",
       order,
@@ -433,7 +488,7 @@ exports.getAnalytics = async (req, res, next) => {
       // Clean '$' symbol if formatted in getters
       const rawPrice = order.getDataValue("total_price");
       const orderTotal = typeof rawPrice === "string" ? parseFloat(rawPrice.replace(/([$]|qar|[\s,])/gi, "")) : parseFloat(rawPrice) || 0;
-      
+
       totalSales += orderTotal;
       uniqueUserIds.add(order.user_id);
 
@@ -453,8 +508,8 @@ exports.getAnalytics = async (req, res, next) => {
       if (order.items) {
         order.items.forEach((item) => {
           const categoryTitle = item.product?.subcategory?.category?.title || "Other";
-          const itemPrice = typeof item.price_at_purchase === "string" 
-            ? parseFloat(item.price_at_purchase.replace(/([$]|qar|[\s,])/gi, "")) 
+          const itemPrice = typeof item.price_at_purchase === "string"
+            ? parseFloat(item.price_at_purchase.replace(/([$]|qar|[\s,])/gi, ""))
             : parseFloat(item.price_at_purchase) || 0;
           const itemTotal = itemPrice * (item.quantity || 1);
           categorySalesMap[categoryTitle] = (categorySalesMap[categoryTitle] || 0) + itemTotal;
