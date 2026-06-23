@@ -23,9 +23,11 @@ import {
   CheckCircle,
   ChevronRight,
   Trash2,
+  Clock,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { getSettingsApi, getDeliverySlotsApi } from "@/app/utils/api";
 
 // ─────────────────────────────────────────────────────────
 // Types
@@ -47,6 +49,7 @@ interface CheckoutForm {
   floor: string;
   landmark: string;
   deliveryNotes: string;
+  deliverySlotId: string;
 }
 
 const INITIAL_FORM: CheckoutForm = {
@@ -60,6 +63,7 @@ const INITIAL_FORM: CheckoutForm = {
   floor: "",
   landmark: "",
   deliveryNotes: "",
+  deliverySlotId: "",
 };
 
 // ─────────────────────────────────────────────────────────
@@ -81,43 +85,62 @@ export default function CheckoutPage() {
 
   // Form state
   const [form, setForm] = useState<CheckoutForm>(INITIAL_FORM);
+  const [deliverySlots, setDeliverySlots] = useState<any[]>([]);
+  const [selectedSlotId, setSelectedSlotId] = useState<number | null>(null);
 
   // Saved addresses (logged-in users)
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [addressesLoading, setAddressesLoading] = useState(false);
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
   const [useNewAddress, setUseNewAddress] = useState(false);
+  const [checkoutToken, setCheckoutToken] = useState("");
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
+  useEffect(() => {
+    // Generate checkout token on cart change
+    const token = typeof window !== "undefined" && window.crypto?.randomUUID 
+      ? window.crypto.randomUUID() 
+      : Math.random().toString(36).substring(2) + Date.now().toString(36);
+    setCheckoutToken(token);
+  }, [cartState.items]);
   // Shipping config from backend
   const [shippingConfig, setShippingConfig] = useState<ShippingConfig>({
-    shippingFee: 15,
-    freeShippingThreshold: 150,
+    shippingFee: 10,
+    freeShippingThreshold: 99,
     whatsappNumber: "+97455551234",
   });
 
   const isLoggedIn = isAuthenticated && isCustomer;
 
-  // Fetch site settings for shipping config
+  // Fetch site settings and active delivery slots
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/settings`);
-        if (res.ok) {
-          const data = await res.json();
-          const s = data.settings;
-          if (s) {
-            setShippingConfig({
-              shippingFee: parseFloat(s.shippingFee) || 15,
-              freeShippingThreshold: parseFloat(s.freeShippingThreshold) || 150,
-              whatsappNumber: s.whatsappNumber || "+97455551234",
-            });
-          }
+        const settings = await getSettingsApi();
+        if (settings) {
+          setShippingConfig({
+            shippingFee: settings.shippingFee !== undefined ? Number(settings.shippingFee) : 10,
+            freeShippingThreshold: settings.freeShippingThreshold !== undefined ? Number(settings.freeShippingThreshold) : 99,
+            whatsappNumber: settings.whatsappNumber || "+97455551234",
+          });
         }
       } catch {
         // Use defaults silently
       }
     };
+
+    const fetchSlots = async () => {
+      try {
+        const slots = await getDeliverySlotsApi();
+        const activeSlots = slots?.filter((s: any) => s.is_active) || [];
+        setDeliverySlots(activeSlots);
+      } catch {
+        // Fail silently
+      }
+    };
+
     fetchSettings();
+    fetchSlots();
   }, []);
 
   // Pre-fill form for logged-in users
@@ -245,13 +268,31 @@ export default function CheckoutPage() {
     const needsAddressValidation = !isLoggedIn || useNewAddress || !selectedAddress;
 
     if (!form.fullName.trim()) errors.fullName = "Full name is required";
-    if (!form.phone.trim() || form.phone.trim().length < 8) errors.phone = "Valid phone number is required";
-    // Email is optional
+    
+    // HIGH-5: Strict Qatar phone validation
+    const cleanedPhone = form.phone.trim().replace(/[\s\-\(\)]/g, "");
+    const qatarPhoneRegex = /^(?:\+?974|00974)?[3567]\d{7}$/;
+    if (!qatarPhoneRegex.test(cleanedPhone)) {
+      errors.phone = "Invalid Qatar phone format. Enter an 8-digit number (optionally starting with +974) starting with 3, 5, 6, or 7.";
+    }
+    
+    if (!form.email.trim()) {
+      errors.email = "Email address is required";
+    } else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(form.email.trim())) {
+        errors.email = "Invalid email address format";
+      }
+    }
 
     if (needsAddressValidation) {
       if (!form.area.trim()) errors.area = "Area is required";
       if (!form.street.trim()) errors.street = "Street is required";
       if (!form.buildingNumber.trim()) errors.buildingNumber = "Building number is required";
+    }
+
+    if (!selectedSlotId) {
+      errors.deliverySlotId = "Preferred delivery slot is required";
     }
 
     setFormErrors(errors);
@@ -327,6 +368,8 @@ export default function CheckoutPage() {
         payment_method: "COD",
         delivery_notes: form.deliveryNotes || undefined,
         city: customerCity,
+        delivery_slot_id: selectedSlotId || undefined,
+        checkout_token: checkoutToken, // Pass checkout token for idempotency
       });
 
       if (response.success) {
@@ -359,9 +402,11 @@ export default function CheckoutPage() {
         // Clear frontend cart state
         cartDispatch({ type: "CLEAR" });
 
-        // Navigate to success page
+        // Navigate to success page (exposing order number & slot only, omitting total price URL param)
+        const selectedSlot = deliverySlots.find((s) => s.id === selectedSlotId);
+        const slotParam = selectedSlot ? encodeURIComponent(selectedSlot.name) : "";
         router.push(
-          `/order-success?order=${encodeURIComponent(response.order.order_number)}&total=${encodeURIComponent(response.order.total_price)}`
+          `/order-success?order=${encodeURIComponent(response.order.order_number)}&slot=${slotParam}`
         );
       } else {
         setOrderError(response.message || "Failed to place order. Please try again.");
@@ -512,7 +557,7 @@ export default function CheckoutPage() {
                 {/* Email */}
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-bold uppercase tracking-wide text-gray-500 mb-1">
-                    Email Address <span className="text-gray-400 normal-case font-normal">(optional)</span>
+                    Email Address <span className="text-red-400">*</span>
                   </label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -521,9 +566,14 @@ export default function CheckoutPage() {
                       placeholder="your@email.com"
                       value={form.email}
                       onChange={(e) => updateForm("email", e.target.value)}
-                      className="block w-full rounded-xl border border-gray-200 pl-10 pr-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-colors"
+                      className={`block w-full rounded-xl border ${
+                        formErrors.email ? "border-red-300 bg-red-50/30" : "border-gray-200"
+                      } pl-10 pr-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-colors`}
                     />
                   </div>
+                  {formErrors.email && (
+                    <p className="text-xs text-red-500 mt-1">{formErrors.email}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -775,6 +825,54 @@ export default function CheckoutPage() {
               )}
             </div>
 
+            {/* ── Section: Preferred Delivery Time ── */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 animate-in fade-in duration-300">
+              <div className="flex items-center gap-2 mb-5 border-b pb-3">
+                <div className="h-8 w-8 rounded-full bg-orange-50 flex items-center justify-center">
+                  <Clock className="h-4 w-4 text-orange-500" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900">Preferred Delivery Time</h3>
+              </div>
+
+              {deliverySlots.length === 0 ? (
+                <div className="text-center py-6 text-xs text-gray-400">
+                  Loading active delivery slots...
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {deliverySlots.map((slot) => (
+                    <div
+                      key={slot.id}
+                      onClick={() => {
+                        setSelectedSlotId(slot.id);
+                        if (formErrors.deliverySlotId) {
+                          setFormErrors((prev) => ({ ...prev, deliverySlotId: undefined }));
+                        }
+                      }}
+                      className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-center gap-3 ${
+                        selectedSlotId === slot.id
+                          ? "border-orange-500 bg-orange-50/50 shadow-sm shadow-orange-500/5"
+                          : "border-gray-200 hover:border-orange-300"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        checked={selectedSlotId === slot.id}
+                        readOnly
+                        className="text-orange-500 focus:ring-orange-500"
+                      />
+                      <div>
+                        <p className="font-semibold text-gray-900 text-sm">{slot.name}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {formErrors.deliverySlotId && (
+                <p className="text-xs text-red-500 mt-2">{formErrors.deliverySlotId}</p>
+              )}
+            </div>
+
             {/* ── Section 3: Payment Method ── */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
               <div className="flex items-center gap-2 mb-5 border-b pb-3">
@@ -947,7 +1045,13 @@ export default function CheckoutPage() {
 
               {/* Place Order Button */}
               <button
-                onClick={handlePlaceOrder}
+                onClick={() => {
+                  if (validateForm()) {
+                    setShowConfirmModal(true);
+                  } else {
+                    setOrderError("Please fill in all required fields.");
+                  }
+                }}
                 disabled={isPlacingOrder || hasStockErrors}
                 className={`w-full flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold text-white transition-all shadow-lg ${
                   isPlacingOrder
@@ -974,6 +1078,54 @@ export default function CheckoutPage() {
             </div>
           </div>
         </div>
+        {/* HIGH-8: Confirmation Modal Overlay */}
+        {showConfirmModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in-50 duration-200">
+            <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full mx-4 shadow-2xl border border-gray-100 animate-in zoom-in-95 duration-200">
+              <h3 className="text-xl font-black text-gray-900 mb-2">Confirm Your Order</h3>
+              <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+                Are you sure you want to place this Cash on Delivery (COD) order?
+              </p>
+              
+              <div className="bg-gray-50 rounded-2xl p-4 mb-6 border border-gray-100 space-y-2.5 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Delivery Address</span>
+                  <span className="font-semibold text-gray-800 text-right max-w-[200px] truncate">{buildShippingAddress()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Delivery Slot</span>
+                  <span className="font-semibold text-gray-800">
+                    {deliverySlots.find((s) => s.id === selectedSlotId)?.name || "Not Selected"}
+                  </span>
+                </div>
+                <div className="border-t pt-2.5 flex justify-between font-bold text-base">
+                  <span className="text-gray-900">Total Amount</span>
+                  <span className="text-orange-500">QAR {orderTotal.toFixed(2)}</span>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowConfirmModal(false);
+                    handlePlaceOrder();
+                  }}
+                  disabled={isPlacingOrder}
+                  className="flex-1 rounded-xl bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300 py-3 text-sm font-bold text-white transition-all cursor-pointer shadow-md shadow-orange-500/10"
+                >
+                  {isPlacingOrder ? "Placing Order..." : "Confirm & Place"}
+                </button>
+                <button
+                  onClick={() => setShowConfirmModal(false)}
+                  disabled={isPlacingOrder}
+                  className="flex-1 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 text-sm font-bold transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

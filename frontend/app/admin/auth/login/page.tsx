@@ -23,17 +23,18 @@ export default function AdminLoginPage() {
     try {
       const result = await authService.login({ email, password });
       if (result && result.token) {
-        if (result.user?.role === "admin") {
-          login({ name: result.user?.name || email.split("@")[0], email, role: "admin" }, result.token);
+        const role = result.user?.role;
+        if (role === "admin" || role === "staff") {
+          login({ name: result.user?.name || email.split("@")[0], email, role }, result.token);
           router.push("/admin");
           return;
         } else {
-          setError("Invalid admin credentials. Please try again.");
+          setError("Invalid credentials. Access restricted to authorized personnel.");
           return;
         }
       }
 
-      setError("Invalid admin credentials. Please try again.");
+      setError("Invalid credentials. Please try again.");
     } catch {
       setError("Unable to connect to server. Please try again.");
     } finally {
@@ -53,9 +54,6 @@ export default function AdminLoginPage() {
 
           {/* Header */}
           <div className="flex flex-col items-center mb-8">
-            <div className="h-12 w-12 rounded-xl bg-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/40 mb-4">
-              <Sparkles className="h-6 w-6 text-gray-900" />
-            </div>
             <img src="/images/logo-dark.png" alt="Griva Logo" className="h-8 w-auto object-contain mb-1" />
             <p className="text-[10px] text-gray-400 font-bold tracking-widest uppercase mt-1">
               Admin Dashboard Access

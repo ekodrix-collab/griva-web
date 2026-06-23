@@ -1,10 +1,18 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   TrendingUp, DollarSign, ShoppingCart, Users, BarChart2,
   ToggleLeft, ToggleRight, CheckCircle, EyeOff,
   ChevronRight, Package, Sliders
 } from 'lucide-react';
-import { AnalyticsData } from '../../utils/api';
+import { useToast } from '@/app/context/ToastContext';
+import {
+  AnalyticsData,
+  DeliverySlot,
+  getDeliverySlotsApi,
+  createDeliverySlotApi,
+  updateDeliverySlotApi,
+  deleteDeliverySlotApi
+} from '../../utils/api';
 
 interface OverviewTabProps {
   analytics: AnalyticsData | null;
@@ -21,6 +29,15 @@ interface OverviewTabProps {
   slidesList: any[];
   categoriesList: any[];
   offersList: any[];
+  shippingFee: number;
+  freeShippingThreshold: number;
+  onSaveShippingConfig: (fee: number, threshold: number) => Promise<void>;
+  dateRangeOption: string;
+  setDateRangeOption: (val: string) => void;
+  customStartDate: string;
+  setCustomStartDate: (val: string) => void;
+  customEndDate: string;
+  setCustomEndDate: (val: string) => void;
 }
 
 const CATEGORY_COLORS = [
@@ -28,9 +45,25 @@ const CATEGORY_COLORS = [
 ];
 
 function SalesLineChart({ data }: { data: { date: string; sales: number }[] }) {
-  if (!data || data.length < 2) return null;
-  const maxSales = Math.max(...data.map(d => d.sales));
-  const minSales = Math.min(...data.map(d => d.sales));
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex h-full items-center justify-center text-xs font-bold text-gray-400 bg-gray-50/50 rounded-xl border border-dashed border-gray-200">
+        No sales revenue recorded for this period
+      </div>
+    );
+  }
+
+  let chartData = [...data];
+  if (chartData.length === 1) {
+    const singlePoint = chartData[0];
+    chartData = [
+      { date: `${singlePoint.date} (Start)`, sales: 0 },
+      singlePoint
+    ];
+  }
+
+  const maxSales = Math.max(...chartData.map(d => d.sales));
+  const minSales = Math.min(...chartData.map(d => d.sales));
   const range = maxSales - minSales || 1;
   const width = 500;
   const height = 120;
@@ -38,8 +71,8 @@ function SalesLineChart({ data }: { data: { date: string; sales: number }[] }) {
   const chartW = width - padding.left - padding.right;
   const chartH = height - padding.top - padding.bottom;
 
-  const points = data.map((d, i) => ({
-    x: padding.left + (i / (data.length - 1)) * chartW,
+  const points = chartData.map((d, i) => ({
+    x: padding.left + (i / (chartData.length - 1)) * chartW,
     y: padding.top + chartH - ((d.sales - minSales) / range) * chartH,
     sales: d.sales,
     date: d.date,
@@ -90,7 +123,13 @@ function SalesLineChart({ data }: { data: { date: string; sales: number }[] }) {
 }
 
 function CategoryPieChart({ data }: { data: { category: string; sales: number }[] }) {
-  if (!data || data.length === 0) return null;
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex h-32 items-center justify-center text-xs font-bold text-gray-400 bg-gray-50/50 rounded-xl border border-dashed border-gray-200 w-full">
+        No category distribution recorded for this period
+      </div>
+    );
+  }
   const total = data.reduce((s, d) => s + d.sales, 0);
   let cumAngle = -Math.PI / 2;
   const cx = 70, cy = 70, r = 55, innerR = 30;
@@ -143,48 +182,222 @@ function CategoryPieChart({ data }: { data: { category: string; sales: number }[
 }
 
 export default function OverviewTab(props: OverviewTabProps) {
+  const { toast, confirm } = useToast();
   const {
     analytics, analyticsLoading,
     announcementBarEnabled, setAnnouncementBarEnabled,
     fridaySaleEnabled, setFridaySaleEnabled,
     midnightSaleEnabled, setMidnightSaleEnabled,
     highlightedSchemaSection, setHighlightedSchemaSection,
-    setActiveTab, slidesList, categoriesList, offersList
+    setActiveTab, slidesList, categoriesList, offersList,
+    shippingFee, freeShippingThreshold, onSaveShippingConfig,
+    dateRangeOption, setDateRangeOption,
+    customStartDate, setCustomStartDate,
+    customEndDate, setCustomEndDate
   } = props;
 
   const statusCounts = analytics?.orderStatusCounts || { pending: 0, shipped: 0, delivered: 0, completed: 0, cancelled: 0 };
 
+  const [thresholdInput, setThresholdInput] = useState(freeShippingThreshold);
+  const [feeInput, setFeeInput] = useState(shippingFee);
+  const [isSavingRules, setIsSavingRules] = useState(false);
+
+  // Sync inputs with props changes
+  useEffect(() => {
+    setThresholdInput(freeShippingThreshold);
+  }, [freeShippingThreshold]);
+
+  useEffect(() => {
+    setFeeInput(shippingFee);
+  }, [shippingFee]);
+
+  const [slots, setSlots] = useState<DeliverySlot[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState(true);
+  const [newSlotName, setNewSlotName] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const data = await getDeliverySlotsApi();
+        setSlots(data);
+      } catch {}
+      setLoadingSlots(false);
+    }
+    load();
+  }, []);
+
+  const handleToggleSlot = async (slot: DeliverySlot) => {
+    const updated = await updateDeliverySlotApi(slot.id, { is_active: !slot.is_active });
+    if (updated) {
+      setSlots(prev => prev.map(s => s.id === slot.id ? { ...s, is_active: updated.is_active } : s));
+    }
+  };
+
+  const handleAddSlot = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSlotName.trim()) return;
+    setIsSaving(true);
+    const newSlot = await createDeliverySlotApi({
+      name: newSlotName.trim(),
+      is_active: true,
+      sort_order: slots.length + 1,
+    });
+    if (newSlot) {
+      setSlots(prev => [...prev, newSlot].sort((a, b) => a.sort_order - b.sort_order));
+      setNewSlotName("");
+    }
+    setIsSaving(false);
+  };
+
+  const handleMoveSlot = async (index: number, direction: 'up' | 'down') => {
+    if (direction === 'up' && index === 0) return;
+    if (direction === 'down' && index === slots.length - 1) return;
+
+    const swapIndex = direction === 'up' ? index - 1 : index + 1;
+    const currentSlot = slots[index];
+    const targetSlot = slots[swapIndex];
+
+    const currentOrder = currentSlot.sort_order;
+    const targetOrder = targetSlot.sort_order;
+
+    currentSlot.sort_order = targetOrder;
+    targetSlot.sort_order = currentOrder;
+
+    const newSlots = [...slots];
+    newSlots[index] = targetSlot;
+    newSlots[swapIndex] = currentSlot;
+
+    setSlots(newSlots.sort((a, b) => a.sort_order - b.sort_order));
+
+    await Promise.all([
+      updateDeliverySlotApi(currentSlot.id, { sort_order: targetOrder }),
+      updateDeliverySlotApi(targetSlot.id, { sort_order: currentOrder })
+    ]);
+  };
+
+  const handleDeleteSlot = async (id: number) => {
+    const isConfirmed = await confirm(
+      "Are you sure you want to delete this delivery slot? Existing orders assigned to this slot will remain unaffected.",
+      "Delete Delivery Slot"
+    );
+    if (!isConfirmed) return;
+    const deleted = await deleteDeliverySlotApi(id);
+    if (deleted) {
+      setSlots(prev => prev.filter(s => s.id !== id));
+      toast.success("Delivery slot deleted successfully.");
+    } else {
+      toast.error("Failed to delete delivery slot.");
+    }
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in-50 duration-300">
 
+      {/* ── Dashboard Date Range Filter Bar ── */}
+      <div className="bg-white border border-orange-500/20 rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+        <div>
+          <h2 className="text-base font-black text-gray-900">Store Analytics & Insights</h2>
+          <p className="text-[11px] font-semibold text-orange-500/80 mt-0.5">
+            {(() => {
+              if (dateRangeOption === "all") return "All-time platform performance";
+              if (dateRangeOption === "today") return `Performance for today (${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })})`;
+              if (dateRangeOption === "yesterday") {
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                return `Performance for yesterday (${yesterday.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })})`;
+              }
+              if (dateRangeOption === "7days") {
+                const start = new Date();
+                start.setDate(start.getDate() - 6);
+                return `Last 7 Days: ${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+              }
+              if (dateRangeOption === "30days") {
+                const start = new Date();
+                start.setDate(start.getDate() - 29);
+                return `Last 30 Days: ${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+              }
+              if (dateRangeOption === "month") {
+                const now = new Date();
+                const start = new Date(now.getFullYear(), now.getMonth(), 1);
+                return `This Month: ${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+              }
+              if (dateRangeOption === "custom") {
+                if (customStartDate && customEndDate) {
+                  const start = new Date(customStartDate);
+                  const end = new Date(customEndDate);
+                  return `Custom Period: ${start.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} – ${end.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+                }
+                return "Select custom start and end dates below";
+              }
+              return "";
+            })()}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          {dateRangeOption === "custom" && (
+            <div className="flex items-center gap-2 animate-in slide-in-from-right-5 duration-200">
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+                className="text-xs font-semibold text-gray-700 bg-white border border-orange-500/20 rounded-xl px-3 py-2 outline-none focus:border-orange-500 transition-colors shadow-sm"
+              />
+              <span className="text-gray-400 text-xs font-bold">to</span>
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+                className="text-xs font-semibold text-gray-700 bg-white border border-orange-500/20 rounded-xl px-3 py-2 outline-none focus:border-orange-500 transition-colors shadow-sm"
+              />
+            </div>
+          )}
+
+          <select
+            value={dateRangeOption}
+            onChange={(e) => setDateRangeOption(e.target.value)}
+            className="text-xs font-bold text-gray-700 bg-white border border-orange-500/30 rounded-xl px-4.5 py-2 outline-none focus:border-orange-500 transition-all shadow-sm hover:border-orange-500/60 cursor-pointer"
+          >
+            <option value="7days">Last 7 Days</option>
+            <option value="today">Today</option>
+            <option value="yesterday">Yesterday</option>
+            <option value="30days">Last 30 Days</option>
+            <option value="month">This Month</option>
+            <option value="all">All Time</option>
+            <option value="custom">Custom Range</option>
+          </select>
+        </div>
+      </div>
+
       {/* ── KPI Metric Cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className={`grid grid-cols-2 lg:grid-cols-4 gap-4 transition-opacity duration-200 ${analyticsLoading ? 'opacity-70' : 'opacity-100'}`}>
         {[
           {
             label: 'Total Revenue',
             value: analytics ? `QAR ${analytics.totalSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '—',
-            sub: 'All-time sales',
+            sub: dateRangeOption === 'all' ? 'All-time sales' : 'Revenue in period',
             icon: <DollarSign className="h-5 w-5 text-orange-500" />,
             color: 'from-orange-500/10 to-amber-500/5',
           },
           {
             label: 'Total Orders',
             value: analytics ? analytics.totalOrders.toString() : '—',
-            sub: `${statusCounts.pending} pending`,
+            sub: dateRangeOption === 'all' ? `${statusCounts.pending} pending` : 'Orders in period',
             icon: <ShoppingCart className="h-5 w-5 text-blue-500" />,
             color: 'from-blue-500/10 to-sky-500/5',
           },
           {
             label: 'Avg Order Value',
             value: analytics ? `QAR ${analytics.averageOrderValue.toFixed(2)}` : '—',
-            sub: 'Per transaction',
+            sub: dateRangeOption === 'all' ? 'Per transaction' : 'AOV in period',
             icon: <TrendingUp className="h-5 w-5 text-violet-500" />,
             color: 'from-violet-500/10 to-purple-500/5',
           },
           {
             label: 'Customers',
             value: analytics ? analytics.totalCustomers.toString() : '—',
-            sub: 'Registered buyers',
+            sub: dateRangeOption === 'all' ? 'Registered buyers' : 'Active buyers in period',
             icon: <Users className="h-5 w-5 text-emerald-500" />,
             color: 'from-emerald-500/10 to-teal-500/5',
           },
@@ -205,14 +418,14 @@ export default function OverviewTab(props: OverviewTabProps) {
       </div>
 
       {/* ── Charts Row ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className={`grid grid-cols-1 lg:grid-cols-12 gap-6 transition-opacity duration-200 ${analyticsLoading ? 'opacity-80' : 'opacity-100'}`}>
 
         {/* Sales Over Time Chart */}
         <div className="lg:col-span-8 bg-white border border-orange-500/30 rounded-2xl p-6">
           <div className="flex items-center justify-between mb-5">
             <div>
               <h4 className="text-sm font-bold text-gray-900">Revenue Over Time</h4>
-              <p className="text-[10px] text-gray-400 mt-0.5">Daily sales performance — last 10 days</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">Daily sales performance</p>
             </div>
             <BarChart2 className="h-4 w-4 text-orange-400" />
           </div>
@@ -305,6 +518,147 @@ export default function OverviewTab(props: OverviewTabProps) {
             </button>
           </div>
         ))}
+      </div>
+
+      {/* ── Shipping & Delivery Configurations ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in fade-in duration-300">
+        {/* Shipping Rules */}
+        <div className="lg:col-span-5 bg-white border border-orange-500/30 rounded-2xl p-6 flex flex-col justify-between">
+          <div>
+            <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-1">Global Shipping Rules</h4>
+            <p className="text-[10px] text-gray-400 mb-5">Configure free shipping thresholds and baseline delivery fees.</p>
+
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              setIsSavingRules(true);
+              try {
+                await onSaveShippingConfig(feeInput, thresholdInput);
+                toast.success("Shipping rules saved successfully.");
+              } catch {
+                toast.error("Failed to save shipping rules.");
+              }
+              setIsSavingRules(false);
+            }} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold uppercase text-gray-400 tracking-wider mb-1">Free Shipping Threshold (QAR)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={thresholdInput}
+                  onChange={(e) => setThresholdInput(Number(e.target.value))}
+                  className="w-full text-xs font-semibold text-gray-700 bg-white border border-orange-500/20 rounded-xl px-3 py-2.5 outline-none focus:border-orange-500 transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold uppercase text-gray-400 tracking-wider mb-1">Shipping Charge (QAR)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={feeInput}
+                  onChange={(e) => setFeeInput(Number(e.target.value))}
+                  className="w-full text-xs font-semibold text-gray-700 bg-white border border-orange-500/20 rounded-xl px-3 py-2.5 outline-none focus:border-orange-500 transition-colors"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={isSavingRules}
+                className="w-full flex items-center justify-center py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-orange-500 to-amber-500 hover:opacity-95 shadow-md shadow-orange-500/10 cursor-pointer disabled:opacity-50 transition-all"
+              >
+                {isSavingRules ? "Saving Configurations..." : "Save Shipping Rules"}
+              </button>
+            </form>
+          </div>
+        </div>
+
+        {/* Delivery Time Slots */}
+        <div className="lg:col-span-7 bg-white border border-orange-500/30 rounded-2xl p-6">
+          <div className="flex items-center justify-between border-b border-orange-500/10 pb-4 mb-4">
+            <div>
+              <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Delivery Time Slots</h4>
+              <p className="text-[10px] text-gray-400 mt-0.5">Manage customer preferred checkout slots.</p>
+            </div>
+            <span className="text-[10px] font-bold text-orange-400 bg-orange-500/10 px-2.5 py-0.5 rounded-full uppercase">
+              {slots.length} Active Slots
+            </span>
+          </div>
+
+          {loadingSlots ? (
+            <div className="flex items-center justify-center py-10">
+              <span className="h-5 w-5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+              {slots.map((slot, index) => (
+                <div key={slot.id} className="flex items-center justify-between p-3 bg-gray-50/50 border border-gray-100 rounded-xl hover:bg-orange-500/3 transition-colors group">
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] font-bold text-gray-400 w-4">#{index + 1}</span>
+                    <span className="text-xs font-bold text-gray-700">{slot.name}</span>
+                    {!slot.is_active && (
+                      <span className="text-[8px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full font-black uppercase">Disabled</span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {/* Up button */}
+                    <button
+                      onClick={() => handleMoveSlot(index, 'up')}
+                      disabled={index === 0}
+                      className="p-1 rounded bg-white border border-gray-100 hover:border-orange-500/35 text-gray-500 hover:text-orange-500 transition-colors disabled:opacity-30 cursor-pointer"
+                    >
+                      ▲
+                    </button>
+                    {/* Down button */}
+                    <button
+                      onClick={() => handleMoveSlot(index, 'down')}
+                      disabled={index === slots.length - 1}
+                      className="p-1 rounded bg-white border border-gray-100 hover:border-orange-500/35 text-gray-500 hover:text-orange-500 transition-colors disabled:opacity-30 cursor-pointer"
+                    >
+                      ▼
+                    </button>
+                    {/* Toggle button */}
+                    <button
+                      onClick={() => handleToggleSlot(slot)}
+                      className={`text-[10px] font-bold px-2 py-1 rounded-lg border transition-all cursor-pointer ${
+                        slot.is_active
+                          ? "bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                          : "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100"
+                      }`}
+                    >
+                      {slot.is_active ? "Disable" : "Enable"}
+                    </button>
+                    {/* Delete button */}
+                    <button
+                      onClick={() => handleDeleteSlot(slot.id)}
+                      className="p-1 rounded bg-white border border-red-200 hover:bg-red-50 text-red-400 transition-colors cursor-pointer"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add New Slot form */}
+          <form onSubmit={handleAddSlot} className="mt-4 flex gap-2">
+            <input
+              type="text"
+              placeholder="e.g. 09:00 AM - 12:00 PM"
+              value={newSlotName}
+              onChange={(e) => setNewSlotName(e.target.value)}
+              className="flex-1 text-xs font-semibold text-gray-700 bg-white border border-orange-500/20 rounded-xl px-3 py-2 outline-none focus:border-orange-500 transition-colors"
+            />
+            <button
+              type="submit"
+              disabled={isSaving || !newSlotName.trim()}
+              className="px-4 rounded-xl text-xs font-bold text-white bg-orange-500 hover:bg-orange-600 transition-colors cursor-pointer disabled:opacity-50"
+            >
+              Add Slot
+            </button>
+          </form>
+        </div>
       </div>
 
       {/* ── Storefront Schema Mapper ── */}

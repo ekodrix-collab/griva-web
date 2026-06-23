@@ -64,9 +64,21 @@ export const productService = {
   },
 
   // Update banner status
-  updateBannerStatus: async (id: number, is_banner: boolean, href?: string,banner_background_color?: string, tags?: string[]) => {
-    const response = await api.patch(`/products/${id}/banner`, { is_banner, href,banner_background_color, tags });
+  updateBannerStatus: async (id: number, is_banner: boolean, href?: string,mobile_ad_banner?:string, banner_background_color?: string, tags?: string[]) => {
+    const response = await api.patch(`/products/${id}/banner`, { is_banner, href,banner_background_color,mobile_ad_banner, tags });
     return response.data;
-  }
+  },
+
+  // Update deal of the day status
+  updateDealOfDayStatus: async (id: number, deal_of_day: boolean) => {
+    const response = await api.patch(`/products/${id}/deal-of-day`, { deal_of_day });
+    return response.data;
+  },
+
+  // Get deal of the day products
+  getDealOfDayProducts: async () => {
+    const response = await api.get("/products/deal-of-day");
+    return response.data;
+  },
 
 };

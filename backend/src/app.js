@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
 const path = require("path");
+const { apiLimiter } = require("./middleware/rateLimit");
 
 // Initialize Database Models and Associations
 require("./models");
@@ -29,6 +30,10 @@ app.use(cors({
   },
   credentials: true,
 }));
+
+// Apply rate limiter to all API endpoints
+app.use("/api", apiLimiter);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -63,11 +68,13 @@ const subCategoryRoutes = require("./routes/subCategoryRoutes");
 const cartRoutes = require("./routes/cartRoutes");
 const deliveryRoutes = require("./routes/deliveryRoutes"); // FEATURE: Delivery Boy System
 const customerRoutes = require("./routes/customerRoutes");
-// const testEmailRoutes = require("./routes/testEmailRoutes");
+const staffRoutes = require("./routes/staffRoutes");
+const testEmailRoutes = require("./routes/testEmailRoutes");
 const deliveryAttemptRoutes = require("./routes/deliveryAttemptRoutes");
 const uploadRoutes = require("./routes/uploadRoutes"); //IMAGE UPLOAD
+const deliverySlotRoutes = require("./routes/deliverySlotRoutes");
+const dealOfDayRoutes = require("./routes/dealOfDayRoutes");
 // const testShippedEmailRoutes = require("./routes/testShippedEmailRoutes");
- 
 
 // Mount API Routers
 app.use("/api/auth", authRoutes);
@@ -84,11 +91,12 @@ app.use("/api/subcategories", subCategoryRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/delivery", deliveryRoutes); // FEATURE: Delivery Boy System
 app.use("/api/admin/customers", customerRoutes);
+app.use("/api/admin/staff", staffRoutes);
 app.use("/api/delivery", deliveryAttemptRoutes); // FEATURE: Delivery Attempt Management
 // app.use("/api/test-email", testEmailRoutes);
 app.use("/api/uploads", uploadRoutes); //IMAGE UPLOAD
- 
- 
+app.use("/api/delivery-slots", deliverySlotRoutes);
+app.use("/api/deal-of-day", dealOfDayRoutes);
 
 // Global Error Handler Middleware
 app.use((err, req, res, next) => {

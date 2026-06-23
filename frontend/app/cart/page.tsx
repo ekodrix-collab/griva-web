@@ -7,9 +7,12 @@ import { ShoppingBag, ArrowLeft, Trash2, Plus, Minus } from "lucide-react";
 import { useCart } from "@/app/context/CartContext";
 import SectionHeading from "@/app/components/common/SectionHeading";
 import { motion, AnimatePresence } from "framer-motion";
+import { useToast } from "@/app/context/ToastContext";
+import { getSettingsApi } from "@/app/utils/api";
 
 export default function CartPage() {
   const { state, dispatch } = useCart();
+  const { confirm, toast } = useToast();
 
   const handleIncrement = (id: number, currentQty: number) => {
     dispatch({
@@ -33,30 +36,71 @@ export default function CartPage() {
     dispatch({ type: "REMOVE", payload: { id } });
   };
 
-  const handleClear = () => {
-    if (confirm("Are you sure you want to clear your cart?")) {
+  const handleClear = async () => {
+    const isConfirmed = await confirm(
+      "Are you sure you want to remove all items from your cart?",
+      "Clear Cart"
+    );
+    if (isConfirmed) {
       dispatch({ type: "CLEAR" });
+      toast.success("Cart cleared successfully.");
     }
   };
 
   const [shippingConfig, setShippingConfig] = useState({
-    shippingFee: 15,
-    freeShippingThreshold: 150,
+    shippingFee: 10,
+    freeShippingThreshold: 99,
   });
+
+  const [stockStatus, setStockStatus] = useState<Record<number, { available: number; ok: boolean; active: boolean; title: string }>>({});
+  const [checkingStock, setCheckingStock] = useState(false);
+
+  useEffect(() => {
+    const checkStock = async () => {
+      if (state.items.length === 0) return;
+      setCheckingStock(true);
+      const statusMap: typeof stockStatus = {};
+      for (const item of state.items) {
+        try {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/${item.productId}`);
+          if (res.ok) {
+            const data = await res.json();
+            const product = data.data;
+            if (product) {
+              statusMap[item.id] = {
+                available: product.stock,
+                ok: item.quantity <= product.stock && product.is_active,
+                active: product.is_active,
+                title: product.title,
+              };
+            } else {
+              statusMap[item.id] = { available: 0, ok: false, active: false, title: item.title };
+            }
+          } else {
+            statusMap[item.id] = { available: 0, ok: false, active: false, title: item.title };
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }
+      setStockStatus(statusMap);
+      setCheckingStock(false);
+    };
+
+    checkStock();
+  }, [state.items]);
+
+  const hasCartErrors = Object.values(stockStatus).some((s) => !s.ok);
 
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/settings`);
-        if (res.ok) {
-          const data = await res.json();
-          const s = data.settings;
-          if (s) {
-            setShippingConfig({
-              shippingFee: parseFloat(s.shippingFee) || 15,
-              freeShippingThreshold: parseFloat(s.freeShippingThreshold) || 150,
-            });
-          }
+        const settings = await getSettingsApi();
+        if (settings) {
+          setShippingConfig({
+            shippingFee: settings.shippingFee !== undefined ? Number(settings.shippingFee) : 10,
+            freeShippingThreshold: settings.freeShippingThreshold !== undefined ? Number(settings.freeShippingThreshold) : 99,
+          });
         }
       } catch {
         // Use defaults silently
@@ -77,7 +121,53 @@ export default function CartPage() {
         <SectionHeading title="Your Shopping Cart" subtitle="Manage items before completing purchase" />
 
         {state.items.length > 0 ? (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="space-y-6">
+            {/* Free Shipping Alert Card */}
+            <div className="bg-white rounded-2xl border border-orange-500/20 shadow-sm p-5 animate-in fade-in duration-300">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-9 w-9 rounded-xl bg-orange-50 flex items-center justify-center shrink-0">
+                    <span className="text-lg">🚚</span>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-gray-900">
+                      {state.totalPrice >= shippingConfig.freeShippingThreshold ? (
+                        <span className="text-green-600 font-extrabold">You qualify for Free Delivery!</span>
+                      ) : (
+                        <span>Free Shipping Above QAR {shippingConfig.freeShippingThreshold.toFixed(0)}</span>
+                      )}
+                    </h4>
+                    <p className="text-[11px] text-gray-500 mt-0.5">
+                      {state.totalPrice >= shippingConfig.freeShippingThreshold ? (
+                        "Your order will be shipped free of charge within Qatar."
+                      ) : (
+                        <>Add <span className="font-bold text-orange-500">QAR {(shippingConfig.freeShippingThreshold - state.totalPrice).toFixed(2)}</span> more to get Free Delivery</>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                {state.totalPrice < shippingConfig.freeShippingThreshold && (
+                  <Link
+                    href="/shop"
+                    className="text-xs font-bold text-orange-500 hover:text-orange-600 transition shrink-0 self-start sm:self-center"
+                  >
+                    + Add More Items
+                  </Link>
+                )}
+              </div>
+
+              {/* Progress Bar */}
+              <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-orange-500 to-amber-500 transition-all duration-500 ease-out rounded-full"
+                  style={{
+                    width: `${Math.min((state.totalPrice / shippingConfig.freeShippingThreshold) * 100, 100)}%`,
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             {/* Left side: Item list */}
             <div className="lg:col-span-8 space-y-4">
               <div className="flex justify-between items-center mb-2">
@@ -139,6 +229,16 @@ export default function CartPage() {
                             </span>
                           )}
                         </div>
+                        {/* HIGH-9: Stock error warning notice */}
+                        {stockStatus[item.id] && !stockStatus[item.id].ok && (
+                          <div className="mt-1.5 text-xs text-red-500 font-bold bg-red-50 border border-red-100 rounded-lg px-2.5 py-1 inline-block animate-fadeIn">
+                            {!stockStatus[item.id].active ? (
+                              "⚠️ This product is currently inactive / unavailable."
+                            ) : (
+                              `⚠️ Requested quantity exceeds stock. Only ${stockStatus[item.id].available} available.`
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       {/* Qty Controls */}
@@ -175,7 +275,8 @@ export default function CartPage() {
                         onClick={() => handleRemove(item.id)}
                         className="rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors cursor-pointer"
                       >
-                        <Trash2 className="h-4. w-4." />
+                        {/* MED-8: Fix invalid Tailwind CSS class */}
+                        <Trash2 className="h-4 w-4" />
                       </button>
                     </motion.div>
                   ))}
@@ -213,18 +314,29 @@ export default function CartPage() {
                   </div>
                 </div>
 
-                <Link
-                  href="/checkout"
-                  className="w-full flex items-center justify-center rounded-xl bg-orange-500 py-3.5 text-sm font-semibold text-white hover:bg-orange-600 transition-colors shadow-lg shadow-orange-500/10 cursor-pointer"
-                >
-                  Proceed to Checkout
-                </Link>
+                {/* HIGH-9: Disable Proceed to Checkout if stock errors exist */}
+                {hasCartErrors ? (
+                  <button
+                    disabled
+                    className="w-full flex items-center justify-center rounded-xl bg-gray-300 py-3.5 text-sm font-bold text-gray-500 cursor-not-allowed shadow-none"
+                  >
+                    Resolve Stock Issues to Checkout
+                  </button>
+                ) : (
+                  <Link
+                    href="/checkout"
+                    className="w-full flex items-center justify-center rounded-xl bg-orange-500 py-3.5 text-sm font-semibold text-white hover:bg-orange-600 transition-colors shadow-lg shadow-orange-500/10 cursor-pointer"
+                  >
+                    Proceed to Checkout
+                  </Link>
+                )}
 
                 <div className="pt-2 text-center text-xs text-gray-400">
                   Secured by 256-bit SSL connection
                 </div>
               </div>
             </div>
+          </div>
           </div>
         ) : (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center max-w-lg mx-auto mt-8">

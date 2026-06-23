@@ -3,6 +3,23 @@ const SubCategory = require("../models/SubCategory");
 const { Op } = require("sequelize");
 
 /**
+ * Helper to extract Cloudinary public ID from its URL
+ */
+const getPublicIdFromUrl = (url) => {
+  if (!url || !url.includes("cloudinary.com")) return null;
+  try {
+    const splitUrl = url.split("/upload/");
+    if (splitUrl.length < 2) return null;
+    const pathAfterUpload = splitUrl[1];
+    const pathWithoutVersion = pathAfterUpload.replace(/^v\d+\//, "");
+    return pathWithoutVersion.substring(0, pathWithoutVersion.lastIndexOf("."));
+  } catch (error) {
+    console.error("Error parsing Cloudinary URL:", error);
+    return null;
+  }
+};
+
+/**
  * Create Product
  */
 exports.createProduct = async (req, res) => {
@@ -52,16 +69,24 @@ exports.getProducts = async (req, res) => {
 
     const where = {};
 
+    // CRIT-4: Enforce is_active check for public views (allow admin/staff to see deactivated ones)
+    const isAdminOrStaffUser = req.user && (req.user.role === "admin" || req.user.role === "staff");
+    if (!isAdminOrStaffUser) {
+      where.is_active = true;
+    }
+
     if (search) {
+      // MED-11: Escape SQL wildcard characters % and _ in search query
+      const escapedSearch = search.replace(/[%_]/g, "\\$&");
       where[Op.or] = [
         {
           title: {
-            [Op.iLike]: `%${search}%`,
+            [Op.iLike]: `%${escapedSearch}%`,
           },
         },
         {
           description: {
-            [Op.iLike]: `%${search}%`,
+            [Op.iLike]: `%${escapedSearch}%`,
           },
         },
       ];
@@ -106,7 +131,9 @@ exports.getProductById = async (req, res) => {
   try {
     const product = await Product.findByPk(req.params.id);
 
-    if (!product) {
+    // CRIT-4: Add is_active check for public views on product details
+    const isAdminOrStaffUser = req.user && (req.user.role === "admin" || req.user.role === "staff");
+    if (!product || (!product.is_active && !isAdminOrStaffUser)) {
       return res.status(404).json({
         success: false,
         message: "Product not found",
@@ -132,10 +159,18 @@ exports.getProductById = async (req, res) => {
  */
 exports.getProductsBySubCategory = async (req, res) => {
   try {
+    const where = {
+      subcategory_id: req.params.subcategoryId,
+    };
+
+    // CRIT-4: Enforce is_active check for public subcategory view
+    const isAdminOrStaffUser = req.user && (req.user.role === "admin" || req.user.role === "staff");
+    if (!isAdminOrStaffUser) {
+      where.is_active = true;
+    }
+
     const products = await Product.findAll({
-      where: {
-        subcategory_id: req.params.subcategoryId,
-      },
+      where,
     });
 
     res.status(200).json({
@@ -234,6 +269,17 @@ exports.updateProduct = async (req, res) => {
       });
     }
 
+    // If main_image_url is being updated, delete the old one from Cloudinary to free space
+    if (req.body.main_image_url && product.main_image_url && req.body.main_image_url !== product.main_image_url) {
+      const oldPublicId = getPublicIdFromUrl(product.main_image_url);
+      if (oldPublicId) {
+        const cloudinary = require("../config/cloudinary");
+        await cloudinary.uploader.destroy(oldPublicId).catch(err => {
+          console.error("Failed to delete old image from Cloudinary:", err);
+        });
+      }
+    }
+
     await product.update(req.body);
 
     res.status(200).json({
@@ -300,6 +346,17 @@ exports.deleteProduct = async (req, res) => {
       });
     }
 
+    // Delete image from Cloudinary if it exists
+    if (product.main_image_url) {
+      const publicId = getPublicIdFromUrl(product.main_image_url);
+      if (publicId) {
+        const cloudinary = require("../config/cloudinary");
+        await cloudinary.uploader.destroy(publicId).catch(err => {
+          console.error("Failed to delete product image from Cloudinary:", err);
+        });
+      }
+    }
+
     await product.destroy();
 
     res.status(200).json({
@@ -329,13 +386,14 @@ exports.updateBannerStatus = async (req, res) => {
       });
     }
 
-    const { is_banner, href, tags,banner_background_color} = req.body;
+    const { is_banner, href, tags,banner_background_color,mobile_ad_banner} = req.body;
 
     await product.update({
       is_banner,
       href,
       tags,
-      banner_background_color
+      banner_background_color,
+      mobile_ad_banner
     });
 
     res.status(200).json({
@@ -377,3 +435,62 @@ exports.getBannerActiveProducts = async (req, res) => {
     });
   }
 };
+
+//deal of the day
+exports.updateDealOfDay = async (req, res) => {
+  try {
+    const product = await Product.findByPk(req.params.id);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    const { deal_of_day} = req.body;
+
+    await product.update({
+      deal_of_day
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "deal of the day updated successfully",
+      data: product,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+//get deal of the day products
+exports.getDealOfDayProducts = async (req, res) => {
+  try {
+    const products = await Product.findAll({
+      where: {
+        deal_of_day: true,
+        is_active: true,
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      count: products.length,
+      data: products,
+    });
+  } catch (error) {
+    console.log(error);
+
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+

@@ -4,18 +4,21 @@ import { useState } from "react";
 import SectionHeading from "@/app/components/common/SectionHeading";
 import ScrollReveal from "@/app/components/common/ScrollReveal";
 import { Mail, Phone, MapPin, Send, CheckCircle2 } from "lucide-react";
+import { useToast } from "@/app/context/ToastContext";
 
 export default function ContactPage() {
   const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
   const [submitted, setSubmitted] = useState(false);
+  const { toast } = useToast();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.email || !form.message) {
-      alert("Please fill in all required fields.");
+      toast.warning("Please fill in all required fields.");
       return;
     }
     setSubmitted(true);
+    toast.success("Thank you! Your message has been sent successfully.");
     setForm({ name: "", email: "", subject: "", message: "" });
   };
 

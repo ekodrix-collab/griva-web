@@ -23,7 +23,9 @@ import {
   RefreshCw,
   CheckCircle,
   Clock,
-  Sparkles
+  Sparkles,
+  Download,
+  Ban
 } from "lucide-react";
 import {
   getCustomersApi,
@@ -32,7 +34,8 @@ import {
   updateCustomerStatusApi,
   CustomerInfo,
   CustomerDetailInfo,
-  CustomerAnalyticsData
+  CustomerAnalyticsData,
+  downloadCustomersExportApi
 } from "@/app/utils/api";
 
 const FILTER_OPTIONS = [
@@ -85,6 +88,35 @@ export default function CustomersTab() {
 
   // Notification Banner
   const [alert, setAlert] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
+  // Customer Export States
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [exportSegment, setExportSegment] = useState('all');
+  const [exportStartDate, setExportStartDate] = useState('');
+  const [exportEndDate, setExportEndDate] = useState('');
+  const [exportFormat, setExportFormat] = useState<'csv' | 'xlsx'>('xlsx');
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState('');
+
+  const handleExportCustomers = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setExporting(true);
+    setExportError('');
+    try {
+      await downloadCustomersExportApi({
+        segment: exportSegment === 'all' ? undefined : exportSegment,
+        startDate: exportStartDate || undefined,
+        endDate: exportEndDate || undefined,
+        format: exportFormat,
+      });
+      setIsExportModalOpen(false);
+      triggerAlert("success", "Customers exported successfully!");
+    } catch (err: any) {
+      setExportError(err.message || 'Failed to export customer records.');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   // Fetch Core Customers List
   const fetchCustomers = async () => {
@@ -219,13 +251,29 @@ export default function CustomersTab() {
             Monitor client accounts, segment performance, order conversion, and secure status management.
           </p>
         </div>
-        <button
-          onClick={() => { fetchCustomers(); fetchAnalytics(); }}
-          className="flex items-center justify-center gap-2 self-start px-4 py-2 border border-orange-500/30 hover:bg-orange-500/5 text-gray-600 hover:text-gray-900 rounded-xl transition-all text-xs font-bold cursor-pointer"
-        >
-          <RefreshCw className="h-3.5 w-3.5" />
-          Sync Records
-        </button>
+        <div className="flex flex-wrap items-center gap-2 self-start">
+          <button
+            onClick={() => {
+              setExportSegment('all');
+              setExportStartDate('');
+              setExportEndDate('');
+              setExportFormat('xlsx');
+              setExportError('');
+              setIsExportModalOpen(true);
+            }}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:opacity-90 active:scale-95 text-white rounded-xl shadow-xs transition-all text-xs font-bold cursor-pointer h-[34px]"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Export Customers
+          </button>
+          <button
+            onClick={() => { fetchCustomers(); fetchAnalytics(); }}
+            className="flex items-center justify-center gap-2 px-4 py-2 border border-orange-500/30 hover:bg-orange-500/5 text-gray-600 hover:text-gray-900 rounded-xl transition-all text-xs font-bold cursor-pointer h-[34px]"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Sync Records
+          </button>
+        </div>
       </div>
 
       {/* Analytics Summaries Banner */}
@@ -423,32 +471,28 @@ export default function CustomersTab() {
       {/* Customers Directory Table */}
       <div className="bg-white border border-orange-500/20 rounded-2xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse min-w-[700px]">
             <thead>
               <tr className="border-b border-orange-500/20 text-[10px] text-gray-400 font-bold uppercase tracking-wider bg-gray-50/50">
-                <th className="p-4">Customer Info</th>
-                <th className="p-4">Contact Phone</th>
-                <th className="p-4">Joined Date</th>
-                <th className="p-4 text-center">Orders Stat</th>
-                <th className="p-4 text-center">Success Rate</th>
-                <th className="p-4">Total Revenue</th>
-                <th className="p-4 text-center">Flags</th>
+                <th className="p-4 pl-6">Customer Info</th>
+                <th className="p-4">Orders Count</th>
+                <th className="p-4">Revenue</th>
                 <th className="p-4 text-center">Status</th>
-                <th className="p-4 text-center">Actions</th>
+                <th className="p-4 text-right pr-6">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-150">
               {loading ? (
                 Array.from({ length: 5 }).map((_, idx) => (
                   <tr key={idx} className="animate-pulse">
-                    <td className="p-4" colSpan={9}>
+                    <td className="p-4 pl-6" colSpan={5}>
                       <div className="h-10 bg-gray-100/70 rounded-xl w-full" />
                     </td>
                   </tr>
                 ))
               ) : customers.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="p-8 text-center text-xs text-gray-400 font-medium">
+                  <td colSpan={5} className="p-10 text-center text-xs text-gray-400 font-medium">
                     No matching customer accounts found.
                   </td>
                 </tr>
@@ -456,76 +500,37 @@ export default function CustomersTab() {
                 customers.map((c) => {
                   const initials = c.name ? c.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase() : "C";
                   return (
-                    <tr key={c.id} className="hover:bg-orange-500/[0.01] transition-colors">
-                      {/* Name & Email */}
-                      <td className="p-4">
+                    <tr key={c.id} className="hover:bg-orange-500/3 transition-colors group">
+                      {/* Name, Avatar, Email & Phone */}
+                      <td className="p-4 pl-6">
                         <div className="flex items-center gap-3">
-                          <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-orange-400 to-amber-500 flex items-center justify-center font-black text-xs text-white">
+                          <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-orange-400 to-amber-500 flex items-center justify-center font-black text-xs text-white shrink-0 shadow-xs">
                             {initials}
                           </div>
                           <div>
-                            <span className="text-xs font-bold text-gray-800 block truncate max-w-[150px]">{c.name}</span>
-                            <span className="text-[10px] text-gray-400 font-medium block truncate max-w-[150px]">{c.email}</span>
+                            <span className="text-xs font-bold text-gray-800 block truncate max-w-[200px] hover:text-orange-500 transition-colors">{c.name}</span>
+                            <span className="text-[10px] text-gray-450 font-medium block truncate max-w-[220px]">
+                              {c.email} {c.phone ? `• ${c.phone}` : ""}
+                            </span>
                           </div>
                         </div>
                       </td>
 
-                      {/* Phone */}
-                      <td className="p-4 text-xs font-semibold text-gray-600">
-                        {c.phone || "—"}
-                      </td>
-
-                      {/* Join Date */}
-                      <td className="p-4 text-xs text-gray-500 font-medium">
-                        {new Date(c.registrationDate).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" })}
-                      </td>
-
-                      {/* Total Orders */}
-                      <td className="p-4 text-center">
-                        <div>
-                          <span className="text-xs font-bold text-gray-800">{c.totalOrders}</span>
-                          <span className="text-[9px] text-gray-400 font-semibold block">
-                            {c.deliveredOrders} Del | {c.cancelledOrders} Can | {c.returnedOrders} Ret
+                      {/* Orders Count */}
+                      <td className="p-4">
+                        <div className="flex flex-col">
+                          <span className="text-xs text-gray-800 font-bold">
+                            {c.totalOrders} order{c.totalOrders !== 1 ? 's' : ''}
+                          </span>
+                          <span className="text-[9px] text-gray-400 font-semibold block mt-0.5">
+                            {c.deliveredOrders} Del • {c.cancelledOrders} Can
                           </span>
                         </div>
                       </td>
 
-                      {/* Success Rate */}
-                      <td className="p-4 text-center">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          c.successRate >= 80 ? "bg-green-50 text-green-700" :
-                          c.successRate >= 50 ? "bg-orange-50 text-orange-700" : "bg-red-50 text-red-700"
-                        }`}>
-                          {c.successRate}%
-                        </span>
-                      </td>
-
-                      {/* Spending */}
-                      <td className="p-4 text-xs font-black text-gray-800">
+                      {/* Total Revenue */}
+                      <td className="p-4 text-xs font-black text-gray-900">
                         QAR {c.totalSpent.toFixed(2)}
-                      </td>
-
-                      {/* Segment & Risk Badges */}
-                      <td className="p-4 text-center">
-                        <div className="flex flex-col gap-1 items-center">
-                          {/* Segment Badge */}
-                          <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider leading-none ${
-                            c.totalSpent >= 5000 ? "bg-amber-100 text-amber-800 border border-amber-500/20" :
-                            c.totalOrders >= 2 ? "bg-blue-100 text-blue-800 border border-blue-500/10" :
-                            "bg-gray-100 text-gray-800"
-                          }`}>
-                            {c.totalSpent >= 5000 ? "VIP" : c.totalOrders >= 2 ? "Repeat" : "New"}
-                          </span>
-
-                           {/* Risk Badge */}
-                           {c.riskLevel !== "LOW" && (
-                             <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold leading-none ${
-                               c.riskLevel === "MEDIUM" ? "bg-orange-50 text-orange-600 border border-orange-500/20" : "bg-red-50 text-red-600 border border-red-500/20"
-                             }`}>
-                               {c.riskLevel} RISK
-                             </span>
-                           )}
-                         </div>
                       </td>
 
                       {/* Status */}
@@ -536,10 +541,10 @@ export default function CustomersTab() {
                             name: c.name,
                             status: c.status === "ACTIVE" ? "BLOCKED" : "ACTIVE"
                           })}
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold hover:shadow-sm transition-all cursor-pointer ${
+                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border text-[10px] font-bold transition-all duration-150 cursor-pointer ${
                             c.status === "ACTIVE"
-                              ? "bg-green-100 text-green-800 border border-green-300/30 hover:bg-green-200/50"
-                              : "bg-red-100 text-red-800 border border-red-300/30 hover:bg-red-200/50"
+                              ? "bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                              : "bg-red-50 border-red-200 text-red-800 hover:bg-red-100"
                           }`}
                         >
                           <span className={`h-1.5 w-1.5 rounded-full ${c.status === "ACTIVE" ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
@@ -547,14 +552,32 @@ export default function CustomersTab() {
                         </button>
                       </td>
 
-                      {/* Details Trigger */}
-                      <td className="p-4 text-center">
-                        <button
-                          onClick={() => handleViewDetails(c.id)}
-                          className="p-1.5 text-gray-500 hover:text-orange-500 hover:bg-orange-500/5 rounded-lg transition-colors cursor-pointer"
-                        >
-                          <Eye className="h-4.5 w-4.5" />
-                        </button>
+                      {/* Actions */}
+                      <td className="p-4 text-right pr-6" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-2.5">
+                          <button
+                            onClick={() => handleViewDetails(c.id)}
+                            title="View Profile Details"
+                            className="p-1.5 text-gray-400 hover:text-gray-900 bg-white hover:bg-gray-100 rounded-lg transition-colors cursor-pointer border border-orange-500/20"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => setConfirmBlock({
+                              id: c.id,
+                              name: c.name,
+                              status: c.status === "ACTIVE" ? "BLOCKED" : "ACTIVE"
+                            })}
+                            title={c.status === "ACTIVE" ? "Block Account" : "Activate Account"}
+                            className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                              c.status === "ACTIVE"
+                                ? "border-red-500/20 text-red-500 hover:bg-red-50"
+                                : "border-green-500/20 text-green-600 hover:bg-green-50"
+                            }`}
+                          >
+                            {c.status === "ACTIVE" ? <Ban className="h-3.5 w-3.5" /> : <CheckCircle className="h-3.5 w-3.5" />}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -894,6 +917,88 @@ export default function CustomersTab() {
                 Cancel
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Export Customers Modal */}
+      {isExportModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setIsExportModalOpen(false)}>
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-xs" />
+          <div className="relative bg-white rounded-2xl w-full max-w-md p-6 space-y-4 shadow-xl z-10" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-sm font-black text-gray-900 uppercase tracking-wider flex items-center gap-1.5 border-b border-orange-500/10 pb-2">
+              <Download className="h-4.5 w-4.5 text-orange-500" />
+              Export Customers Directory
+            </h3>
+            <form onSubmit={handleExportCustomers} className="space-y-4">
+              <div>
+                <label className="text-[10px] text-gray-400 font-bold uppercase block mb-1">Customer Segment</label>
+                <select
+                  value={exportSegment}
+                  onChange={(e) => setExportSegment(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-orange-500 bg-white font-bold"
+                >
+                  <option value="all">All Customers</option>
+                  <option value="registered">Registered Accounts Only</option>
+                  <option value="guest">Guest Customers Only</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] text-gray-400 font-bold uppercase block mb-1">From Date</label>
+                  <input
+                    type="date"
+                    value={exportStartDate}
+                    onChange={(e) => setExportStartDate(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-orange-500 bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-gray-400 font-bold uppercase block mb-1">To Date</label>
+                  <input
+                    type="date"
+                    value={exportEndDate}
+                    onChange={(e) => setExportEndDate(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-orange-500 bg-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-gray-400 font-bold uppercase block mb-1">Format</label>
+                <select
+                  value={exportFormat}
+                  onChange={(e) => setExportFormat(e.target.value as 'csv' | 'xlsx')}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-orange-500 bg-white font-bold"
+                >
+                  <option value="xlsx">Excel Spreadsheet (.xlsx)</option>
+                  <option value="csv">CSV Document (.csv)</option>
+                </select>
+              </div>
+
+              {exportError && (
+                <p className="text-red-600 text-xs font-bold bg-red-50 border border-red-200 rounded-xl p-2.5">
+                  {exportError}
+                </p>
+              )}
+
+              <div className="flex gap-2 pt-2 border-t border-orange-500/10">
+                <button
+                  type="submit"
+                  disabled={exporting}
+                  className="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-xs font-bold py-2.5 rounded-xl disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5 shadow-sm active:scale-98"
+                >
+                  {exporting ? 'Exporting...' : 'Start Export'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsExportModalOpen(false)}
+                  className="flex-1 bg-gray-150 text-gray-650 text-xs font-bold py-2.5 rounded-xl cursor-pointer hover:bg-gray-200 flex items-center justify-center"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

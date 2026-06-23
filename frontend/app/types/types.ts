@@ -197,6 +197,7 @@ export interface ApiProduct {
   is_active: boolean;
   is_banner?: boolean;
   banner_background_color?: string;
+  mobile_ad_banner?: string;
   href?: string;
   meta_title?: string;
   meta_description?: string;
@@ -222,6 +223,7 @@ export interface BannerProduct extends ProductRequest {
     id: number;
     href?: string;
     banner_background_color?: string;
+    mobile_ad_banner:string;
 }
 
 
@@ -234,15 +236,13 @@ export interface HeroSlide {
     old_price?: number;
     href: string;
     bg: string;
+    mobile_ad_banner:string;
 }
-
-
-
-
 
 // ─────────────────────────────────────────────────────────
 // Core Product Types
 // ─────────────────────────────────────────────────────────
+
 export interface ProductVariant {
   label: string;
   value: string;
@@ -288,6 +288,35 @@ export interface Product {
   colors?: ProductColor[];
   storageOptions?: ProductVariant[];
   reviews?: Review[];
+}
+
+// ─────────────────────────────────────────────────────────
+// Deal of the Day Types
+// ─────────────────────────────────────────────────────────
+
+export interface DealProduct {
+  id: number;
+  title: string;
+  main_image_url?: string;
+  gallery_images?: string[];
+  price?: string | number;
+  old_price?: string | number;
+  subcategory?: {
+    name: string;
+  };
+  rating?: number;
+  short_description?: string;
+  description?: string;
+}
+
+export interface Deal {
+  id: number;
+  title?: string;
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
+  productId: number;
+  product?: DealProduct;
 }
 
 // ─────────────────────────────────────────────────────────

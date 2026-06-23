@@ -8,14 +8,22 @@ import Rating from "../rating/Rating";
 import { useCart } from "@/app/context/CartContext";
 import { useWishlist } from "@/app/context/WishlistContext";
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 
-export default function ProductCard({
-  product,
-}: {
-  product?: ApiProduct;
-}) {
+const ORANGE = "#FF6A00";
+const INK = "#0D0D0D";
+
+export default function ProductCard({ product }: { product?: ApiProduct }) {
   const { addToCart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsDesktop(window.innerWidth >= 640);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   if (!product) return null;
 
@@ -31,7 +39,6 @@ export default function ProductCard({
   const handleWishlistToggle = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-
     toggleWishlist({
       id: product.id,
       title: product.title,
@@ -46,7 +53,6 @@ export default function ProductCard({
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-
     addToCart({
       id: product.id,
       title: product.title,
@@ -59,160 +65,191 @@ export default function ProductCard({
 
   return (
     <motion.div
-      whileHover={{ y: -6 }}
-      transition={{ duration: 0.25 }}
-      className="group relative flex flex-col overflow-hidden rounded-[22px] border border-gray-200 bg-white p-3 shadow-[0_8px_30px_rgba(15,23,42,0.04)] transition-all duration-300 hover:border-orange-300 hover:shadow-[0_20px_45px_rgba(249,115,22,0.12)] sm:rounded-[28px] sm:p-4"
+      whileHover={isDesktop ? { y: -5 } : {}}
+      transition={{ duration: 0.25, ease: "easeOut" }}
+      className="group relative flex flex-col overflow-hidden bg-white p-2 transition-all duration-300
+        rounded-none sm:rounded-[24px] sm:p-4
+        border-1 border-gray-200 sm:border sm:border-[#ECECEC]
+        shadow-none sm:shadow-[0_4px_16px_rgba(0,0,0,0.18)]"
+      onMouseEnter={(e) => {
+        if (!isDesktop) return;
+        e.currentTarget.style.borderColor = "#FF6A0055";
+        e.currentTarget.style.boxShadow = "0 18px 40px rgba(255,106,0,0.14)";
+      }}
+      onMouseLeave={(e) => {
+        if (!isDesktop) return;
+        e.currentTarget.style.borderColor = "#ECECEC";
+        e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.18)";
+      }}
     >
-      <Link
-        href={`/product/${product.id}`}
-        className="flex flex-col"
+      {/* ── Heart — absolute top right ── */}
+      <button
+        onClick={handleWishlistToggle}
+        className="absolute right-2 top-2 z-20 flex h-7 w-7 items-center justify-center rounded-full transition-all duration-300 sm:right-4 sm:top-4 sm:h-9 sm:w-9"
       >
-        {/* Wishlist */}
-        <button
-          onClick={handleWishlistToggle}
-          className="absolute right-3 top-3 z-20 flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition-all duration-300 hover:scale-105 hover:text-red-500 sm:right-5 sm:top-5 sm:h-10 sm:w-10"
+        <motion.div whileTap={{ scale: 0.85 }}>
+          <Heart
+            size={13}
+            className={`transition-colors duration-300 sm:h-4 sm:w-4 ${
+              isWishlisted ? "fill-red-500 text-red-500" : "text-[#0D0D0D]"
+            }`}
+          />
+        </motion.div>
+      </button>
+
+      <Link href={`/product/${product.id}`} className="flex flex-col">
+
+        {/* ── Image ── */}
+        <div
+          className="relative flex h-[130px] items-center justify-center overflow-hidden rounded-none p-3 sm:h-[210px] sm:rounded-[18px] sm:p-6"
         >
-          <motion.div whileTap={{ scale: 0.85 }}>
-            <Heart
-              size={16}
-              className={`transition-colors duration-300 sm:h-[18px] sm:w-[18px] ${
-                isWishlisted
-                  ? "fill-red-500 text-red-500"
-                  : "text-gray-400"
-              }`}
-            />
-          </motion.div>
-        </button>
 
-        {/* Image Section */}
-        <div className="relative flex h-[170px] items-center justify-center overflow-hidden rounded-[18px] bg-gradient-to-br from-blue-200 via-orange-200 to-blue-100 p-4 sm:h-[240px] sm:rounded-[24px] sm:p-8">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(249,115,22,0.08),transparent_45%)]" />
-
-          {/* Discount badge */}
-          {product.discount_percentage && product.discount_percentage > 0 ? (
-            <div className="absolute left-3 top-3 max-w-[70%] truncate rounded-full bg-orange-500 px-2 py-1 text-[8px] font-bold uppercase tracking-wider text-white shadow-sm sm:left-4 sm:top-4 sm:px-3 sm:text-[10px]">
+          {(product.discount_percentage ?? 0) > 0 && (
+            <div
+              className="absolute left-2 top-2 z-20 rounded-full px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider text-white sm:px-2.5 sm:text-[9px]"
+              style={{ backgroundColor: ORANGE }}
+            >
               -{product.discount_percentage}%
-            </div>
-          ) : (
-            <div className="absolute left-3 top-3 max-w-[70%] truncate rounded-full bg-white px-2 py-1 text-[8px] font-semibold uppercase tracking-wider text-orange-500 shadow-sm sm:left-4 sm:top-4 sm:max-w-none sm:px-3 sm:text-[10px]">
-              {product.brand || "Product"}
             </div>
           )}
 
-          <Image
-            src={product.main_image_url}
-            alt={product.title}
-            width={160}
-            height={160}
-            priority
-            className="relative z-10 h-auto max-h-[120px] w-auto object-contain transition-transform duration-500 group-hover:scale-110 sm:max-h-[165px]"
-          />
+          <div className="relative w-full h-full flex items-center justify-center">
+            <Image
+              src={product.main_image_url}
+              alt={product.title}
+              width={160}
+              height={160}
+              priority
+              className={`relative z-10 h-auto max-h-[95px] w-auto object-contain transition-all duration-500 sm:max-h-[155px] ${
+                product.gallery_images && product.gallery_images.length > 0
+                  ? "group-hover:opacity-0 group-hover:scale-95 group-hover:pointer-events-none"
+                  : "group-hover:scale-110"
+              }`}
+            />
+            {product.gallery_images && product.gallery_images.length > 0 && (
+              <Image
+                src={product.gallery_images[0]}
+                alt={`${product.title} Alternate`}
+                width={160}
+                height={160}
+                className="absolute inset-0 z-10 m-auto h-auto max-h-[95px] w-auto object-contain opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-110 transition-all duration-500 sm:max-h-[155px] pointer-events-none"
+              />
+            )}
+          </div>
         </div>
 
-        {/* Content */}
-        <div className="mt-4 flex flex-col gap-2 sm:mt-5 sm:gap-3">
-          {/* Mobile */}
-          <div className="sm:hidden">
-            <h3 className="truncate text-[13px] font-semibold text-gray-900 transition-colors duration-300 group-hover:text-orange-500">
+        {/* ── Content ── */}
+        <div className="mt-2 flex flex-col gap-1 sm:mt-3 sm:gap-1.5">
+
+          {/* Brand — below image, above title */}
+          {product.brand && product.brand.trim() !== "" && (
+            <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+              {product.brand}
+            </p>
+          )}
+
+          {/* Title */}
+          <h3
+            className="truncate text-[11px] font-semibold leading-snug tracking-[-0.01em] sm:line-clamp-2 sm:text-[14px] sm:leading-5 pr-5 sm:pr-0"
+            style={{ color: INK }}
+          >
+            <span className="sm:group-hover:text-[#FF6A00] transition-colors duration-300">
               {product.title}
-            </h3>
-
-            <div className="mt-1 flex items-center gap-2 overflow-hidden whitespace-nowrap">
-              {/* Current Price */}
-              <div className="flex items-center gap-1 leading-none">
-                <span className="relative top-[1px] text-[11px] font-bold uppercase text-red-500">
-                  QAR
-                </span>
-
-                <span className="text-[18px] font-bold tracking-tight text-orange-500">
-                  {formatPrice(product.price)}
-                </span>
-              </div>
-
-              {/* Old Price */}
-              {product.old_price && (
-                <div className="flex items-center leading-none text-gray-400 line-through">
-                  <span className="mr-1 flex items-center self-center text-[9px] font-semibold uppercase text-gray-400">
-                    QAR
-                  </span>
-
-                  <span className="text-[11px] font-medium">
-                    {formatPrice(product.old_price)}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Desktop */}
-          <div className="hidden sm:block">
-            {/* Title - Single Line */}
-            <h3 className="truncate text-[15px] font-semibold leading-6 tracking-[-0.02em] text-gray-900 transition-colors duration-300 group-hover:text-orange-500">
-              {product.title}
-            </h3>
-
-            {/* Prices - Same Row */}
-            <div className="mt-2 flex items-center justify-between gap-3">
-              {product.old_price ? (
-                <div className="flex items-center leading-none text-gray-400 line-through">
-                  <span className="mr-1 flex items-center self-center text-[10px] font-semibold uppercase text-gray-400">
-                    QAR
-                  </span>
-
-                  <span className="text-sm font-medium">
-                    {formatPrice(product.old_price)}
-                  </span>
-                </div>
-              ) : (
-                <div />
-              )}
-
-              <div className="flex shrink-0 items-center whitespace-nowrap leading-none">
-                <span className="mr-1 flex items-center self-center text-[15px] font-bold uppercase text-red-500">
-                  QAR
-                </span>
-
-                <span className="text-xl font-bold tracking-tight text-orange-500">
-                  {formatPrice(product.price)}
-                </span>
-              </div>
-            </div>
-          </div>
+            </span>
+          </h3>
 
           {/* Rating */}
-          <div className="flex items-center gap-1 sm:gap-2">
-            <Rating rating={product.rating} />
+          <div className="flex items-center gap-1.5 flex-wrap min-h-[20px]">
+            {(() => {
+              const count = product.review_count ?? 0;
+              if (count === 0) {
+                return (
+                  <span className="text-[8px] sm:text-[10px] font-bold text-orange-500 bg-orange-50 px-1.5 py-0.5 rounded border border-orange-200">
+                    New Arrival
+                  </span>
+                );
+              } else if (count >= 1 && count <= 4) {
+                return (
+                  <>
+                    <Rating rating={product.rating} />
+                    <span className="text-[9px] font-medium text-gray-400">
+                      ({count})
+                    </span>
+                    <span className="text-[8px] font-bold text-blue-500 bg-blue-50 px-1 py-0.5 rounded border border-blue-200 scale-90 origin-left">
+                      Early Reviews
+                    </span>
+                  </>
+                );
+              } else {
+                return (
+                  <>
+                    <Rating rating={product.rating} />
+                    <span className="text-[9px] font-medium text-gray-400">
+                      ({count})
+                    </span>
+                  </>
+                );
+              }
+            })()}
+          </div>
 
-            <span className="text-[10px] font-medium text-gray-400 sm:text-xs">
-              ({product.review_count || 0})
+          {/* Price */}
+          <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+            <span className="flex items-baseline gap-0.5 leading-none">
+              <span className="text-[9px] font-bold uppercase tracking-wide text-gray-400 sm:text-[10px]">
+                QAR
+              </span>
+              <span
+                className="tabular-nums text-[14px] font-extrabold tracking-tight sm:text-xl"
+                style={{ color:INK }}
+              >
+                {formatPrice(product.price)}
+              </span>
             </span>
+            {product.old_price && (
+              <span className="text-[8px] font-semibold uppercase text-gray-400 line-through sm:text-[10px]">
+                QAR {formatPrice(product.old_price)}
+              </span>
+            )}
           </div>
         </div>
       </Link>
 
-      {/* Mobile Button */}
-      <div className="mt-4 sm:hidden">
-        <Link
-          href={`/product/${product.id}`}
-          className="block w-full"
-        >
-          <button className="flex h-10 w-full items-center justify-center rounded-[10px] bg-gradient-to-r from-orange-500 to-orange-600 text-xs font-semibold text-white shadow-[0_10px_20px_rgba(249,115,22,0.25)] transition-all duration-300">
-            Buy Now
-          </button>
-        </Link>
-      </div>
-
-      {/* Desktop Buttons */}
-      <div className="mt-5 hidden grid-cols-2 gap-3 sm:grid">
+      {/* ── Desktop Buttons ── */}
+      <div className="mt-3 hidden grid-cols-2 gap-2.5 sm:grid">
         <button
           onClick={handleAddToCart}
-          className="flex h-12 items-center justify-center rounded-[5px] bg-gray-100 px-2 text-sm font-semibold text-gray-700 transition-all duration-300 hover:bg-gray-200"
+          className="flex h-11 items-center justify-center rounded-xl border px-2 text-sm font-semibold transition-all duration-300"
+          style={{ borderColor: "#ECECEC", color: INK, backgroundColor: "transparent" }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = ORANGE;
+            e.currentTarget.style.borderColor = ORANGE;
+            e.currentTarget.style.color = "#fff";
+            e.currentTarget.style.boxShadow = "0 14px 28px rgba(255,106,0,0.32)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "transparent";
+            e.currentTarget.style.borderColor = "#ECECEC";
+            e.currentTarget.style.color = INK;
+            e.currentTarget.style.boxShadow = "none";
+          }}
         >
           Add to Cart
         </button>
 
-        <Link href={`/product/${product.id}`}>
-          <button className="flex h-12 w-full items-center justify-center rounded-[10px] bg-gradient-to-r from-orange-500 to-orange-600 px-2 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(249,115,22,0.25)] transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_14px_28px_rgba(249,115,22,0.35)]">
+        <Link href={`/product/${product.id}`} className="w-full">
+          <button
+            className="flex h-11 w-full cursor-pointer items-center justify-center rounded-[10px] px-2 text-sm font-semibold text-white transition-all duration-300"
+            style={{ backgroundColor: INK, boxShadow: "0 10px 20px rgba(13,13,13,0.2)" }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = ORANGE;
+              e.currentTarget.style.boxShadow = "0 14px 28px rgba(255,106,0,0.32)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = INK;
+              e.currentTarget.style.boxShadow = "0 10px 20px rgba(13,13,13,0.2)";
+            }}
+          >
             Buy Now
           </button>
         </Link>

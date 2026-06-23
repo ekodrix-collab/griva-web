@@ -12,7 +12,14 @@ api.interceptors.request.use((config) => {
     const pathname = window.location.pathname;
     let token = null;
     if (pathname.startsWith("/admin")) {
-      token = localStorage.getItem("griva_admin_token");
+      const activeRole = sessionStorage.getItem("griva_active_role");
+      if (activeRole === "staff") {
+        token = localStorage.getItem("griva_staff_token");
+      } else if (activeRole === "admin") {
+        token = localStorage.getItem("griva_admin_token");
+      } else {
+        token = localStorage.getItem("griva_admin_token") || localStorage.getItem("griva_staff_token");
+      }
     } else if (pathname.startsWith("/delivery")) {
       token = localStorage.getItem("griva_delivery_token");
     } else {

@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 const categoryController = require("../controllers/categoryController");
-const {authenticateJWT,isAdmin} = require("../middleware/auth");
+const {authenticateJWT,isAdminOrStaff} = require("../middleware/auth");
 
 /**
  * Public Routes
@@ -14,10 +14,10 @@ router.get("/:id", categoryController.getCategoryById);
 
 
 /**
- * Admin Routes
+ * Admin / Staff Routes
  */
-router.post("/",authenticateJWT,isAdmin,categoryController.createCategory);
-router.put("/:id",authenticateJWT,isAdmin,categoryController.updateCategory);
-router.delete("/:id",authenticateJWT,isAdmin,categoryController.deleteCategory);
+router.post("/",authenticateJWT,isAdminOrStaff,categoryController.createCategory);
+router.put("/:id",authenticateJWT,isAdminOrStaff,categoryController.updateCategory);
+router.delete("/:id",authenticateJWT,isAdminOrStaff,categoryController.deleteCategory);
 
 module.exports = router;
