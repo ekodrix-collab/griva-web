@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
 const path = require("path");
+const { apiLimiter } = require("./middleware/rateLimit");
 
 // Initialize Database Models and Associations
 require("./models");
@@ -29,6 +30,10 @@ app.use(cors({
   },
   credentials: true,
 }));
+
+// Apply rate limiter to all API endpoints
+app.use("/api", apiLimiter);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

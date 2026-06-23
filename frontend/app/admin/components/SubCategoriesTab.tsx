@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Search, Plus, Trash2, Edit, Check, X, ChevronDown } from 'lucide-react';
 import { SubCategory, SubCategoryRequest, Category } from '@/app/types/types';
 import { subCategoryService } from '@/app/services/subCategory.service';
+import { useToast } from '@/app/context/ToastContext';
 import { categoryService } from '@/app/services/category.service';
 import { uploadService } from '@/app/services/upload.service';
 
 export default function SubCategoriesTab() {
+  const { toast, confirm } = useToast();
   const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [activeCategories, setActiveCategories] = useState<Category[]>([]);
@@ -88,12 +90,17 @@ export default function SubCategoriesTab() {
   };
 
   const handleDelete = async (id: number) => {
-    if (confirm("Are you sure you want to delete this sub category?")) {
+    const isConfirmed = await confirm(
+      "Are you sure you want to delete this subcategory? All products belonging to this subcategory will lose their parent subcategory reference.",
+      "Delete Subcategory"
+    );
+    if (isConfirmed) {
       try {
         await subCategoryService.deleteSubCategory(id);
         setSubCategories(prev => prev.filter(c => c.id !== id));
+        toast.success("Subcategory deleted successfully");
       } catch (err) {
-        alert("Failed to delete sub category");
+        toast.error("Failed to delete subcategory");
       }
     }
   };

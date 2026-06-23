@@ -33,6 +33,7 @@ import {
   Moon,
   Trash2
 } from "lucide-react";
+import { useToast } from "@/app/context/ToastContext";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 
@@ -85,6 +86,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }
 
 export default function DeliveryDashboard() {
   const router = useRouter();
+  const { toast } = useToast();
   const [orders, setOrders] = useState<DeliveryOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -103,7 +105,6 @@ export default function DeliveryDashboard() {
   const [callCount, setCallCount] = useState<number | null>(null);
   const [rescheduleOption, setRescheduleOption] = useState<string | null>(null);
   const [failedReason, setFailedReason] = useState<string | null>(null);
-  const [toastMessage, setToastMessage] = useState("");
 
   // Payment terminal state
   const [selectedPaymentOrderId, setSelectedPaymentOrderId] = useState<number | null>(null);
@@ -287,10 +288,10 @@ export default function DeliveryDashboard() {
         showToast(`Status updated to ${newStatus.replace(/_/g, ' ')}`);
       } else {
         const data = await res.json();
-        alert(data.message || "Failed to update status.");
+        showToast(data.message || "Failed to update status.", "error");
       }
     } catch {
-      alert("Check your internet connection.");
+      showToast("Check your internet connection.", "error");
     } finally {
       setUpdatingId(null);
     }
@@ -321,12 +322,9 @@ export default function DeliveryDashboard() {
     setRescheduleOption(null);
     setFailedReason(null);
   };
-
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(""), 3500);
+  const showToast = (msg: string, type: "success" | "error" | "warning" | "info" = "success") => {
+    toast[type](msg);
   };
-
   const getRescheduleTime = (option: string): string => {
     const now = new Date();
     if (option === "1h") {
@@ -1423,19 +1421,6 @@ export default function DeliveryDashboard() {
         )}
       </AnimatePresence>
 
-      {/* Dynamic Toast Popup */}
-      <AnimatePresence>
-        {toastMessage && (
-          <motion.div 
-            initial={{ opacity: 0, y: 50, x: "-50%" }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-24 left-1/2 z-[60] bg-zinc-950 border border-zinc-900 text-[#FF6A00] text-xs font-bold px-6 py-3.5 rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.8)] tracking-wider"
-          >
-            {toastMessage.toUpperCase()}
-          </motion.div>
-        )}
-      </AnimatePresence>
       
     </div>
   );

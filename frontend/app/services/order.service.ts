@@ -19,6 +19,8 @@ export interface CreateOrderPayload {
   delivery_notes?: string;
   city?: string;
   delivery_slot_id?: number;
+  checkout_token?: string;
+  checkoutToken?: string;
 }
 
 export interface OrderResponse {
@@ -116,6 +118,14 @@ export const orderService = {
     const response = await api.get("/orders/track", {
       params: { order_number: orderNumber, phone },
     });
+    return response.data;
+  },
+
+  /**
+   * Cancel a pending order — PATCH /api/orders/:id/cancel
+   */
+  cancelOrder: async (orderId: number): Promise<any> => {
+    const response = await api.patch(`/orders/${orderId}/cancel`);
     return response.data;
   },
 };

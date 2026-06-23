@@ -7,6 +7,7 @@ import { productService } from '@/app/services/product.service';
 import { uploadService } from '@/app/services/upload.service';
 import dealOfDayService from '@/app/services/dealOfDay.service';
 import { ApiProduct } from '@/app/types/types';
+import { useToast } from '@/app/context/ToastContext';
 
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';

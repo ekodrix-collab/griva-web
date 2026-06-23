@@ -15,6 +15,7 @@ import { orderService, MyOrder } from "@/app/services/order.service";
 import { useUser } from "@/app/context/UserContext";
 import { useWishlist } from "@/app/context/WishlistContext";
 import { Address, AddressRequest } from "@/app/types/types";
+import { useToast } from "@/app/context/ToastContext";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
   pending:   { label: "Pending",   color: "text-amber-600",  bg: "bg-amber-50 border-amber-200",    icon: <Clock className="h-3 w-3" /> },
@@ -55,6 +56,7 @@ const labelColors = {
 
 export default function AccountPage() {
   const router = useRouter();
+  const { toast, confirm } = useToast();
   const { logout, isAuthenticated, isCustomer, loading: userLoading, state } = useUser();
   const [activeTab, setActiveTab] = useState("profile");
 
@@ -152,6 +154,33 @@ export default function AccountPage() {
   const handleLogout = () => {
     logout();
     router.push("/auth/login");
+  };
+
+  const handleCancelOrder = async (orderId: number) => {
+    const isConfirmed = await confirm(
+      "Are you sure you want to cancel this order? This action cannot be undone.",
+      "Cancel Order"
+    );
+    if (!isConfirmed) {
+      return;
+    }
+    try {
+      const response = await orderService.cancelOrder(orderId);
+      if (response.success) {
+        toast.success("Order cancelled successfully.");
+        setOrders((prev) =>
+          prev.map((o) => (o.id === orderId ? { ...o, status: "cancelled" } : o))
+        );
+      } else {
+        toast.error(response.message || "Failed to cancel order.");
+      }
+    } catch (err: any) {
+      toast.error(
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        "Failed to cancel order. Please try again."
+      );
+    }
   };
 
   const handleAddressSubmit = async (e: React.FormEvent) => {
@@ -1053,11 +1082,20 @@ export default function AccountPage() {
                                     </div>
                                   ))}
                                 </div>
-                                
                                 <div className="pt-4 border-t border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                                  <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">
-                                    Payment Method: <span className="text-slate-700 font-black">{order.payment_method || "COD"}</span>
-                                  </span>
+                                  <div className="flex flex-wrap items-center gap-3">
+                                    <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">
+                                      Payment Method: <span className="text-slate-700 font-black">{order.payment_method || "COD"}</span>
+                                    </span>
+                                    {order.status === "pending" && (
+                                      <button
+                                        onClick={() => handleCancelOrder(order.id)}
+                                        className="text-xs font-bold text-red-500 hover:text-red-650 transition cursor-pointer"
+                                      >
+                                        Cancel Order
+                                      </button>
+                                    )}
+                                  </div>
                                   <div className="text-right">
                                     <span className="text-sm font-black text-slate-900">
                                       Grand Total: QAR {order.total_price ? parseFloat(String(order.total_price).replace(/([$]|qar|[\s,])/gi, "") || "0").toFixed(2) : "—"}

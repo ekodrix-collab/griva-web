@@ -4,11 +4,13 @@ import {
 } from 'lucide-react';
 import { ProductRequest, Category, SubCategory } from '@/app/types/types';
 import { productService } from '@/app/services/product.service';
+import { useToast } from '@/app/context/ToastContext';
 import { categoryService } from '@/app/services/category.service';
 import { subCategoryService } from '@/app/services/subCategory.service';
 import AddProductModal from './AddProductModal';
 
 export default function ProductsTab() {
+  const { toast, confirm } = useToast();
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
@@ -60,8 +62,9 @@ export default function ProductsTab() {
     setProducts((prev) => prev.map((x) => x.id === id ? { ...x, stock: next } : x));
     try {
       await productService.updateProductStock(id, next);
+      toast.success("Stock updated successfully");
     } catch (err) {
-      alert("Failed to update stock");
+      toast.error("Failed to update stock");
       loadData(); // Revert on failure
     }
   };
@@ -70,8 +73,9 @@ export default function ProductsTab() {
     setProducts((prev) => prev.map((p) => p.id === id ? { ...p, stock: val } : p));
     try {
       await productService.updateProductStock(id, val);
+      toast.success("Stock updated successfully");
     } catch (err) {
-      alert("Failed to update stock");
+      toast.error("Failed to update stock");
       loadData();
     }
   };
@@ -385,8 +389,9 @@ export default function ProductsTab() {
                   try {
                     await productService.deleteProduct(id);
                     setProducts(prev => prev.filter(c => c.id !== id));
+                    toast.success("Product deleted successfully");
                   } catch (err) {
-                    alert("Failed to delete product");
+                    toast.error("Failed to delete product");
                   }
                 }}
                 className="px-5 py-2.5 bg-red-500 text-white text-xs font-bold rounded-xl hover:bg-red-600 transition-colors cursor-pointer shadow-md shadow-red-500/10 border-none outline-none"

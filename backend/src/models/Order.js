@@ -171,6 +171,11 @@ const Order = sequelize.define(
         key: "id",
       },
     },
+    checkout_token: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      unique: true,
+    },
   },
   {
     timestamps: true,

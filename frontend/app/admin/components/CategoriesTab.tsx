@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Search, Plus, Trash2, Edit, Check, X, Loader2 } from 'lucide-react';
 import { Category, CategoryRequest } from '@/app/types/types';
 import { categoryService } from '@/app/services/category.service';
+import { useToast } from '@/app/context/ToastContext';
 import { uploadService } from '@/app/services/upload.service';
 
 export default function CategoriesTab() {
+  const { toast, confirm } = useToast();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -67,12 +69,17 @@ export default function CategoriesTab() {
   };
 
   const handleDelete = async (id: number) => {
-    if (confirm("Are you sure you want to delete this category?")) {
+    const isConfirmed = await confirm(
+      "Are you sure you want to delete this category? All subcategories and products belonging to this category will lose their parent category references.",
+      "Delete Category"
+    );
+    if (isConfirmed) {
       try {
         await categoryService.deleteCategory(id);
         setCategories(prev => prev.filter(c => c.id !== id));
+        toast.success("Category deleted successfully");
       } catch (err) {
-        alert("Failed to delete category");
+        toast.error("Failed to delete category");
       }
     }
   };

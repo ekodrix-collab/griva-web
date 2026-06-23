@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -60,6 +60,41 @@ export default function ProductPage({ params }: ProductPageProps) {
   const [quantity, setQuantity] = useState<number>(1);
   const [activeTab, setActiveTab] = useState<"desc" | "specs" | "reviews">("desc");
 
+  const [freeShippingThreshold, setFreeShippingThreshold] = useState(150);
+  const [reviewsList, setReviewsList] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/settings`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.settings?.freeShippingThreshold) {
+            setFreeShippingThreshold(parseFloat(data.settings.freeShippingThreshold));
+          }
+        }
+      } catch {}
+    };
+    fetchSettings();
+  }, []);
+
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/reviews/product/${productId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.reviews) {
+            setReviewsList(data.reviews);
+          }
+        }
+      } catch {}
+    };
+    if (productId) {
+      fetchReviews();
+    }
+  }, [productId]);
+
   // Loading state — full page skeleton
   if (loading) return <ProductSkeleton />;
 
@@ -96,7 +131,7 @@ export default function ProductPage({ params }: ProductPageProps) {
     return Number(price).toFixed(2);
   };
 
-  const handleQuantityIncrement = () => setQuantity((prev) => prev + 1);
+  const handleQuantityIncrement = () => setQuantity((prev) => (product && prev < product.stock ? prev + 1 : prev));
   const handleQuantityDecrement = () => setQuantity((prev) => (prev > 1 ? prev - 1 : 1));
 
   const handleAddToCart = () => {
@@ -352,7 +387,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                 <div className="flex flex-col items-center text-center p-2 rounded-lg bg-gray-50/50">
                   <Truck className="h-4 w-4 text-orange-500 mb-1" />
                   <span className="font-semibold text-gray-700">Free Shipping</span>
-                  <span>Orders over QAR 50</span>
+                  <span>Orders over QAR {freeShippingThreshold.toFixed(0)}</span>
                 </div>
                 <div className="flex flex-col items-center text-center p-2 rounded-lg bg-gray-50/50">
                   <RotateCcw className="h-4 w-4 text-orange-500 mb-1" />
@@ -382,7 +417,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                     : "border-transparent text-gray-500 hover:text-gray-800"
                 }`}
               >
-                {tab === "desc" ? "Description" : tab === "specs" ? "Specifications" : `Reviews (${product.review_count ?? 0})`}
+                {tab === "desc" ? "Description" : tab === "specs" ? "Specifications" : `Reviews (${reviewsList.length})`}
               </button>
             ))}
           </div>
@@ -412,8 +447,29 @@ export default function ProductPage({ params }: ProductPageProps) {
             )}
 
             {activeTab === "reviews" && (
-              <div className="text-center py-8 text-sm text-gray-500">
-                No reviews yet. Be the first to review this product!
+              <div className="space-y-4 max-w-2xl py-2 text-sm text-gray-600">
+                {reviewsList.length === 0 ? (
+                  <div className="text-center py-8 text-sm text-gray-500">
+                    No reviews yet. Be the first to review this product!
+                  </div>
+                ) : (
+                  reviewsList.map((review) => (
+                    <div key={review.id} className="bg-gray-50/50 rounded-2xl border p-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <p className="font-bold text-gray-900">{review.title || "User Review"}</p>
+                          <p className="text-[10px] text-gray-400 mt-0.5">By {review.user?.email || "Customer"}</p>
+                        </div>
+                        <div className="flex gap-0.5 text-orange-500 font-black">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <span key={i}>{i < review.rating ? "★" : "☆"}</span>
+                          ))}
+                        </div>
+                      </div>
+                      <p className="text-gray-600 mt-1 leading-relaxed">{review.body}</p>
+                    </div>
+                  ))
+                )}
               </div>
             )}
           </div>
