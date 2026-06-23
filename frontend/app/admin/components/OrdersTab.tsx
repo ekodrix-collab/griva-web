@@ -897,33 +897,116 @@ export default function OrdersTab({ ordersList, setOrdersList }: OrdersTabProps)
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex flex-wrap gap-2 bg-white p-3 rounded-xl border border-orange-500/30">
-        {(['all', 'new', 'pending', 'processing', 'assigned', 'out_for_delivery', 'shipped', 'delivered', 'cancelled']).map((status) => {
-          const cfg = status === 'all' ? null : STATUS_CONFIG[status];
-          const isActive = filterStatus === status;
-          return (
+      <div className="flex flex-wrap gap-4 items-center justify-between bg-white p-4 rounded-xl border border-orange-500/30">
+        <div className="flex flex-wrap items-center gap-4">
+          {/* All Tab */}
+          <div>
             <button
-              key={status}
-              onClick={() => setFilterStatus(status)}
+              onClick={() => setFilterStatus('all')}
               className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer border ${
-                isActive
+                filterStatus === 'all'
                   ? 'bg-orange-500 text-white border-orange-500 shadow-sm shadow-orange-500/30'
                   : 'bg-white text-gray-500 border-orange-500/20 hover:border-orange-500/50'
               }`}
             >
-              {cfg?.icon}
-              <span className="capitalize">{status === 'new' ? 'New' : status}</span>
-              <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${isActive ? 'bg-white/20' : 'bg-gray-100'}`}>
-                {counts[status]}
+              <span>All</span>
+              <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${filterStatus === 'all' ? 'bg-white/20' : 'bg-gray-100'}`}>
+                {counts['all']}
               </span>
             </button>
-          );
-        })}
+          </div>
+
+          {/* Action Required Group */}
+          <div className="flex flex-wrap items-center gap-2 bg-orange-50/45 p-3.5 pt-4 rounded-xl border border-orange-100 relative">
+            <span className="absolute -top-2 left-3 bg-white px-1.5 text-[8px] font-black text-orange-650 tracking-wider uppercase border border-orange-100 rounded-sm">
+              ⚠️ Action Required
+            </span>
+            {(['new', 'pending', 'processing', 'assigned', 'out_for_delivery']).map((status) => {
+              const cfg = STATUS_CONFIG[status];
+              const isActive = filterStatus === status;
+              
+              let activeClass = 'bg-orange-500 text-white border-orange-500 shadow-orange-500/30';
+              let inactiveClass = 'bg-white text-gray-500 border-orange-500/20 hover:border-orange-500/50';
+              if (status === 'new') {
+                activeClass = 'bg-red-600 text-white border-red-600 shadow-sm shadow-red-500/30';
+                inactiveClass = 'bg-white text-red-650 border-red-200 hover:border-red-400';
+              } else if (status === 'pending') {
+                activeClass = 'bg-orange-500 text-white border-orange-500 shadow-sm shadow-orange-500/30';
+                inactiveClass = 'bg-white text-orange-650 border-orange-200 hover:border-orange-400';
+              } else if (status === 'processing') {
+                activeClass = 'bg-amber-500 text-white border-amber-500 shadow-sm shadow-amber-500/30';
+                inactiveClass = 'bg-white text-amber-650 border-amber-200 hover:border-amber-400';
+              } else if (status === 'assigned') {
+                activeClass = 'bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-500/30';
+                inactiveClass = 'bg-white text-blue-650 border-blue-200 hover:border-blue-400';
+              } else if (status === 'out_for_delivery') {
+                activeClass = 'bg-orange-600 text-white border-orange-600 shadow-sm shadow-orange-550/30';
+                inactiveClass = 'bg-white text-orange-700 border-orange-200 hover:border-orange-400';
+              }
+
+              return (
+                <button
+                  key={status}
+                  onClick={() => setFilterStatus(status)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer border ${
+                    isActive ? activeClass : inactiveClass
+                  }`}
+                >
+                  {cfg?.icon}
+                  <span className="capitalize">{status === 'new' ? 'New' : status.replace(/_/g, ' ')}</span>
+                  <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${isActive ? 'bg-white/20' : 'bg-gray-100'}`}>
+                    {counts[status]}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Completed Group */}
+          <div className="flex flex-wrap items-center gap-2 bg-gray-50 p-3.5 pt-4 rounded-xl border border-gray-200 relative">
+            <span className="absolute -top-2 left-3 bg-white px-1.5 text-[8px] font-black text-gray-500 tracking-wider uppercase border border-gray-200 rounded-sm">
+              ✅ Completed
+            </span>
+            {(['shipped', 'delivered', 'cancelled']).map((status) => {
+              const cfg = STATUS_CONFIG[status];
+              const isActive = filterStatus === status;
+              
+              let activeClass = 'bg-gray-500 text-white border-gray-500 shadow-gray-500/30';
+              let inactiveClass = 'bg-white text-gray-500 border-gray-200 hover:border-gray-400';
+              if (status === 'shipped') {
+                activeClass = 'bg-indigo-600 text-white border-indigo-600 shadow-sm shadow-indigo-500/30';
+                inactiveClass = 'bg-white text-indigo-650 border-indigo-200 hover:border-indigo-400';
+              } else if (status === 'delivered') {
+                activeClass = 'bg-green-600 text-white border-green-600 shadow-sm shadow-green-500/30';
+                inactiveClass = 'bg-white text-green-650 border-green-200 hover:border-green-400';
+              } else if (status === 'cancelled') {
+                activeClass = 'bg-gray-600 text-white border-gray-600 shadow-sm shadow-gray-550/30';
+                inactiveClass = 'bg-white text-gray-500 border-gray-200 hover:border-gray-450';
+              }
+
+              return (
+                <button
+                  key={status}
+                  onClick={() => setFilterStatus(status)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer border ${
+                    isActive ? activeClass : inactiveClass
+                  }`}
+                >
+                  {cfg?.icon}
+                  <span className="capitalize">{status}</span>
+                  <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${isActive ? 'bg-white/20' : 'bg-gray-100'}`}>
+                    {counts[status]}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         <select
           value={filterSlot}
           onChange={(e) => setFilterSlot(e.target.value)}
-          className="text-xs font-bold text-gray-750 bg-white border border-orange-500/20 rounded-lg px-3 py-1.5 outline-none hover:border-orange-500/40 cursor-pointer md:ml-auto"
+          className="text-xs font-bold text-gray-750 bg-white border border-orange-500/20 rounded-lg px-3 py-2.5 outline-none hover:border-orange-500/40 cursor-pointer md:ml-auto"
         >
           <option value="all">All Delivery Slots</option>
           {deliverySlots.map(s => (

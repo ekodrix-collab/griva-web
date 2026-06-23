@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { UserPlus, Mail, Shield, User, Key, Users, RefreshCw, Edit2, Lock, Ban, CheckCircle } from "lucide-react";
+import { UserPlus, Mail, Shield, User, Key, Users, RefreshCw, Edit2, Lock, Ban, CheckCircle, XCircle } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
@@ -380,86 +380,97 @@ export default function StaffTab() {
             </button>
           </div>
 
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse min-w-[500px]">
             <thead>
               <tr className="border-b border-orange-500/30 text-[10px] text-gray-400 font-bold uppercase tracking-wider bg-gray-50">
-                <th className="p-4">Staff Name</th>
-                <th className="p-4">Email</th>
-                <th className="p-4">Status</th>
-                <th className="p-4 text-right">Actions</th>
+                <th className="p-4 pl-6">Staff Member</th>
+                <th className="p-4 text-center">Status</th>
+                <th className="p-4 text-right pr-6">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-150">
               {loading && staff.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="p-8 text-center text-xs text-gray-400 font-semibold">
+                  <td colSpan={3} className="p-10 text-center text-xs text-gray-400 font-semibold">
                     <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2 text-orange-500" />
                     Loading staff directory...
                   </td>
                 </tr>
               ) : staff.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="p-8 text-center text-xs text-gray-400 font-semibold">
+                  <td colSpan={3} className="p-10 text-center text-xs text-gray-400 font-semibold">
                     No staff accounts created yet.
                   </td>
                 </tr>
               ) : (
-                staff.map((member) => (
-                  <tr key={member.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="p-4 text-xs font-bold text-gray-800">👤 {member.name}</td>
-                    <td className="p-4 text-xs text-gray-500">{member.email}</td>
-                    <td className="p-4 text-xs font-bold">
-                      {member.status === "ACTIVE" ? (
-                        <span className="bg-green-50 border border-green-200 text-green-700 px-2 py-0.5 rounded-lg text-[9px]">
-                          ACTIVE
-                        </span>
-                      ) : (
-                        <span className="bg-red-50 border border-red-200 text-red-600 px-2 py-0.5 rounded-lg text-[9px]">
-                          BLOCKED
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-4 text-xs text-gray-400 text-right" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-1.5">
-                        {/* Edit Button */}
-                        <button
-                          onClick={() => handleEditClick(member)}
-                          title="Edit Profile"
-                          className="p-1.5 rounded-lg border border-orange-500/20 text-gray-500 hover:text-orange-500 hover:bg-orange-500/5 transition-colors cursor-pointer"
-                        >
-                          <Edit2 className="h-3.5 w-3.5" />
-                        </button>
+                staff.map((member) => {
+                  const initials = member.name ? member.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase() : "S";
+                  return (
+                    <tr key={member.id} className="hover:bg-orange-500/3 transition-colors group">
+                      <td className="p-4 pl-6">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-orange-400 to-amber-500 flex items-center justify-center font-black text-xs text-white shrink-0 shadow-xs">
+                            {initials}
+                          </div>
+                          <div>
+                            <span className="text-xs font-bold text-gray-800 block truncate max-w-[200px] hover:text-orange-500 transition-colors">{member.name}</span>
+                            <span className="text-[10px] text-gray-450 font-medium block truncate max-w-[200px]">{member.email}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4 text-center">
+                        {member.status === "ACTIVE" ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 border border-green-200 text-green-700 rounded-lg text-[10px] font-bold">
+                            <CheckCircle className="w-3.5 h-3.5 text-green-500" /> Active
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-50 border border-red-200 text-red-700 rounded-lg text-[10px] font-bold">
+                            <XCircle className="w-3.5 h-3.5 text-red-500" /> Blocked
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-4 text-right pr-6" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-2.5">
+                          {/* Edit Button */}
+                          <button
+                            onClick={() => handleEditClick(member)}
+                            title="Edit Profile"
+                            className="p-1.5 rounded-lg border border-orange-500/20 text-gray-500 hover:text-orange-500 hover:bg-orange-500/5 transition-colors cursor-pointer"
+                          >
+                            <Edit2 className="h-3.5 w-3.5" />
+                          </button>
 
-                        {/* Password Reset Trigger */}
-                        <button
-                          onClick={() => {
-                            setResetStaff(member);
-                            setNewPassword("");
-                            setError("");
-                            setSuccessMsg("");
-                          }}
-                          title="Reset Password"
-                          className="p-1.5 rounded-lg border border-orange-500/20 text-gray-500 hover:text-orange-500 hover:bg-orange-500/5 transition-colors cursor-pointer"
-                        >
-                          <Lock className="h-3.5 w-3.5" />
-                        </button>
+                          {/* Password Reset Trigger */}
+                          <button
+                            onClick={() => {
+                              setResetStaff(member);
+                              setNewPassword("");
+                              setError("");
+                              setSuccessMsg("");
+                            }}
+                            title="Reset Password"
+                            className="p-1.5 rounded-lg border border-orange-500/20 text-gray-500 hover:text-orange-500 hover:bg-orange-500/5 transition-colors cursor-pointer"
+                          >
+                            <Lock className="h-3.5 w-3.5" />
+                          </button>
 
-                        {/* Block/Unblock Status */}
-                        <button
-                          onClick={() => handleToggleStatus(member)}
-                          title={member.status === "ACTIVE" ? "Deactivate Account" : "Reactivate Account"}
-                          className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
-                            member.status === "ACTIVE"
-                              ? "border-red-500/20 text-red-500 hover:bg-red-50"
-                              : "border-green-500/20 text-green-600 hover:bg-green-50"
-                          }`}
-                        >
-                          {member.status === "ACTIVE" ? <Ban className="h-3.5 w-3.5" /> : <CheckCircle className="h-3.5 w-3.5" />}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                          {/* Block/Unblock Status */}
+                          <button
+                            onClick={() => handleToggleStatus(member)}
+                            title={member.status === "ACTIVE" ? "Deactivate Account" : "Reactivate Account"}
+                            className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                              member.status === "ACTIVE"
+                                ? "border-red-500/20 text-red-500 hover:bg-red-50"
+                                : "border-green-500/20 text-green-600 hover:bg-green-50"
+                            }`}
+                          >
+                            {member.status === "ACTIVE" ? <Ban className="h-3.5 w-3.5" /> : <CheckCircle className="h-3.5 w-3.5" />}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
